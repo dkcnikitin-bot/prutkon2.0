@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><comments xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision"><authors><author></author><author>tc={0541957e-7dfe-46c5-a72e-9e3c1746a0f4}</author><author>tc={08489667-5290-4851-8ff4-933490936cdd}</author><author>tc={09c87822-03e7-4776-90b9-bdf934aad49c}</author><author>tc={0a2e8a71-2433-4fe8-8a04-45c52dbed6f4}</author><author>tc={2001255b-0d7c-4a3a-862c-dd491a94b9d5}</author><author>tc={30c4004a-28b0-4dc0-ba1c-52c285567a8c}</author><author>tc={46daa29e-4747-45cb-9c44-3e08311ec9c8}</author><author>tc={55844b03-2d58-45c6-acb5-283c10069c60}</author><author>tc={55f08a5c-6758-4f45-981b-11a58bdf6a11}</author><author>tc={61c1bb63-5851-4e23-a97a-4f154d7e889c}</author><author>tc={6a3536be-e49a-45af-9941-e1be70cc2aea}</author><author>tc={868febe2-3c35-4a54-bde1-9ba08525663d}</author><author>tc={a2175d7e-85d4-4b51-a4a5-bce98225e9e8}</author><author>tc={ca50e05c-322e-4234-9f8c-ccce74237c64}</author></authors><commentList><comment authorId="0" ref="O3"><text><t xml:space="preserve">шаг * кол-во прутков  = длина в кольцо</t></text></comment><comment authorId="0" ref="R3"><text><t xml:space="preserve">длина в кольцо / шаг = кол-во прутков</t></text></comment><comment authorId="0" ref="Y3"><text><t xml:space="preserve">поле доступно если в ячейке кол-во ремней выбрано более 2х</t></text></comment><comment authorId="0" ref="AD3"><text><t xml:space="preserve">поле доступно если в ячейке кол-во ремней выбрано более 2х
+</t></text></comment><comment authorId="0" ref="AF3"><text><t xml:space="preserve">поле доступно если выбран тип соединения мех-замок
+</t></text></comment><comment authorId="0" ref="AH3"><text><t xml:space="preserve">поле доступно если выбран тип соединения мех замок
+</t></text></comment><comment authorId="0" ref="AP3"><text><t xml:space="preserve">при нескольких видах прутка указывается количество штук прутка которое идет до следующего вида прутка на транспортере.</t></text></comment><comment authorId="0" ref="BV3"><text><t xml:space="preserve">поле доступно для заполнение если в поле кол-во ремней выбрано более 2х </t></text></comment><comment authorId="0" ref="CE3"><text><t xml:space="preserve">указывается сколько пропущено прутков для создания окна
+</t></text></comment><comment authorId="1" xr:uid="{0541957e-7dfe-46c5-a72e-9e3c1746a0f4}" ref="BL3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	отсеивает прутки не подходящие по ширине и кол-ву рядов на транспортере
+</t></text></comment><comment authorId="2" xr:uid="{08489667-5290-4851-8ff4-933490936cdd}" ref="CA3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	сумма всех прутков &quot;основного и дополнительных&quot; на транспортере должна равняться сумме прутков указанных вначале
+</t></text></comment><comment authorId="3" xr:uid="{09c87822-03e7-4776-90b9-bdf934aad49c}" ref="AL3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	поле активирует или блокирует соответствующие ячейки в разделе хлопушки
+</t></text></comment><comment authorId="4" xr:uid="{0a2e8a71-2433-4fe8-8a04-45c52dbed6f4}" ref="AO3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	отсеивает прутки не подходящие по ширине и кол-ву рядов на транспортере
+</t></text></comment><comment authorId="5" xr:uid="{2001255b-0d7c-4a3a-862c-dd491a94b9d5}" ref="AW3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	отсеивает прутки не подходящие по ширине и кол-ву рядов на транспортере
+</t></text></comment><comment authorId="6" xr:uid="{30c4004a-28b0-4dc0-ba1c-52c285567a8c}" ref="BW3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	если выбран тип центральной пластины, то общее кол-во прутков на транспортере * (на количество ремней - 2) = кол-во центральных пластин
+</t></text></comment><comment authorId="7" xr:uid="{46daa29e-4747-45cb-9c44-3e08311ec9c8}" ref="AM3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	поле активирует или блокирует соответствующие ячейки в разделе спец элементы
+</t></text></comment><comment authorId="8" xr:uid="{55844b03-2d58-45c6-acb5-283c10069c60}" ref="BE3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	отсеивает прутки не подходящие по ширине и кол-ву рядов на транспортере
+</t></text></comment><comment authorId="9" xr:uid="{55f08a5c-6758-4f45-981b-11a58bdf6a11}" ref="AF3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	отсеивает по ширине ремня указанному в марке ремня этот столбец и столбец центральных ремней
+</t></text></comment><comment authorId="10" xr:uid="{61c1bb63-5851-4e23-a97a-4f154d7e889c}" ref="X3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	отсеивает по виду ремня и шагу транспортера этот столбец и столбец центральных ремней
+</t></text></comment><comment authorId="11" xr:uid="{6a3536be-e49a-45af-9941-e1be70cc2aea}" ref="AK3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	поле активирует или блокирует соответствующие ячейки прутков по кол-ву типов
+</t></text></comment><comment authorId="12" xr:uid="{868febe2-3c35-4a54-bde1-9ba08525663d}" ref="BU3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	кол-во дополнительных пластин = сумма дополнительных пластин всех видов прутков х2
+</t></text></comment><comment authorId="13" xr:uid="{a2175d7e-85d4-4b51-a4a5-bce98225e9e8}" ref="BT3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	кол-во основных пластин = (общему кол-ву прутков на транспортере х2) - общее кол-во дополнительных пластин
+</t></text></comment><comment authorId="14" xr:uid="{ca50e05c-322e-4234-9f8c-ccce74237c64}" ref="AF3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	отсеивает этот столбец и столбец центральных ремней по ширине указанному в марке ремня
+</t></text></comment></commentList></comments>

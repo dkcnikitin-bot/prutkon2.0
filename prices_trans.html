@@ -1,0 +1,64 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пруткон | Прайсы конвейерные</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="with-hero-bg">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="top-header no-print">
+                <div class="view-header"><h2>Прайсы (Транспорт.)</h2></div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="window.manageCategoriesTrans()" title="Разделы"><i class="fa-solid fa-folder-tree"></i></button>
+                    <button class="btn btn-primary btn-sm" onclick="window.startAddWizardTrans()"><i class="fa-solid fa-plus-circle"></i> Добавить</button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.openExcelImportTrans()" title="Импорт Excel"><i class="fa-solid fa-file-excel"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.refreshPricesTrans()"><i class="fa-solid fa-rotate"></i></button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                <div id="price-tabs-trans" class="tabs-scrollable mb-4">
+                    <!-- Categories -->
+                </div>
+
+                <div class="panel glass-panel">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 id="price-title-trans" class="mb-0">Транспортерные ленты</h4>
+                        <div class="flex gap-2 items-center">
+                            <input type="text" id="price-search-input-trans" class="form-control" placeholder="Поиск в реестре..." style="width:250px;" oninput="window.renderPriceTableTrans()">
+                        </div>
+                    </div>
+                    
+                    <div id="dynamic-filters-trans" class="flex flex-wrap gap-2 mb-4 padding-15" style="background:rgba(0,0,0,0.2); border-radius:12px; border:1px solid var(--border-glass);">
+                        <!-- Filter inputs -->
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table" id="price-table-trans"></table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals follow same cockpit class... -->
+    <!-- (Wizard templates are reused from prices_trans.common) -->
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/firebase_config.js"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/handlers/prices_trans.js?v=19.0.0"></script>
+</body>
+</html>

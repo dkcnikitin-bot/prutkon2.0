@@ -1,0 +1,140 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ПРУТКОН | Реестр заказов</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..700;1,100..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="with-hero-bg">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="cockpit-header no-print">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-white text-black" style="font-size:2rem; margin:0">РЕЕСТР ЗАКАЗОВ</h2>
+                    <div id="bx-status-indicator" class="text-xs emerald">
+                         <i class="fa-solid fa-circle-check"></i> CRM-LINK ACTIVE
+                    </div>
+                </div>
+                <div class="flex gap-3 items-center">
+                    <input type="text" id="order-search" class="form-control" placeholder="Поиск по ID, клиенту..." style="width:300px;">
+                    <button class="btn btn-primary" onclick="window.location.href='calculator.html'"><i class="fa-solid fa-plus"></i> НОВЫЙ ЗАКАЗ</button>
+                    <button class="btn btn-secondary" onclick="window.syncOrdersWithBitrix()"><i class="fa-solid fa-sync"></i></button>
+                </div>
+            </header>
+
+            <div class="metrics-grid">
+                <div class="metric-box"><label>Оборот</label><div class="val" id="stats-total-sum">0 ₽</div></div>
+                <div class="metric-box" style="border-color:var(--gold-industrial)"><label>Уточнение</label><div class="val" id="stats-waiting">0</div></div>
+                <div class="metric-box" style="border-color:var(--emerald-neon)"><label>В работе</label><div class="val" id="stats-paid">0</div></div>
+                <div class="metric-box" style="border-color:var(--brand-red)"><label>CRM Связь</label><div class="val" id="stats-bitrix-sync">0%</div></div>
+            </div>
+
+            <section class="padding-40 flex-1 overflow-auto" style="padding: 0 40px;">
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>ДАТА</th>
+                                <th>КЛИЕНТ / КРАТКО</th>
+                                <th>ИТОГО</th>
+                                <th>СТАТУС</th>
+                                <th class="text-right">УПРАВЛЕНИЕ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: DEAL CARD -->
+    <div id="deal-card-modal" class="modal">
+        <div class="card-cockpit">
+            <header class="padding-25 flex justify-between items-center" style="padding: 25px 40px; border-bottom:1px solid var(--border-glass); background:rgba(226,31,38,0.05);">
+                <div class="flex items-center gap-4">
+                    <div id="card-order-id" class="text-black brand-red" style="font-size:1.6rem; font-family:'JetBrains Mono';">ORD-000000</div>
+                    <span id="card-status-badge" class="bx-badge bx-initial">НОВЫЙ</span>
+                </div>
+                <div class="flex gap-3">
+                    <button class="btn btn-secondary btn-sm" onclick="window.syncSingleOrderWithBitrix(window.currentCardOrder.id)"><i class="fa-solid fa-sync"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('deal-card-modal').style.display='none'"><i class="fa-solid fa-times"></i></button>
+                </div>
+            </header>
+
+            <div class="flex flex-1 overflow-hidden">
+                <aside class="card-side">
+                    <div class="flex flex-col items-center mb-4">
+                        <div id="card-client-avatar" class="flex items-center justify-center text-white text-black" style="width:80px; height:80px; background:var(--brand-red); border-radius:50%; font-size:2rem; box-shadow:0 0 20px var(--brand-glow);">?</div>
+                        <h3 id="card-client-name" class="mt-3 mb-1 text-center">---</h3>
+                        <div id="card-client-phone" class="emerald text-xs" style="font-family:'JetBrains Mono';">---</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Изменить этап</label>
+                        <select id="card-status-select" class="form-control text-bold"></select>
+                    </div>
+
+                    <div id="approval-box" class="panel hidden" style="background:rgba(255,180,0,0.05); border-color:var(--brand-gold);">
+                        <h4 class="text-xs text-bold" style="color:var(--brand-gold); margin-bottom:15px; text-transform:uppercase;">Контроль руководства</h4>
+                        <button class="btn btn-success btn-sm w-100 mb-2" onclick="window.approvalSuccessAction()">В производство</button>
+                        <button class="btn btn-secondary btn-sm w-100" onclick="window.approvalRejectAction()">На доработку</button>
+                    </div>
+
+                    <label class="stat-label mt-4">Лента CRM (Bitrix24)</label>
+                    <div id="card-timeline-list" class="activity-feed" style="height:350px;"></div>
+                </aside>
+
+                <main class="card-main">
+                    <div class="flex justify-between items-end border-bottom pb-4" style="border-bottom:1px solid var(--border-glass); padding-bottom:30px;">
+                        <div>
+                            <div id="card-order-date" class="text-xs text-muted mb-2">---</div>
+                            <div id="card-total-sum" class="text-black" style="font-size:3.5rem; font-family:'JetBrains Mono';">0 ₽</div>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <div id="edit-lock-msg" class="text-xs text-bold brand-gold hidden mb-2"><i class="fa-solid fa-lock"></i> ЗАКАЗ ЗАБЛОКИРОВАН</div>
+                            <button id="edit-order-btn" class="btn btn-primary" onclick="window.editCurrentOrder()"><i class="fa-solid fa-edit"></i> ИЗМЕНИТЬ ЗАКАЗ</button>
+                        </div>
+                    </div>
+
+                    <div id="card-status-stepper" class="flex gap-4"></div>
+
+                    <div class="grid grid-2 gap-4 flex-1 overflow-hidden">
+                        <div class="flex flex-col overflow-hidden">
+                            <label class="stat-label">Состав спецификации</label>
+                            <div id="card-items-container" class="flex-1 panel" style="padding:0; overflow-y:auto; background:rgba(0,0,0,0.2);"></div>
+                        </div>
+                        <div class="flex flex-col gap-4">
+                            <div class="flex-1 flex flex-col overflow-hidden">
+                                <label class="stat-label">Аудит ERP</label>
+                                <div id="card-audit-list" class="flex-1 panel" style="background:rgba(0,0,0,0.3); overflow-y:auto;"></div>
+                            </div>
+                            <div class="panel" style="height:140px; padding:15px; display:flex; flex-direction:column; gap:10px;">
+                                <textarea id="card-comment-input" class="form-control" style="flex:1; border:none; background:transparent; padding:0; resize:none;" placeholder="Примечание в CRM..."></textarea>
+                                <button class="btn btn-secondary btn-sm" onclick="window.sendCardComment()">ОТПРАВИТЬ</button>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase Cloud & Core -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/core/supabase_config.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/handlers/warehouse.js?v=19.0.0"></script>
+    <script src="js/utils/bitrix.js?v=19.0.0"></script>
+    <script src="js/handlers/orders.js?v=19.0.0"></script>
+</body>
+</html>

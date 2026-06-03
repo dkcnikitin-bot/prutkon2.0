@@ -1,0 +1,368 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пруткон | Единый реестр моделей</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="with-hero-bg">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="top-header no-print">
+                <div class="view-header"><h2>Единый реестр моделей</h2></div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="window.showDuplicateFinder()" title="Поиск дубликатов"><i class="fa-solid fa-clone emerald"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.cleanupEmptyCatalogRows()" title="Очистка"><i class="fa-solid fa-broom"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.manageCatalogCategories()" title="Разделы"><i class="fa-solid fa-folder-tree"></i></button>
+                    <button class="btn btn-primary btn-sm" onclick="window.startCatalogAddWizard()"><i class="fa-solid fa-plus-circle"></i> Добавить заготовку</button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.openCatalogExcelImport()" title="Импорт"><i class="fa-solid fa-file-excel"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.refreshCatalog()"><i class="fa-solid fa-rotate"></i></button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                <div id="catalog-tabs" class="tabs-scrollable mb-4">
+                    <!-- Categories -->
+                </div>
+
+                <div class="panel glass-panel">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 id="catalog-title" class="mb-0">Каталог моделей техники</h4>
+                        <div class="flex gap-2 items-center">
+                            <button id="cat-mass-delete-btn" class="btn btn-danger btn-sm hidden" onclick="window.massDeleteCatalogItems()">Удалить выбранные</button>
+                            <input type="text" id="catalog-search-input" class="form-control" placeholder="Поиск по артикулу..." style="width:250px;" oninput="window.renderCatalogTable()">
+                        </div>
+                    </div>
+
+                    <div id="dynamic-cat-filters" class="flex flex-wrap gap-2 mb-4 padding-15" style="background:rgba(0,0,0,0.2); border-radius:12px; border:1px solid var(--border-glass);">
+                        <!-- Filter inputs -->
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table" id="catalog-table"></table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- WIZARD: EXCEL IMPORT -->
+    <div id="catalog-excel-modal" class="modal">
+        <div class="card-cockpit" style="max-width:1100px; height:auto; max-height:95vh;">
+            <header class="padding-25 flex justify-between items-center" style="border-bottom:1px solid var(--border-glass); background:rgba(255,255,255,0.02);">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center justify-center brand-red-bg" style="width:50px; height:50px; border-radius:12px; background:rgba(226,31,38,0.1); border:1px solid var(--brand-red-dim);">
+                        <i class="fa-solid fa-file-import text-lg brand-red"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">Мастер импорта справочника</h3>
+                        <div id="cat-excel-wizard-subtitle" class="text-xs text-muted text-bold mt-1">ОБРАБОТКА ДАННЫХ...</div>
+                    </div>
+                </div>
+                <button class="action-btn" onclick="document.getElementById('catalog-excel-modal').classList.remove('active')"><i class="fa-solid fa-times"></i></button>
+            </header>
+
+            <div class="padding-40 flex-1 overflow-auto">
+                <div class="wiz-stepper mb-5" id="cat-excel-wizard-steps">
+                    <div class="wiz-step active" data-step="1"><div class="wiz-dot">1</div><div class="wiz-label">Источник</div></div>
+                    <div class="wiz-step" data-step="2"><div class="wiz-dot">2</div><div class="wiz-label">Разметка</div></div>
+                    <div class="wiz-step" data-step="3"><div class="wiz-dot">3</div><div class="wiz-label">Анализ</div></div>
+                    <div class="wiz-step" data-step="4"><div class="wiz-dot">4</div><div class="wiz-label">Импорт</div></div>
+                </div>
+
+                <div id="cat-excel-wiz-1" class="wiz-content-cat active">
+                    <div style="max-width:600px; margin:0 auto;">
+                        <div class="drop-zone flex flex-col items-center justify-center" onclick="document.getElementById('cat-excel-input').click()" style="border:2px dashed var(--border-glass); padding:80px 40px; border-radius:24px; background:rgba(255,255,255,0.01); cursor:pointer;">
+                            <i class="fa-solid fa-file-excel brand-red mb-4" style="font-size:4rem;"></i>
+                            <h4 class="mb-2">Выберите Excel файл</h4>
+                            <p class="neutral text-sm">Перетащите файл сюда или нажмите для выбора</p>
+                            <input type="file" id="cat-excel-input" class="hidden" accept=".xlsx, .xls" onchange="window.handleCatalogExcelFile(event)">
+                        </div>
+                        <div class="panel mt-4">
+                            <label class="stat-label">Целевой раздел импорта</label>
+                            <select id="cat-excel-target-category" class="form-control text-bold"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="cat-excel-wiz-2" class="wiz-content-cat hidden">
+                    <div class="grid" style="grid-template-columns: 300px 1fr; gap:40px;">
+                        <aside class="flex flex-col gap-4">
+                            <div class="panel" style="background:rgba(226,31,38,0.03);">
+                                <label class="stat-label">Лист Excel</label>
+                                <select id="cat-excel-sheet-select" class="form-control" onchange="window.selectCatalogExcelSheet(this.value)"></select>
+                            </div>
+                            <div class="panel flex-1">
+                                <h5 class="text-xs text-bold mb-3"><i class="fa-solid fa-tasks"></i> Сводка маппинга</h5>
+                                <div id="cat-mapping-summary" class="text-xs"></div>
+                            </div>
+                        </aside>
+                        <main>
+                            <h4 class="mb-4">Привязка колонок к атрибутам</h4>
+                            <div id="catalog-mappings-container" class="grid grid-3 gap-3"></div>
+                        </main>
+                    </div>
+                </div>
+
+                <!-- Wiz 3 & 4 follow similar logic... keeping them consistent -->
+                <div id="cat-excel-wiz-3" class="wiz-content-cat hidden">
+                    <div class="panel amber-bg" style="border-left:4px solid var(--brand-gold); background:rgba(255,180,0,0.05);">
+                        <h4 class="brand-gold mb-1">Предварительный просмотр</h4>
+                        <p class="text-sm neutral">Проверьте корректность распознавания первых 5 строк данных.</p>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table" id="catalog-excel-preview-table"></table>
+                    </div>
+                </div>
+
+                <div id="cat-excel-wiz-4" class="wiz-content-cat hidden flex flex-col items-center justify-center text-center padding-40">
+                    <div id="cat-wiz-progress-active" class="w-100">
+                        <h2 id="cat-wiz-status-title" class="mb-4">Выполняется импорт записей...</h2>
+                        <div id="cat-wiz-processed-count" class="text-sm neutral mb-2">Подготовка...</div>
+                        <div style="height:12px; background:rgba(255,255,255,0.05); border-radius:20px; overflow:hidden; max-width:600px; margin:0 auto;">
+                            <div id="cat-excel-progress-bar" style="width:0%; height:100%; background:var(--brand-red); transition:width 0.3s;"></div>
+                        </div>
+                        <div id="cat-excel-progress-text" class="text-xs mt-2" style="opacity:0.6;">0%</div>
+                        <div id="cat-excel-log-container" style="max-height:150px; overflow-y:auto; text-align:left; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px; margin-top:20px; font-size:0.75rem; color:#aaa;"></div>
+                    </div>
+                    <div id="cat-wiz-progress-done" class="hidden">
+                        <i class="fa-solid fa-check-circle emerald mb-4" style="font-size:5rem;"></i>
+                        <h2 class="emerald mb-4">Импорт успешно завершен!</h2>
+                        <div id="cat-wiz-final-stats" class="mb-4 text-sm neutral"></div>
+                        <button class="btn btn-primary" onclick="document.getElementById('catalog-excel-modal').classList.remove('active'); location.reload();">Закрыть мастер</button>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="padding-25 flex justify-between items-center" style="border-top:1px solid var(--border-glass); background:rgba(0,0,0,0.2);">
+                <button id="btn-cat-wiz-prev" class="btn btn-secondary" style="visibility:hidden;" onclick="window.catExcelWizBack()"><i class="fa-solid fa-chevron-left"></i> Назад</button>
+                <button id="btn-cat-wiz-next" class="btn btn-primary" onclick="window.catExcelWizNext()">Далее <i class="fa-solid fa-chevron-right"></i></button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ITEM CARD MODAL -->
+    <div id="catalog-card-modal" class="modal">
+        <div class="card-cockpit" style="max-width:1000px; height:auto; max-height:92vh;">
+            <header class="padding-25 flex justify-between items-center" style="border-bottom:1px solid var(--border-glass); background:rgba(226,31,38,0.05);">
+                <h3 class="mb-0 brand-red"><i class="fa-solid fa-box-open" style="margin-right:10px;"></i> Карточка товара</h3>
+                <button class="action-btn" onclick="window.closeCatalogCard()"><i class="fa-solid fa-times"></i></button>
+            </header>
+            <div class="flex flex-1 overflow-hidden">
+                <aside class="card-side flex flex-col gap-4">
+                    <div style="aspect-ratio: 1/1; background:#000; border-radius:16px; border:1px solid var(--border-glass); overflow:hidden;">
+                        <img id="catalog-card-img" src="" style="width:100%; height:100%; object-fit:contain;">
+                    </div>
+                    <div class="form-group">
+                        <label>URL изображения</label>
+                        <input type="text" id="cc-photo" class="form-control text-xs">
+                    </div>
+                    <div class="flex-1 overflow-auto">
+                        <label class="stat-label mb-3">История изменений</label>
+                        <div id="cat-history-log" class="activity-feed text-xs"></div>
+                    </div>
+                </aside>
+                <main class="card-main">
+                    <input type="hidden" id="cc-id">
+                    <div class="grid grid-2 gap-4">
+                        <div class="form-group">
+                            <label>Артикул</label>
+                            <input type="text" id="cc-art" class="form-control text-bold brand-red">
+                        </div>
+                        <div class="form-group">
+                            <label>Категория / Раздел</label>
+                            <select id="cc-category" class="form-control text-bold"></select>
+                        </div>
+                    </div>
+                    <div class="form-group mb-4">
+                        <label>Наименование (Полное)</label>
+                        <input type="text" id="cc-name" class="form-control text-lg text-bold">
+                    </div>
+                    <div class="grid grid-2 gap-4 mb-4">
+                        <div class="form-group">
+                            <label>Производитель / Бренд</label>
+                            <input type="text" id="cc-brand" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Класс / Тэг</label>
+                            <input type="text" id="cc-type" class="form-control">
+                        </div>
+                    </div>
+                    <h5 class="stat-label border-bottom pb-2 mb-3">Технические спецификации</h5>
+                    <div id="catalog-card-extra" class="grid grid-2 gap-3"></div>
+                    <div class="mt-auto pt-4 flex justify-end gap-3" style="border-top:1px solid var(--border-glass);">
+                        <button class="btn btn-secondary" onclick="window.closeCatalogCard()">Отмена</button>
+                        <button class="btn btn-primary" onclick="window.saveCatalogCard()" style="padding:0 60px;">Сохранить изменения</button>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- WIZARD: CATALOG ADD MASTER -->
+    <div id="catalog-add-master-modal" class="modal">
+        <div class="card-cockpit" style="max-width:800px;">
+            <header class="padding-25 flex justify-between items-center" style="border-bottom:1px solid var(--border-glass); background:rgba(0,180,255,0.05);">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center justify-center" style="width:50px; height:50px; border-radius:12px; background:rgba(0,180,255,0.1); border:1px solid rgba(0,180,255,0.2);">
+                        <i class="fa-solid fa-plus-circle text-lg" style="color:#00b4ff;"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">Мастер добавления товара</h3>
+                        <div id="cat-add-wizard-subtitle" class="text-xs text-muted text-bold mt-1">Шаг 1: Базовая информация</div>
+                    </div>
+                </div>
+                <button class="action-btn" onclick="window.closeCatalogAddMaster()"><i class="fa-solid fa-times"></i></button>
+            </header>
+
+            <div class="padding-40 flex-1 overflow-auto">
+                <div class="wiz-stepper mb-5" id="cat-add-wizard-steps">
+                    <div class="wiz-step active" data-step="1"><div class="wiz-dot">1</div><div class="wiz-label">Основа</div></div>
+                    <div class="wiz-step" data-step="2"><div class="wiz-dot">2</div><div class="wiz-label">Параметры</div></div>
+                    <div class="wiz-step" data-step="3"><div class="wiz-dot">3</div><div class="wiz-label">Проверка</div></div>
+                </div>
+
+                <div id="cat-add-wiz-1" class="wiz-content-add-cat active">
+                    <div class="grid grid-2 gap-4">
+                        <div class="form-group">
+                            <label>Артикул *</label>
+                            <input type="text" id="cat-add-art" class="form-control text-bold" placeholder="Введите уникальный артикул">
+                        </div>
+                        <div class="form-group">
+                            <label>Раздел справочника *</label>
+                            <select id="cat-add-category" class="form-control"></select>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Наименование *</label>
+                            <input type="text" id="cat-add-name" class="form-control" placeholder="Полное название детали">
+                        </div>
+                        <div class="form-group">
+                            <label>Производитель / Бренд</label>
+                            <input type="text" id="cat-add-brand" class="form-control" placeholder="Опционально">
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>Фото (URL или относительный путь)</label>
+                            <input type="text" id="cat-add-photo" class="form-control" placeholder="Ссылка на изображение">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="cat-add-wiz-2" class="wiz-content-add-cat hidden">
+                    <div id="cat-add-dynamic-fields" class="grid grid-2 gap-4">
+                        <!-- Dynamic fields generated here -->
+                    </div>
+                </div>
+
+                <div id="cat-add-wiz-3" class="wiz-content-add-cat hidden">
+                    <div class="panel" style="background:rgba(0,255,157,0.05); border:1px solid rgba(0,255,157,0.2);">
+                        <h4 class="emerald mb-3"><i class="fa-solid fa-check-circle"></i> Готово к добавлению</h4>
+                        <div class="grid grid-2 gap-4">
+                            <div>
+                                <div class="text-xs text-muted mb-1">Наименование</div>
+                                <div id="cat-sum-name" class="text-bold text-lg">---</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-muted mb-1">Артикул и Раздел</div>
+                                <div id="cat-sum-art" class="text-bold brand-red">---</div>
+                                <div id="cat-sum-cat" class="text-sm">---</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="padding-25 flex justify-between items-center" style="border-top:1px solid var(--border-glass); background:rgba(0,0,0,0.2);">
+                <button id="btn-cat-add-prev" class="btn btn-secondary" style="visibility:hidden;" onclick="window.catAddWizBack()"><i class="fa-solid fa-chevron-left"></i> Назад</button>
+                <button id="btn-cat-add-next" class="btn btn-primary" onclick="window.catAddWizNext()">Далее <i class="fa-solid fa-chevron-right"></i></button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div id="catalog-category-modal" class="modal">
+        <div class="glass-panel" style="width:600px; padding:35px;">
+            <h3 class="mb-4 brand-red"><i class="fa-solid fa-folder-tree"></i> Разделы справочника</h3>
+            <div id="catalog-categories-list" class="flex flex-col gap-2" style="max-height:400px; overflow-y:auto;"></div>
+            <div class="mt-4 flex justify-between items-center gap-3 pt-4 border-top">
+                <button class="btn btn-secondary" onclick="document.getElementById('catalog-category-modal').classList.remove('active')">Закрыть</button>
+                <button class="btn btn-primary" onclick="window.addNewCatalogCategory()">+ Создать раздел</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cleanup Modal -->
+    <div id="cleanup-modal" class="modal">
+        <div class="glass-panel text-center" style="width:600px; padding:45px;">
+            <i class="fa-solid fa-broom brand-red mb-4" style="font-size:4rem;"></i>
+            <h3>Оптимизация справочника</h3>
+            <p id="cleanup-desc" class="neutral text-sm mb-4"></p>
+            <div id="cleanup-step-1" class="flex justify-center gap-3">
+                <button class="btn btn-secondary" onclick="document.getElementById('cleanup-modal').classList.remove('active')">Отмена</button>
+                <button class="btn btn-primary" onclick="window.startFinalCatalogCleanup()">Запустить</button>
+            </div>
+            <div id="cleanup-step-2" style="display:none;">
+                <p id="cleanup-status-text" class="neutral text-sm mb-3">Подготовка...</p>
+                <div style="height:10px; background:rgba(255,255,255,0.05); border-radius:10px; overflow:hidden; margin-bottom:20px;">
+                    <div id="cleanup-progress-bar" style="width:0%; height:100%; background:var(--brand-red); transition:width 0.3s;"></div>
+                </div>
+                <div id="cleanup-log" style="max-height:200px; overflow-y:auto; text-align:left; font-size:0.7rem; opacity:0.6; background:rgba(0,0,0,0.3); padding:10px; border-radius:8px;"></div>
+            </div>
+            <div id="cleanup-step-3" style="display:none;">
+                <div id="cleanup-final-report" class="mb-4"></div>
+                <button class="btn btn-primary" onclick="document.getElementById('cleanup-modal').classList.remove('active')">Готово</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal for Catalog Items -->
+    <div id="cat-history-modal" class="modal">
+        <div class="glass-panel" style="width:600px; max-height:80vh; display:flex; flex-direction:column; padding:0;">
+            <header style="padding:25px; border-bottom:1px solid var(--border-glass); display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h3 class="mb-0 brand-red"><i class="fa-solid fa-clock-rotate-left" style="margin-right:10px;"></i> Журнал изменений</h3>
+                    <div id="cat-history-details" style="font-size:0.75rem; margin-top:5px; opacity:0.6;"></div>
+                </div>
+                <button class="action-btn" onclick="document.getElementById('cat-history-modal').classList.remove('active')"><i class="fa-solid fa-times"></i></button>
+            </header>
+            <div id="cat-history-list" style="flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+    </div>
+
+    <!-- Duplicate Finder Modal -->
+    <div id="duplicate-modal" class="modal">
+        <div class="glass-panel" style="width:700px; max-height:80vh; display:flex; flex-direction:column; padding:0;">
+            <header style="padding:25px; border-bottom:1px solid var(--border-glass); display:flex; justify-content:space-between; align-items:center;">
+                <h3 class="mb-0 brand-red"><i class="fa-solid fa-clone" style="margin-right:10px;"></i> Поиск дубликатов</h3>
+                <button class="action-btn" onclick="document.getElementById('duplicate-modal').classList.remove('active')"><i class="fa-solid fa-times"></i></button>
+            </header>
+            <div id="duplicate-content" style="flex:1; overflow-y:auto; padding:20px;"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/core/supabase_config.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/i18n.js?v=19.0.0"></script>
+    <script src="js/core/version_history.js?v=19.0.0"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/handlers/catalog_master/state.js?v=19.0.0"></script>
+    <script src="js/handlers/catalog_master/step1.js?v=19.0.0"></script>
+    <script src="js/handlers/catalog_master/step2.js?v=19.0.0"></script>
+    <script src="js/handlers/catalog_master/step3.js?v=19.0.0"></script>
+    <script src="js/handlers/catalog_master/step4.js?v=19.0.0"></script>
+    <script src="js/handlers/catalog_master/step5.js?v=19.0.0"></script>
+    <script src="js/handlers/catalog_master/specification.js?v=19.0.0"></script>
+    <script src="js/handlers/catalog_master/manager.js?v=19.0.0"></script>
+    <script src="js/handlers/catalog.js?v=19.0.0"></script>
+    <!-- modal-add-model placeholder for CatalogManager -->
+    <div id="modal-add-model" class="hidden" style="display:none;"></div>
+</body>
+</html>

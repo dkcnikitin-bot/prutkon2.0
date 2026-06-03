@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ПРУТКОН | Склад</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..700;1,100..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .production-pipeline { display: flex; align-items: stretch; justify-content: space-between; gap: 15px; overflow-x: auto; padding-bottom: 10px; }
+        .pipeline-stage { flex: 1; min-width: 220px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; }
+        .stage-header { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 0.9rem; color: #fff; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; display:flex; align-items:center; gap:8px;}
+        .stage-arrow { color: var(--brand-red); font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
+        .stage-body { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
+        .stage-desc { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 15px; line-height: 1.3; }
+
+        /* 1C style tabs navigation */
+        .wh-tabs-header {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 20px;
+            padding-bottom: 2px;
+        }
+        .wh-tab-btn {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: none;
+            color: var(--text-secondary);
+            padding: 10px 18px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .wh-tab-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.12);
+            border-bottom: none;
+        }
+        .wh-tab-btn.active {
+            color: #000;
+            background: var(--brand-gold);
+            border-color: var(--brand-gold);
+            text-shadow: 0 1px 0 rgba(255,255,255,0.2);
+            box-shadow: 0 -4px 10px rgba(255, 180, 0, 0.2);
+        }
+        .wh-tab-btn.active span {
+            background: #000 !important;
+            color: var(--brand-gold) !important;
+        }
+        .wh-tab-btn span {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 0.7rem;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-weight: 900;
+        }
+        .wh-tab-content {
+            display: none;
+        }
+        .wh-tab-content.active {
+            display: block;
+        }
+        .wh-tabs-content-wrapper {
+            flex: 1;
+            margin-bottom: 10px;
+        }
+        
+        /* 1C document style specific classes */
+        .one-c-badge-numeric {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body class="with-hero-bg">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="top-header no-print">
+                <div class="view-header"><h2>Склад и движение ТМЦ</h2></div>
+                <div class="header-actions">
+                    <button class="btn btn-danger btn-sm" onclick="window.resetWarehouseInventoryToZero()" title="Сбросить все остатки на складе в 0"><i class="fa-solid fa-trash-can"></i> Сбросить склад</button>
+                    <button class="btn btn-primary btn-sm" onclick="window.PrutkonFeatures.openMetalCard()"><i class="fa-solid fa-cube"></i> Материал (Карточка)</button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.refreshWarehouseData()"><i class="fa-solid fa-sync"></i> Обновить</button>
+                    <button class="btn btn-primary btn-sm" onclick="window.showNewOperationModal()"><i class="fa-solid fa-plus"></i> Новая операция</button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                <div class="module-shell">
+                    <div class="module-hero">
+                        <div class="module-hero-card">
+                            <h2 class="mb-2 text-white">Управление запасами и логика прихода на производство</h2>
+                            <p class="text-sm neutral">Отражение полного производственного цикла: материал &rarr; заготовка &rarr; пруток &rarr; спец-пруток.</p>
+                        </div>
+                        <div class="metric-strip" id="warehouse-metrics">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
+
+
+                    <div class="grid grid-2 gap-4 mb-4">
+                        <div class="panel glass-panel">
+                            <h3 class="mb-4 emerald"><i class="fa-solid fa-cubes"></i> Остатки на складе</h3>
+                            <div class="table-wrapper">
+                                <table class="data-table" id="inventory-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Номенклатура</th>
+                                            <th>Тип</th>
+                                            <th style="text-align: right;">Доступно</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Injected by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="panel glass-panel">
+                            <h3 class="mb-4 blue"><i class="fa-solid fa-list-ul"></i> Последние операции</h3>
+                            <div class="activity-feed" id="warehouse-log">
+                                <!-- Injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal for new operation -->
+    <div id="modal-new-operation" class="modal">
+        <div class="glass-panel" style="width: 950px; padding: 30px; position: relative; max-height: 95vh; display: flex; flex-direction: column;">
+            <button onclick="window.closeOperationModal()" style="position: absolute; right: 25px; top: 25px; background: none; border: none; color: #fff; font-size: 1.8rem; cursor: pointer; z-index: 10;">&times;</button>
+            
+            <div class="flex items-center gap-3 mb-4">
+                <h3 class="text-white mb-0" style="font-size:1.3rem;"><i class="fa-solid fa-file-invoice"></i> Регистрация складской операции</h3>
+                <span id="op-header-badge" class="badge"></span>
+            </div>
+
+            <!-- 1C Style Tab Header (Visible only for in_metal) -->
+            <div id="wh-tabs-header" class="wh-tabs-header" style="display: none;">
+                <button type="button" id="tab-btn-main" class="wh-tab-btn active" onclick="window.switchWhTab('main')">
+                    <i class="fa-solid fa-circle-info"></i> 1. Основные реквизиты
+                </button>
+                <button type="button" id="tab-btn-items" class="wh-tab-btn" onclick="window.switchWhTab('items')">
+                    <i class="fa-solid fa-list-ol"></i> 2. Спецификация (<span id="op-tab-items-count">0</span>)
+                </button>
+                <button type="button" id="tab-btn-delivery" class="wh-tab-btn" onclick="window.switchWhTab('delivery')">
+                    <i class="fa-solid fa-truck-ramp-box"></i> 3. Доставка и Себестоимость
+                </button>
+            </div>
+
+            <form id="warehouse-op-form" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 0;">
+                <div style="flex: 1; overflow-y: auto; padding-right: 15px; margin-bottom: 20px;">
+                    <!-- Top common fields for all operations -->
+                    <div class="grid grid-2 gap-4 mb-3">
+                        <div class="form-group">
+                            <label class="text-xs text-muted" style="text-transform: uppercase;">Тип операции</label>
+                            <select id="op-type" class="form-control" onchange="window.updateOperationForm()" style="border-color: var(--brand-red); border-width: 2px;">
+                                <optgroup label="Внешние поступления">
+                                    <option value="in_metal">1. Приход: Материал (от поставщика)</option>
+                                    <option value="in_belt">1. Приход: Лента (от поставщика)</option>
+                                </optgroup>
+                                <optgroup label="Внутреннее производство">
+                                    <option value="prod_belt_blank">2. Обрезка бортов (Лента -> Лента-Заготовка)</option>
+                                    <option value="prod_belt_strip">2. Нарезка полос (Лента-Заготовка -> Лента-Полоса)</option>
+                                    <option value="prod_blank">3. Изготовление: Заготовка (из материала)</option>
+                                    <option value="prod_straight">4. Изготовление: Пруток прямой (из заготовки)</option>
+                                    <option value="prod_double">4. Изготовление: Сдвоенный пруток (из заготовки)</option>
+                                    <option value="prod_bent">5. Изготовление: Гнутый пруток (из прямого)</option>
+                                    <option value="prod_rubber">5. Изготовление: Обрезиненный пруток (из прямого)</option>
+                                    <option value="prod_hedge">5. Изготовление: Ёжные/пальцевые прутки (из прямого)</option>
+                                    <option value="prod_bent_rubber">6. Изготовление: Гнутый обрезиненный (из гнутого)</option>
+                                </optgroup>
+                                <optgroup label="Корректировки">
+                                    <option value="write_off">Убыток: Списание / Брак</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="text-xs text-muted" style="text-transform: uppercase;">Место хранения (Склад)</label>
+                            <select id="op-destination" class="form-control">
+                                <option value="Основной склад">Основной склад</option>
+                                <option value="Цех 1">Цех 1</option>
+                                <option value="Цех 2">Цех 2</option>
+                                <option value="Уличная площадка">Уличная площадка</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tab content wrapper -->
+                    <div class="wh-tabs-content-wrapper">
+                        
+                        <!-- TAB 1: MAIN PARAMETERS -->
+                        <div id="wh-tab-main" class="wh-tab-content active">
+                            <div class="grid grid-2 gap-4">
+                                <div class="panel glass-panel mb-0" style="padding: 20px;">
+                                    <h4 class="text-sm text-white mb-3" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;"><i class="fa-solid fa-file-signature text-muted"></i> Реквизиты документа (1С)</h4>
+                                    <div class="form-group mb-2">
+                                        <label class="text-xs text-muted">Номер приходного ордера</label>
+                                        <input type="text" id="op-doc-num" class="form-control text-bold" placeholder="ПМ-00000" style="color: var(--brand-gold);">
+                                    </div>
+                                    <div class="form-group mb-2">
+                                        <label class="text-xs text-muted">Дата ордера</label>
+                                        <input type="datetime-local" id="op-doc-date" class="form-control">
+                                    </div>
+                                    <div class="form-group mb-2">
+                                        <label class="text-xs text-muted">Ответственный сотрудник</label>
+                                        <select id="op-responsible" class="form-control"></select>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; flex-direction: column; gap: 15px;">
+                                    <!-- Поставщик и накладная (УПД) -->
+                                    <div id="op-supplier-group" class="panel glass-panel mb-0" style="padding: 20px;">
+                                        <h4 class="text-sm text-white mb-3" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;"><i class="fa-solid fa-truck-ramp-box text-muted"></i> Поставщик и накладная (УПД)</h4>
+                                        <div class="form-group mb-2">
+                                            <label class="text-xs text-muted">Контрагент / Поставщик</label>
+                                            <div class="flex gap-2">
+                                                <input type="text" id="op-supplier" class="form-control font-bold" list="op-suppliers-list" placeholder="Выберите поставщика...">
+                                                <button type="button" class="btn btn-secondary text-bold" style="padding: 0 12px; height: 38px;" onclick="window.quickAddSupplier()" title="Добавить контрагента">+</button>
+                                            </div>
+                                        </div>
+                                        <div class="form-group mb-2">
+                                            <label class="text-xs text-muted">Договор / Контракт</label>
+                                            <input type="text" id="op-contract" class="form-control font-bold" placeholder="Д-000">
+                                        </div>
+                                        <div class="grid grid-2 gap-3">
+                                            <div class="form-group mb-0">
+                                                <label class="text-xs text-muted">№ Накладной / Счет-фактуры</label>
+                                                <input type="text" id="op-invoice-num" class="form-control text-bold" placeholder="СФ-000">
+                                            </div>
+                                            <div class="form-group mb-0">
+                                                <label class="text-xs text-muted">Дата накладной</label>
+                                                <input type="date" id="op-invoice-date" class="form-control">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Параметры расхода и производства -->
+                                    <div id="op-production-group" class="panel glass-panel mb-0" style="padding: 20px;">
+                                        <h4 class="text-sm text-white mb-3" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;"><i class="fa-solid fa-circle-info text-muted"></i> Параметры расхода и производства</h4>
+                                        
+                                        <!-- Source/Consume Group (for production) -->
+                                        <div id="op-source-group" style="display: none;" class="mb-3">
+                                            <label class="text-xs text-muted" style="text-transform: uppercase;">Расходный элемент (<span id="op-source-label">Материал</span>)</label>
+                                            
+                                            <!-- Raw Material Type Selector for Blank Production -->
+                                            <div id="op-blank-source-type-wrapper" style="display: none; margin-bottom: 10px;">
+                                                <label class="text-xs text-muted">Тип сырья для заготовки</label>
+                                                <select id="op-blank-source-type" class="form-control mb-2" onchange="window.onBlankSourceTypeChange()">
+                                                    <option value="metal">Металл (круглый прокат)</option>
+                                                    <option value="belt_strip">Лента-полоса (нарезная)</option>
+                                                </select>
+                                            </div>
+
+                                            <div id="op-source-select-wrapper" style="display: none; margin-bottom: 10px;">
+                                                <select id="op-source-item-select" class="form-control" onchange="window.updateSourceHint(); window.onSourceItemSelectChange();"></select>
+                                            </div>
+                                            <input type="text" id="op-source-qty" class="form-control" placeholder="Количество списания..." oninput="window.onSourceQtyInput()">
+                                            <div class="text-xs text-muted mt-2" id="op-source-hint">Остаток: 0</div>
+                                        </div>
+
+                                        <!-- Blank auto-calc helper -->
+                                        <div id="blank-calc-group" style="display: none; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+                                            <div class="flex justify-between items-center mb-3">
+                                                <h4 class="text-sm mb-0"><i class="fa-solid fa-calculator text-muted"></i> Помощник расчета</h4>
+                                                <label class="toggle-switch">
+                                                    <input type="checkbox" id="blank-calc-toggle" onchange="window.toggleBlankCalc()">
+                                                    <span class="slider round"></span>
+                                                    <span style="margin-left: 45px; font-size: 0.75rem; color: var(--text-muted);">Включить</span>
+                                                </label>
+                                            </div>
+                                            <div id="blank-calc-fields" style="display: none;">
+                                                <div class="form-group mb-2">
+                                                    <label class="text-xs text-muted">Металл из справочника</label>
+                                                    <select id="calc-metal-select" class="form-control" onchange="window.doBlankCalc()"></select>
+                                                </div>
+                                                <div class="form-group mb-2">
+                                                    <label class="text-xs text-muted">Длина 1 заготовки (мм)</label>
+                                                    <input type="text" id="calc-blank-len" class="form-control" placeholder="Например: 1500" oninput="window.doBlankCalc()">
+                                                </div>
+                                                <div class="text-xs p-2 rounded mt-2" style="background: rgba(0,0,0,0.3); color: var(--brand-gold); border: 1px dashed rgba(255,180,0,0.2);" id="calc-blank-result">
+                                                    Заполните поля для расчета.
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Belt Trimming (Обрезка бортов) Group -->
+                                        <div id="prod-belt-blank-fields" style="display: none; background: rgba(0, 147, 255, 0.02); padding: 15px; border-radius: 8px; border: 1px solid rgba(0, 147, 255, 0.15); margin-bottom: 15px;">
+                                            <h4 class="text-sm blue mb-3"><i class="fa-solid fa-scissors"></i> Параметры обрезки бортов</h4>
+                                            <div class="grid grid-3 gap-3">
+                                                <div>
+                                                    <label class="text-xs" style="color:var(--text-muted); text-transform:uppercase; font-weight:700;">Обрезка с края (мм)</label>
+                                                    <input type="text" id="op-belt-trim-margin" class="form-control font-bold" value="25" oninput="window.calculateBeltTrimming()">
+                                                </div>
+                                                <div>
+                                                    <label class="text-xs" style="color:var(--text-muted); text-transform:uppercase; font-weight:700;">Ширина заготовки (мм)</label>
+                                                    <input type="text" id="op-belt-trim-target-width" class="form-control font-bold text-white" readonly>
+                                                </div>
+                                                <div>
+                                                    <label class="text-xs" style="color:var(--text-muted); text-transform:uppercase; font-weight:700;">Новая цена за м² (без НДС)</label>
+                                                    <input type="text" id="op-belt-trim-target-price-m2" class="form-control font-bold" readonly style="color:var(--brand-gold);">
+                                                </div>
+                                            </div>
+                                            <!-- Animated Live CSS Preview Widget! -->
+                                            <div class="mt-3" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; border: 1px dashed rgba(0, 147, 255, 0.25);">
+                                                <div class="text-xs text-muted mb-2 text-center" style="text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Интерактивная схема обрезки</div>
+                                                <div id="trim-preview-container" style="position: relative; height: 40px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: stretch;">
+                                                    <div id="trim-preview-left" style="width: 2.6%; background: rgba(226,31,38,0.25); border-right: 1px dashed var(--brand-red); transition: width 0.3s ease;"></div>
+                                                    <div style="flex: 1; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 0.8rem; font-weight: bold; text-shadow: 0 1px 3px rgba(0,0,0,0.8);" id="trim-preview-center">Заготовка</div>
+                                                    <div id="trim-preview-right" style="width: 2.6%; background: rgba(226,31,38,0.25); border-left: 1px dashed var(--brand-red); transition: width 0.3s ease;"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Belt Slicing (Нарезка полос) Group -->
+                                        <div id="prod-belt-strip-fields" style="display: none; background: rgba(0, 255, 157, 0.02); padding: 15px; border-radius: 8px; border: 1px solid rgba(0, 255, 157, 0.15); margin-bottom: 15px;">
+                                            <h4 class="text-sm emerald mb-3"><i class="fa-solid fa-grip-lines-vertical"></i> Параметры нарезки полос</h4>
+                                            <div class="grid grid-3 gap-3">
+                                                <div>
+                                                    <label class="text-xs" style="color:var(--text-muted); text-transform:uppercase; font-weight:700;">Ширина полосы (мм)</label>
+                                                    <input type="text" id="op-belt-strip-width" class="form-control font-bold" placeholder="22" oninput="window.calculateBeltSlicing()">
+                                                </div>
+                                                <div>
+                                                    <label class="text-xs" style="color:var(--text-muted); text-transform:uppercase; font-weight:700;">Кол-во полос (шт)</label>
+                                                    <input type="text" id="op-belt-strip-count" class="form-control font-bold text-white" readonly>
+                                                </div>
+                                                <div>
+                                                    <label class="text-xs" style="color:var(--text-muted); text-transform:uppercase; font-weight:700;">Цена полосы за м.п. (без НДС)</label>
+                                                    <input type="text" id="op-belt-strip-price-mp" class="form-control font-bold" readonly style="color:var(--brand-gold);">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Writeoff Group -->
+                                        <div id="writeoff-fields" style="display: none; background:rgba(226,31,38,0.02); padding:15px; border-radius:8px; border:1px solid rgba(226,31,38,0.15);">
+                                            <div class="form-group mb-0">
+                                                <label class="text-xs brand-red">Номенклатура для списания</label>
+                                                <select id="op-writeoff-item" class="form-control" onchange="window.updateWriteoffHint()">
+                                                    <option value="metal">Металл</option>
+                                                    <option value="belt">Лента</option>
+                                                    <option value="blank">Заготовка</option>
+                                                    <option value="straight">Пруток прямой</option>
+                                                    <option value="double">Сдвоенный пруток</option>
+                                                    <option value="bent">Гнутый пруток</option>
+                                                    <option value="rubberized">Обрезиненный пруток</option>
+                                                    <option value="hedge">Ёжные прутки</option>
+                                                </select>
+                                                <div class="text-xs text-muted mt-2" id="op-writeoff-hint">Остаток: 0</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Belt Specs Group -->
+                                        <div id="belt-specs-group" style="display: none; background: rgba(0,147,255,0.02); padding: 15px; border-radius: 8px; border: 1px solid rgba(0,147,255,0.12);">
+                                            <h4 class="text-sm blue mb-3" style="margin-top:0;"><i class="fa-solid fa-tape"></i> Спецификация партии ленты</h4>
+                                            <div class="grid grid-2 gap-3 mb-3">
+                                                <div>
+                                                    <label class="text-xs" style="color:var(--text-muted); text-transform:uppercase; font-weight:700;">Рулонов (шт)</label>
+                                                    <input type="text" id="op-belt-rolls" class="form-control font-bold" placeholder="3">
+                                                </div>
+                                                <div>
+                                                    <label class="text-xs" style="color:var(--text-muted); text-transform:uppercase; font-weight:700;">Общий вес (кг)</label>
+                                                    <input type="text" id="op-belt-weight" class="form-control font-bold" placeholder="10000" oninput="window.onOperationFinancialCalc('qty')">
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-3 gap-3">
+                                                <div>
+                                                    <label class="text-xs" style="color:var(--text-muted); text-transform:uppercase; font-weight:700;">Диаметр (мм)</label>
+                                                    <input type="text" id="op-belt-diameter" class="form-control" placeholder="1500">
+                                                </div>
+                                                <div>
+                                                    <label class="text-xs" style="color:var(--text-muted); text-transform:uppercase; font-weight:700;">Ширина (мм)</label>
+                                                    <input type="text" id="op-belt-width" class="form-control" placeholder="800">
+                                                </div>
+                                                <div>
+                                                    <label class="text-xs" style="color:var(--text-muted); text-transform:uppercase; font-weight:700;">Общ. длина (м)</label>
+                                                    <input type="text" id="op-belt-length" class="form-control" placeholder="200">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="wh-standard-fields-wrapper" style="display: block; margin-top: 15px;">
+                                <div class="panel glass-panel mb-0" style="padding: 20px;">
+                                    <h4 id="op-target-label" class="text-sm text-white mb-3" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px;"><i class="fa-solid fa-cube text-muted"></i> Параметры номенклатуры и расценок</h4>
+                                    <div class="grid grid-3 gap-3">
+                                        <div class="form-group mb-0" id="op-qty-group">
+                                            <label class="text-xs text-muted">Количество / Вес (кг)</label>
+                                            <input type="text" id="op-qty" class="form-control text-bold wh-flat-qty" style="color:#fff;" placeholder="Количество..." oninput="window.onOperationFinancialCalc('qty')">
+                                        </div>
+                                        <div class="form-group mb-0">
+                                            <label class="text-xs text-muted">Цена за ед. (без НДС)</label>
+                                            <input type="text" id="op-unit-price" class="form-control wh-flat-price" placeholder="0.00" oninput="window.onOperationFinancialCalc('price')">
+                                        </div>
+                                        <div class="form-group mb-0">
+                                            <label class="text-xs text-muted">Сумма (без НДС)</label>
+                                            <input type="text" id="op-sum-no-vat" class="form-control text-bold wh-flat-sum" style="color:var(--brand-gold);" oninput="window.onOperationFinancialCalc('sum_no_vat')">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: SPECIFICATION (BATCH LIST FOR METAL) -->
+                        <div id="wh-tab-items" class="wh-tab-content">
+                            <div id="incoming-fields" style="display: none; flex-direction: column;">
+                                <!-- Metal specifications input card -->
+                                <div id="incoming-metal-fields" style="display: none; background:rgba(0,200,83,0.02); padding:20px; border-radius:12px; border:1px solid rgba(0,200,83,0.12); margin-bottom:15px;">
+                                    <h5 class="text-sm emerald mb-3" style="border-bottom: 1px solid rgba(0,200,83,0.1); padding-bottom: 6px;"><i class="fa-solid fa-cube text-muted"></i> 1. Добавление позиции материала в спецификацию</h5>
+                                    <div class="form-group">
+                                        <label class="text-xs text-muted" style="text-transform:uppercase; font-weight:700;">Выберите материал из справочника</label>
+                                        <div class="flex gap-2">
+                                            <select id="op-metal-select" class="form-control" onchange="window.onMetalSelectChange()">
+                                                <option value="">-- Поиск по марке и размеру/диаметру --</option>
+                                            </select>
+                                            <button type="button" class="btn btn-secondary text-bold" style="padding: 0 12px; height: 38px;" onclick="window.quickAddMetal()" title="Добавить новый материал в справочник">+</button>
+                                            <button type="button" id="btn-edit-metal" class="btn btn-secondary text-bold" style="padding: 0 12px; height: 38px;" onclick="window.editSelectedMetal()" title="Редактировать выбранный материал" disabled><i class="fa-solid fa-pencil"></i></button>
+                                            <button type="button" id="btn-delete-metal" class="btn btn-secondary text-bold" style="padding: 0 12px; height: 38px; color: var(--brand-red);" onclick="window.deleteSelectedMetal()" title="Удалить выбранный материал из справочника" disabled><i class="fa-solid fa-trash-can"></i></button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-4 gap-3 mt-3">
+                                        <div class="form-group mb-0"><label class="text-xs text-muted">Диаметр (мм)</label><input type="text" id="op-diameter" class="form-control font-bold text-white" oninput="window.onSpecDiameterInput()"></div>
+                                        <div class="form-group mb-0"><label class="text-xs text-muted">Марка стали</label><input type="text" id="op-steel-type" class="form-control font-bold text-white"></div>
+                                        <div class="form-group mb-0"><label class="text-xs text-muted">Вес 1 м.п (кг)</label><input type="text" id="op-weight-per-m" class="form-control one-c-badge-numeric text-white" oninput="window.onMetalManualCalc()"></div>
+                                        <div class="form-group mb-0"><label class="text-xs text-muted">Плавка / Сертификат</label><input type="text" id="op-cert-num" class="form-control text-bold" placeholder="Пл-00000" style="color:var(--brand-gold);"></div>
+                                    </div>
+
+                                    <div class="grid grid-4 gap-3 mt-3">
+                                        <div class="form-group mb-0"><label class="text-xs emerald">Прутков (ФАКТ, шт)</label><input type="text" id="op-bars-count" class="form-control text-bold" placeholder="0" oninput="window.onMetalManualCalc()"></div>
+                                        <div class="form-group mb-0"><label class="text-xs emerald">Длина прутка (мм)</label><input type="text" id="op-bar-len" class="form-control text-bold" value="6000" oninput="window.onMetalManualCalc()"></div>
+                                        <div class="form-group mb-0">
+                                            <label class="text-xs emerald" style="font-weight:900;">ВЕС (КГ)</label>
+                                            <input type="text" id="op-qty" class="form-control" style="border-color:var(--emerald-neon); font-weight:900; color:var(--emerald-neon); font-size:1rem; background:rgba(0,200,83,0.06);" oninput="window.onSpecFinancialCalc('qty')">
+                                        </div>
+                                        <div class="form-group mb-0">
+                                            <label class="text-xs brand-red">ВЕС (ТОНН)</label>
+                                            <input type="text" id="op-qty-tonne" class="form-control font-bold" placeholder="0.000" oninput="window.onSpecFinancialCalc('qty_tonne')">
+                                        </div>
+                                    </div>
+
+                                    <!-- Финансовые поля для конкретной добавляемой позиции с НДС -->
+                                    <div class="panel glass-panel mt-3 mb-0" style="padding: 15px; border: 1px dashed rgba(255, 180, 0, 0.2); background: rgba(255, 180, 0, 0.01); border-radius: 12px;">
+                                        <h5 class="text-xs brand-gold mb-3" style="border-bottom: 1px solid rgba(255,180,0,0.1); padding-bottom: 6px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;"><i class="fa-solid fa-coins"></i> Расчет стоимости позиции</h5>
+                                        
+                                        <div class="grid grid-3 gap-3 mb-3">
+                                            <div class="form-group mb-0">
+                                                <label class="text-xs brand-red" style="font-weight:700;">Цена за Тонну (БЕЗ НДС)</label>
+                                                <input type="text" id="op-spec-price-tonne" class="form-control one-c-badge-numeric" placeholder="0.00" oninput="window.onSpecFinancialCalc('price_tonne')">
+                                            </div>
+                                            <div class="form-group mb-0">
+                                                <label class="text-xs emerald" style="font-weight:700;">Цена за 1 кг (БЕЗ НДС)</label>
+                                                <input type="text" id="op-spec-unit-price" class="form-control one-c-badge-numeric" placeholder="0.00" oninput="window.onSpecFinancialCalc('price')">
+                                            </div>
+                                            <div class="form-group mb-0">
+                                                <label class="text-xs text-muted" style="font-weight:700;">Сумма позиции (БЕЗ НДС)</label>
+                                                <input type="text" id="op-spec-sum-no-vat" class="form-control one-c-badge-numeric text-bold" style="color:var(--brand-gold);" oninput="window.onSpecFinancialCalc('sum_no_vat')">
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-3 gap-3">
+                                            <div class="form-group mb-0">
+                                                <label class="text-xs brand-red" style="font-weight:700; color: #ff8a80;">Цена за Тонну (С НДС)</label>
+                                                <input type="text" id="op-spec-price-tonne-vat" class="form-control one-c-badge-numeric" placeholder="0.00" oninput="window.onSpecFinancialCalc('price_tonne_vat')">
+                                            </div>
+                                            <div class="form-group mb-0">
+                                                <label class="text-xs emerald" style="font-weight:700; color: #b9f6ca;">Цена за 1 кг (С НДС)</label>
+                                                <input type="text" id="op-spec-unit-price-vat" class="form-control one-c-badge-numeric" placeholder="0.00" oninput="window.onSpecFinancialCalc('price_vat')">
+                                            </div>
+                                            <div class="form-group mb-0">
+                                                <label class="text-xs text-muted" style="font-weight:700; color: var(--emerald-neon);">Сумма позиции (С НДС)</label>
+                                                <input type="text" id="op-spec-sum-vat" class="form-control one-c-badge-numeric text-bold" style="color:var(--emerald-neon);" oninput="window.onSpecFinancialCalc('sum_vat')">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Технические параметры (Твердость) -->
+                                    <div class="grid grid-2 gap-3 mt-3" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px dashed rgba(0,200,83,0.15);">
+                                        <div class="form-group mb-0"><label class="text-xs" style="color:var(--brand-gold)">Твердость (по Спецификации)</label><input type="text" id="op-hardness-spec" class="form-control" placeholder="например: 38-42 HRC"></div>
+                                        <div class="form-group mb-0"><label class="text-xs" style="color:var(--emerald-neon)">Твердость (ФАКТИЧЕСКИ)</label><input type="text" id="op-hardness-fact" class="form-control" placeholder="например: 40 HRC"></div>
+                                    </div>
+                                    
+                                    <div class="mt-3 text-right">
+                                        <button type="button" class="btn btn-sm" style="background: var(--emerald-neon); color: #000; font-weight: 700; height:36px;" onclick="window.addToBatch()">
+                                            <i class="fa-solid fa-plus"></i> Добавить позицию
+                                        </button>
+                                    </div>
+                                </div>
+
+                                 <!-- Belt specifications input card -->
+                                 <div id="incoming-belt-fields" style="display: none; background:rgba(0,147,255,0.02); padding:20px; border-radius:12px; border:1px solid rgba(0,147,255,0.12); margin-bottom:15px;">
+                                     <h5 class="text-sm blue mb-3" style="border-bottom: 1px solid rgba(0,147,255,0.1); padding-bottom: 6px;"><i class="fa-solid fa-tape text-muted"></i> 1. Добавление позиции ленты в спецификацию</h5>
+                                     
+                                     <div class="form-group mb-3">
+                                         <label class="text-xs text-muted" style="text-transform:uppercase; font-weight:700;">Выберите ленту из справочника</label>
+                                         <div class="flex gap-2">
+                                             <select id="op-belt-select" class="form-control" onchange="window.onBeltSelectChange()">
+                                                 <option value="">-- Выберите ленту из справочника --</option>
+                                             </select>
+                                             <button type="button" class="btn btn-secondary text-bold" style="padding: 0 12px; height: 38px; background: rgba(0,147,255,0.15); border-color: rgba(0,147,255,0.3);" onclick="window.quickAddBelt()" title="Добавить новую ленту в справочник">+</button>
+                                             <button type="button" id="btn-edit-belt" class="btn btn-secondary text-bold" style="padding: 0 12px; height: 38px;" onclick="window.editSelectedBelt()" title="Редактировать выбранную ленту" disabled><i class="fa-solid fa-pencil"></i></button>
+                                             <button type="button" id="btn-delete-belt" class="btn btn-secondary text-bold" style="padding: 0 12px; height: 38px; color: var(--brand-red);" onclick="window.deleteSelectedBelt()" title="Удалить выбранную ленту из справочника" disabled><i class="fa-solid fa-trash-can"></i></button>
+                                         </div>
+                                     </div>
+
+                                     <div class="grid grid-4 gap-3">
+                                         <div class="form-group mb-0"><label class="text-xs text-muted">Ширина (мм)</label><input type="text" id="op-belt-spec-width" class="form-control font-bold text-white" placeholder="940" oninput="window.onBeltSpecCalc('width')"></div>
+                                         <div class="form-group mb-0"><label class="text-xs text-muted">Прочность на разрыв (EP)</label><input type="text" id="op-belt-spec-strength" class="form-control font-bold text-white" placeholder="1200" oninput="window.onBeltSpecInput()"></div>
+                                         <div class="form-group mb-0"><label class="text-xs text-muted">Кол-во кордов</label><input type="text" id="op-belt-spec-cords" class="form-control font-bold text-white" placeholder="3" oninput="window.onBeltSpecInput()"></div>
+                                         <div class="form-group mb-0"><label class="text-xs text-muted">Обкладка верх (мм)</label><input type="text" id="op-belt-spec-cover-top" class="form-control font-bold text-white" placeholder="6" oninput="window.onBeltSpecInput()"></div>
+                                     </div>
+
+                                     <div class="grid grid-4 gap-3 mt-3">
+                                         <div class="form-group mb-0"><label class="text-xs text-muted">Обкладка низ (мм)</label><input type="text" id="op-belt-spec-cover-bottom" class="form-control font-bold text-white" placeholder="2" oninput="window.onBeltSpecInput()"></div>
+                                         <div class="form-group mb-0"><label class="text-xs text-muted">Класс резины / Тип</label><input type="text" id="op-belt-spec-class" class="form-control font-bold text-white" placeholder="W" oninput="window.onBeltSpecInput()"></div>
+                                         <div class="form-group mb-0"><label class="text-xs text-muted">ГОСТ / ТУ</label><input type="text" id="op-belt-spec-tu" class="form-control text-white" placeholder="ТУ 22.19.40.110-012-48991997-2019" oninput="window.onBeltSpecInput()"></div>
+                                         <div class="form-group mb-0"><label class="text-xs text-muted">Плавка / Сертификат</label><input type="text" id="op-belt-spec-cert" class="form-control text-bold" placeholder="2602-293" style="color:var(--brand-gold);" oninput="window.onBeltSpecInput()"></div>
+                                     </div>
+
+                                      <div class="grid gap-3 mt-3" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;">
+                                          <div class="form-group mb-0"><label class="text-xs text-muted">Толщина ПЛАН (мм)</label><input type="text" id="op-belt-spec-thickness-plan" class="form-control text-white" placeholder="12"></div>
+                                          <div class="form-group mb-0"><label class="text-xs text-muted">Толщина ФАКТ (мм)</label><input type="text" id="op-belt-spec-thickness-fact" class="form-control text-white" placeholder="12"></div>
+                                          <div class="form-group mb-0"><label class="text-xs blue">&#1055;&#1083;&#1086;&#1097;&#1072;&#1076;&#1100; (&#1084;2)</label><input type="text" id="op-belt-spec-area-m2" class="form-control font-bold text-white" placeholder="0.00" oninput="window.onBeltSpecCalc('area')"></div>
+                                         <div class="form-group mb-0"><label class="text-xs blue">Длина рулона (м.п.)</label><input type="text" id="op-belt-spec-len" class="form-control font-bold text-white" placeholder="0.00" oninput="window.onBeltSpecCalc('qty')"></div>
+                                         <div class="form-group mb-0"><label class="text-xs text-muted">Вес рулона (кг)</label><input type="text" id="op-belt-spec-weight" class="form-control text-white" placeholder="0" oninput="window.onBeltSpecCalc('weight')"></div>
+                                         <div class="form-group mb-0"><label class="text-xs text-muted">Вес 1 м2 (справочно, кг)</label><input type="text" id="op-belt-spec-wpm2" class="form-control one-c-badge-numeric text-white" readonly placeholder="0.00"></div>
+                                     </div>
+
+                                     <!-- Финансовые поля для конкретной добавляемой позиции с НДС -->
+                                     <div class="panel glass-panel mt-3 mb-0" style="padding: 15px; border: 1px dashed rgba(0, 147, 255, 0.2); background: rgba(0, 147, 255, 0.01); border-radius: 12px;">
+                                         <h5 class="text-xs blue mb-3" style="border-bottom: 1px solid rgba(0,147,255,0.1); padding-bottom: 6px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;"><i class="fa-solid fa-coins"></i> Расчет стоимости позиции</h5>
+                                         
+                                         <div class="grid grid-3 gap-3 mb-3">
+                                             <div class="form-group mb-0">
+                                                 <label class="text-xs brand-red" style="font-weight:700;">Цена за 1 м2 (БЕЗ НДС)</label>
+                                                 <input type="text" id="op-belt-spec-price-m2" class="form-control one-c-badge-numeric" placeholder="0.00" oninput="window.onBeltSpecCalc('price_m2')">
+                                             </div>
+                                             <div class="form-group mb-0">
+                                                 <label class="text-xs blue" style="font-weight:700;">Цена за 1 м.п. (БЕЗ НДС)</label>
+                                                 <input type="text" id="op-belt-spec-price-mp" class="form-control one-c-badge-numeric" placeholder="0.00" oninput="window.onBeltSpecCalc('price_mp')">
+                                             </div>
+                                             <div class="form-group mb-0">
+                                                 <label class="text-xs text-muted" style="font-weight:700;">Сумма позиции (БЕЗ НДС)</label>
+                                                 <input type="text" id="op-belt-spec-sum-no-vat" class="form-control one-c-badge-numeric text-bold" style="color:var(--brand-gold);" oninput="window.onBeltSpecCalc('sum_no_vat')">
+                                             </div>
+                                         </div>
+
+                                         <div class="grid grid-3 gap-3">
+                                             <div class="form-group mb-0">
+                                                 <label class="text-xs brand-red" style="font-weight:700; color: #ff8a80;">Цена за 1 м2 (С НДС)</label>
+                                                 <input type="text" id="op-belt-spec-price-m2-vat" class="form-control one-c-badge-numeric" placeholder="0.00" oninput="window.onBeltSpecCalc('price_m2_vat')">
+                                             </div>
+                                             <div class="form-group mb-0">
+                                                 <label class="text-xs blue" style="font-weight:700; color: #82b1ff;">Цена за 1 м.п. (С НДС)</label>
+                                                 <input type="text" id="op-belt-spec-price-mp-vat" class="form-control one-c-badge-numeric" placeholder="0.00" oninput="window.onBeltSpecCalc('price_mp_vat')">
+                                             </div>
+                                             <div class="form-group mb-0">
+                                                 <label class="text-xs text-muted" style="font-weight:700; color: #82b1ff;">Сумма позиции (С НДС)</label>
+                                                 <input type="text" id="op-belt-spec-sum-vat" class="form-control one-c-badge-numeric text-bold" style="color:#82b1ff;" oninput="window.onBeltSpecCalc('sum_vat')">
+                                             </div>
+                                         </div>
+                                     </div>
+                                     
+                                     <div class="mt-3 text-right">
+                                         <button type="button" class="btn btn-sm" style="background: rgba(0, 147, 255, 0.8); color: #fff; font-weight: 700; height:36px;" onclick="window.addBeltToBatch()">
+                                             <i class="fa-solid fa-plus"></i> Добавить ленту
+                                         </button>
+                                     </div>
+                                 </div>
+
+                                <!-- Current Batch List Table wrapper -->
+                                <div id="op-batch-container"></div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: DELIVERY & COSTING DETAILS -->
+                        <div id="wh-tab-delivery" class="wh-tab-content">
+                            <div id="financial-fields" style="background:rgba(255,180,0,0.01); padding:20px; border-radius:12px; border:1px solid rgba(255,180,0,0.12); margin-bottom:15px;">
+                                <h5 class="text-sm brand-gold mb-3" style="border-bottom: 1px solid rgba(255,180,0,0.1); padding-bottom: 6px;"><i class="fa-solid fa-coins text-muted"></i> Финансовый расчет (Цены, НДС, Логистика)</h5>
+                                
+                                <div class="grid grid-3 gap-3 mb-3">
+                                    <div class="form-group mb-0">
+                                        <label class="text-xs text-muted">Ставка НДС (%)</label>
+                                        <select id="op-vat-rate" class="form-control" onchange="window.onOperationFinancialCalc('vat_rate')">
+                                            <option value="1.22">22% (ПРУТКОН)</option>
+                                            <option value="1.20">20% (Стандарт)</option>
+                                            <option value="1">БЕЗ НДС</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label class="text-xs brand-red">Цена за Тонну (БЕЗ НДС)</label>
+                                        <input type="text" id="op-price-tonne" class="form-control one-c-badge-numeric" placeholder="0.00" oninput="window.onOperationFinancialCalc('price_tonne')">
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label class="text-xs emerald">Цена за 1 кг (БЕЗ НДС)</label>
+                                        <input type="text" id="op-unit-price" class="form-control one-c-badge-numeric" placeholder="0.00" oninput="window.onOperationFinancialCalc('price')">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-3 gap-3 mb-3" style="background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; border: 1px solid rgba(255,255,255,0.04);">
+                                    <div class="form-group mb-0"><label class="text-xs text-muted">Сумма (БЕЗ НДС)</label><input type="text" id="op-sum-no-vat" class="form-control one-c-badge-numeric" style="color:var(--brand-gold);" oninput="window.onOperationFinancialCalc('sum_no_vat')"></div>
+                                    <div class="form-group mb-0"><label class="text-xs text-muted">Сумма НДС</label><input type="text" id="op-sum-vat-only" class="form-control one-c-badge-numeric" style="color:var(--brand-red);" readonly></div>
+                                    <div class="form-group mb-0"><label class="text-xs text-muted">Сумма (С НДС)</label><input type="text" id="op-sum-vat" class="form-control one-c-badge-numeric" style="color:var(--emerald-neon);" oninput="window.onOperationFinancialCalc('sum_vat')"></div>
+                                </div>
+
+                                <div class="grid grid-3 gap-3 mb-3">
+                                    <div class="form-group mb-0">
+                                        <label class="text-xs text-muted">Транспортные расходы</label>
+                                        <div class="flex gap-2">
+                                            <input type="text" id="op-delivery-cost" class="form-control one-c-badge-numeric" value="0" oninput="window.onOperationFinancialCalc('delivery')">
+                                            <select id="op-delivery-vat-type" class="form-control" style="width:110px;" onchange="window.onOperationFinancialCalc('delivery')">
+                                                <option value="no-vat">БЕЗ НДС</option>
+                                                <option value="with-vat">С НДС</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label class="text-xs text-muted">Метод распр. доставки</label>
+                                        <select id="op-delivery-dist-method" class="form-control" onchange="window.renderBatchTable()">
+                                            <option value="weight">Пропорционально весу (кг)</option>
+                                            <option value="sum">Пропорционально стоимости</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label class="text-xs text-muted">Перевозчик / ТК</label>
+                                        <input type="text" id="op-delivery-carrier" class="form-control" placeholder="Деловые Линии...">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-2 gap-3 mb-3">
+                                    <div class="form-group mb-0">
+                                        <label class="text-xs text-muted">Всего с доставкой (С НДС)</label>
+                                        <input type="text" id="op-overall-costs" class="form-control text-bold" style="color:var(--brand-gold); background:rgba(255,180,0,0.06); border-color:rgba(255,180,0,0.3);" readonly>
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label class="text-xs text-muted">Рассчитанная себестоимость</label>
+                                        <input type="text" id="op-total-cost" class="form-control text-bold" style="color:var(--emerald-neon); background:rgba(0,255,157,0.05); border-color:rgba(0,255,157,0.25);" readonly>
+                                    </div>
+                                </div>
+
+                                <!-- Costing detailed summary for metal (reconstructed beautifully instead of the broken stray div) -->
+                                <div id="financial-summary-detailed" class="mt-3" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden;">
+                                    <div style="background: rgba(255,255,255,0.03); padding: 8px 15px; border-bottom: 1px solid rgba(255,255,255,0.08); font-size:0.7rem; color:var(--brand-red); font-weight:800; text-transform:uppercase; letter-spacing:0.05em;">
+                                        ИТОГОВАЯ СЕБЕСТОИМОСТЬ ПОГОННОГО МЕТРА
+                                    </div>
+                                    <div class="grid grid-2 gap-0" style="text-align: center;">
+                                        <div style="padding: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+                                            <div class="text-xs text-muted mb-1">БЕЗ НДС</div>
+                                            <div style="font-size:0.8rem; margin-bottom:3px; opacity:0.7;">Цена м.п.: <span id="res-m-price-no-vat" class="font-bold text-white">0.00 руб</span></div>
+                                            <div style="font-size:0.8rem; margin-bottom:5px; opacity:0.7;">Доставка м.п.: <span id="res-m-del-no-vat" class="font-bold text-white">0.00 руб</span></div>
+                                            <div style="font-size:1rem; color:var(--brand-gold); border-top:1px dashed rgba(255,255,255,0.1); padding-top:5px; margin-top:5px; font-weight:800;">ИТОГО м.п.: <span id="res-m-total-no-vat">0.00 руб</span></div>
+                                        </div>
+                                        <div style="padding: 12px;">
+                                            <div class="text-xs text-muted mb-1">С УЧЕТОМ НДС (22%)</div>
+                                            <div style="font-size:0.8rem; margin-bottom:3px; opacity:0.7;">Цена м.п.: <span id="res-m-price-vat" class="font-bold text-white">0.00 руб</span></div>
+                                            <div style="font-size:0.8rem; margin-bottom:5px; opacity:0.7;">Доставка м.п.: <span id="res-m-del-vat" class="font-bold text-white">0.00 руб</span></div>
+                                            <div style="font-size:1rem; color:var(--emerald-neon); border-top:1px dashed rgba(255,255,255,0.1); padding-top:5px; margin-top:5px; font-weight:800;">ИТОГО м.п.: <span id="res-m-total-vat">0.00 руб</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Costing breakdown container for distributed metals -->
+                                <div id="op-costing-breakdown-container" class="mt-3"></div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Aggregated totals strip for batch operations (1C style) -->
+                    <div id="wh-doc-totals-strip" style="display: none; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
+                        <div class="grid grid-5 gap-3" style="text-align: center;">
+                            <div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Общий вес</div>
+                                <div id="doc-total-weight" style="font-size: 0.9rem; font-weight: 800; color: #fff; font-family: 'JetBrains Mono', monospace;">0.00 кг</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Всего прутков</div>
+                                <div id="doc-total-bars" style="font-size: 0.9rem; font-weight: 800; color: #fff; font-family: 'JetBrains Mono', monospace;">0 шт</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Сумма без НДС</div>
+                                <div id="doc-total-sum-no-vat" style="font-size: 0.9rem; font-weight: 800; color: var(--brand-gold); font-family: 'JetBrains Mono', monospace;">0.00 руб</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Сумма НДС</div>
+                                <div id="doc-total-sum-vat-only" style="font-size: 0.9rem; font-weight: 800; color: var(--brand-red); font-family: 'JetBrains Mono', monospace;">0.00 руб</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Сумма с НДС</div>
+                                <div id="doc-total-sum-vat" style="font-size: 0.9rem; font-weight: 800; color: var(--emerald-neon); font-family: 'JetBrains Mono', monospace;">0.00 руб</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comment input (Common bottom input) -->
+                    <div class="form-group mb-0" style="margin-top: 15px;">
+                        <label id="op-comment-label" class="text-xs text-muted" style="text-transform: uppercase;">Комментарий / Ответственный</label>
+                        <input type="text" id="op-comment" class="form-control" placeholder="Партия №123 / Исполнитель...">
+                    </div>
+                </div>
+
+                <datalist id="op-steel-types-list"></datalist>
+                <datalist id="op-suppliers-list"></datalist>
+                    
+                <!-- Sticky Modal Footer -->
+                <div class="modal-footer" style="background: rgba(26,26,26,0.5); backdrop-filter: blur(10px); margin: 0 -30px -30px -30px; padding: 15px 30px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 12px 12px; box-shadow: 0 -10px 30px rgba(0,0,0,0.5);">
+                    <div id="op-live-summary-footer" style="font-size: 0.8rem; color: var(--emerald-neon); font-weight:700;"></div>
+                    <div class="flex gap-2" style="margin-left: auto;">
+                        <button type="button" class="btn btn-secondary" style="padding: 8px 15px; height: 38px;" onclick="window.closeOperationModal()">Отмена</button>
+                        <button type="button" class="btn" style="background: var(--brand-gold); color: #000; font-weight: 700; padding: 8px 15px; height: 38px;" onclick="window.printOperationReceipt()">
+                            <i class="fa-solid fa-print"></i> Печать (PDF)
+                        </button>
+                        <button type="button" class="btn" style="background: var(--emerald-neon); color: #000; font-weight: 900; box-shadow: 0 0 15px rgba(0,200,83,0.25); padding: 8px 25px; height: 38px;" onclick="window.saveOperation()">
+                            <i class="fa-solid fa-check-double"></i> ПРОВЕСТИ ОПЕРАЦИЮ
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно быстрого добавления/редактирования металла в справочник -->
+    <div id="modal-quick-add-metal" class="modal">
+        <div class="glass-panel" style="width: 500px; padding: 25px; position: relative; border-radius: 12px; border: 1px solid rgba(255, 180, 0, 0.25); background: rgba(18, 18, 18, 0.95); box-shadow: 0 10px 40px rgba(0,0,0,0.65);">
+            <button onclick="window.closeQuickAddMetalModal()" style="position: absolute; right: 20px; top: 20px; background: none; border: none; color: #fff; font-size: 1.8rem; cursor: pointer; z-index: 10;">&times;</button>
+            <h3 class="text-white mb-4" id="qam-title" style="font-size: 1.25rem;"><i class="fa-solid fa-folder-plus text-brand-gold"></i> Добавление материала в справочник</h3>
+            
+            <form id="quick-add-metal-form" onsubmit="window.submitQuickAddMetal(event)">
+                <input type="hidden" id="qam-metal-id" value="">
+                
+                <div class="form-group mb-3">
+                    <label class="text-xs text-muted" style="text-transform: uppercase;">Вид номенклатуры</label>
+                    <select id="qam-item-type" class="form-control font-bold text-white" onchange="window.onQuickAddMetalCalc()">
+                        <option value="круг">Круг Х/Т (круглый прокат)</option>
+                        <option value="лист">Лист Г/К (листовой прокат)</option>
+                        <option value="прочее">Прочее (материал)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label class="text-xs text-muted" style="text-transform: uppercase;">Марка стали</label>
+                    <input type="text" id="qam-steel-type" class="form-control font-bold text-white" list="op-steel-types-list" placeholder="Выберите или введите марку стали..." required>
+                </div>
+                <div class="grid grid-2 gap-3 mb-3">
+                    <div class="form-group mb-0">
+                        <label class="text-xs text-muted" style="text-transform: uppercase;">Диаметр / Толщина (мм)</label>
+                        <input type="text" id="qam-diameter" class="form-control font-bold text-white" placeholder="13" oninput="window.onQuickAddMetalCalc()" required>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="text-xs text-muted" style="text-transform: uppercase;">Длина хлыста (мм)</label>
+                        <input type="text" id="qam-length" class="form-control font-bold text-white" value="6000" required>
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="text-xs text-muted" style="text-transform: uppercase;">Вес 1 м.п. (кг) <span style="color:var(--brand-gold);">[Авторасчет]</span></label>
+                    <input type="text" id="qam-weight-per-m" class="form-control text-white font-bold" placeholder="0.000" required>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="text-xs text-muted" style="text-transform: uppercase;">Поставщик</label>
+                    <input type="text" id="qam-supplier" class="form-control font-bold text-white" list="op-suppliers-list" placeholder="Выберите или введите поставщика...">
+                </div>
+                <div class="form-group mb-4">
+                    <label class="text-xs text-muted" style="text-transform: uppercase;">Цена за Тонну (БЕЗ НДС, руб)</label>
+                    <input type="text" id="qam-price" class="form-control text-bold text-white" placeholder="0.00" style="color: var(--brand-gold);">
+                </div>
+                
+                <div class="text-right">
+                    <button type="button" class="btn btn-secondary mr-2" style="padding: 8px 15px; height: 38px;" onclick="window.closeQuickAddMetalModal()">Отмена</button>
+                    <button type="submit" id="qam-submit-btn" class="btn" style="background: var(--brand-gold); color:#000; font-weight:700; padding: 8px 20px; height: 38px; box-shadow: 0 0 15px rgba(255, 180, 0, 0.25);">Создать и выбрать</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модальное окно быстрого добавления/редактирования ленты в справочник -->
+    <div id="modal-quick-add-belt" class="modal">
+        <div class="glass-panel" style="width: 500px; padding: 25px; position: relative; border-radius: 12px; border: 1px solid rgba(0, 147, 255, 0.25); background: rgba(18, 18, 18, 0.95); box-shadow: 0 10px 40px rgba(0,0,0,0.65);">
+            <button onclick="window.closeQuickAddBeltModal()" style="position: absolute; right: 20px; top: 20px; background: none; border: none; color: #fff; font-size: 1.8rem; cursor: pointer; z-index: 10;">&times;</button>
+            <h3 class="text-white mb-4" id="qab-title" style="font-size: 1.25rem;"><i class="fa-solid fa-folder-plus text-brand-gold"></i> &#1044;&#1086;&#1073;&#1072;&#1074;&#1083;&#1077;&#1085;&#1080;&#1077; &#1083;&#1077;&#1085;&#1090;&#1099; &#1074; &#1089;&#108F;&#1088;&#1072;&#1074;&#1086;&#1095;&#1085;&#1080;&#1082;</h3>
+            
+            <form id="quick-add-belt-form" onsubmit="window.submitQuickAddBelt(event)">
+                <input type="hidden" id="qab-belt-id" value="">
+                
+                <div class="grid grid-2 gap-3 mb-3">
+                    <div class="form-group mb-0">
+                        <label class="text-xs text-muted" style="text-transform: uppercase;">&#1064;&#1080;&#1088;&#1080;&#1085;&#1072; (&#1084;&#1084;)</label>
+                        <input type="text" id="qab-width" class="form-control font-bold text-white" placeholder="940" required>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="text-xs text-muted" style="text-transform: uppercase;">&#1055;&#1088;&#1086;&#1097;&#1085;&#1086;&#1089;&#1090;&#1100; (EP)</label>
+                        <input type="text" id="qab-strength" class="form-control font-bold text-white" placeholder="1200" required>
+                    </div>
+                </div>
+                
+                <div class="grid grid-3 gap-3 mb-3">
+                    <div class="form-group mb-0">
+                        <label class="text-xs text-muted" style="text-transform: uppercase;">&#1050;&#1086;&#1083;-&#1074;&#1086; &#1082;&#1086;&#1088;&#1076;&#1086;&#1074;</label>
+                        <input type="text" id="qab-cords" class="form-control font-bold text-white" placeholder="3" required>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="text-xs text-muted" style="text-transform: uppercase;">&#1054;&#1073;&#1082;&#1083;&#1072;&#1076;&#1082;&#1072; &#1074;&#1077;&#1088;&#1093;</label>
+                        <input type="text" id="qab-cover-top" class="form-control font-bold text-white" placeholder="6" required>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="text-xs text-muted" style="text-transform: uppercase;">&#1054;&#1073;&#1082;&#1083;&#1072;&#1076;&#1082;&#1072; &#1085;&#1080;&#1079;</label>
+                        <input type="text" id="qab-cover-bottom" class="form-control font-bold text-white" placeholder="2" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-2 gap-3 mb-3">
+                    <div class="form-group mb-0">
+                        <label class="text-xs text-muted" style="text-transform: uppercase;">&#1050;&#1083;&#1072;&#1089;&#1089; &#1088;&#1077;&#1079;&#1080;&#1085;&#1099;</label>
+                        <input type="text" id="qab-class" class="form-control font-bold text-white" placeholder="W" required>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="text-xs text-muted" style="text-transform: uppercase;">&#1058;&#1086;&#1083;&#1097;&#1080;&#1085;&#1072; (&#1084;&#1084;)</label>
+                        <input type="text" id="qab-thickness" class="form-control font-bold text-white" placeholder="12">
+                    </div>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label class="text-xs text-muted" style="text-transform: uppercase;">&#1043;&#1054;&#1057;&#1058; / &#1058;&#1059;</label>
+                    <input type="text" id="qab-tu" class="form-control text-white" placeholder="ТУ 22.19.40.110-012-48991997-2019" required>
+                </div>
+
+                <div class="form-group mb-3">
+                    <label class="text-xs text-muted" style="text-transform: uppercase;">&#1055;&#1086;&#1089;&#1090;&#1072;&#1074;&#1097;&#1080;&#1082;</label>
+                    <input type="text" id="qab-supplier" class="form-control font-bold text-white" list="op-suppliers-list" placeholder="Выберите или введите поставщика...">
+                </div>
+
+                <div class="form-group mb-4">
+                    <label class="text-xs text-muted" style="text-transform: uppercase;">&#1062;&#1077;&#1085;&#1072; &#1079;&#1072; 1 &#1084;2 (&#1041;&#1045;&#1047; &#1053;&#1044;&#1057;, &#1088;&#1091;&#1073;)</label>
+                    <input type="text" id="qab-price-m2" class="form-control text-bold text-white" placeholder="0.00" style="color: var(--brand-gold);">
+                </div>
+                
+                <div class="text-right">
+                    <button type="button" class="btn btn-secondary mr-2" style="padding: 8px 15px; height: 38px;" onclick="window.closeQuickAddBeltModal()">&#1054;&#1090;&#1084;&#1077;&#1085;&#1072;</button>
+                    <button type="submit" id="qab-submit-btn" class="btn" style="background: var(--brand-gold); color:#000; font-weight:700; padding: 8px 20px; height: 38px; box-shadow: 0 0 15px rgba(255, 180, 0, 0.25);">&#1057;&#1086;&#1079;&#1076;&#1072;&#1090;&#1100; &#1080; &#1074;&#1099;&#1073;&#1088;&#1072;&#1090;&#1100;</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/core/supabase_config.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/utils/prutkon_features.js?v=1.0.0"></script>
+    <script src="js/handlers/warehouse.js?v=19.0.0"></script>
+</body>
+</html>

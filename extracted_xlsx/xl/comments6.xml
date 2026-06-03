@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><comments xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision"><authors><author>tc={05d2aaad-accb-48cf-b87f-b1de02a1b965}</author><author>tc={09c02fc1-10a3-48f9-a5f6-5b6bf4cd9f71}</author><author>tc={0adfd86d-d6a3-4de5-abf5-f902298a02c5}</author><author>tc={0cdd3a16-5a11-4307-9da7-29aea8e3bcf8}</author><author>tc={0e71f8f3-a1d8-46cb-8161-d8eb8b2f422f}</author><author>tc={0ec038cc-3e5b-46d8-a8cf-22b58c1111c9}</author><author>tc={156c2554-d165-4660-9ca1-a307bd9b5e8a}</author><author>tc={22dec646-e0f9-4453-a2c6-0678501585d7}</author><author>tc={2c468fe0-b29f-41d0-9491-2e9d5e3a1858}</author><author>tc={399cd2e5-af8a-487d-b1e0-4a46e38ddb0e}</author><author>tc={406a3c8c-7d8e-4088-83c7-1d1c4f7dbd2a}</author><author>tc={5046e83b-b391-4cec-a1b3-95b808f82ca7}</author><author>tc={50feadce-2995-459c-af1e-ba3e04ef8eb5}</author><author>tc={67356405-e3b3-473f-8c5f-5125159ba460}</author><author>tc={7955fbc3-e413-4427-9766-e284602ab909}</author><author>tc={cd8b501d-22db-4281-86e5-25cc6dc4deb6}</author><author>tc={dd8e34d8-3f74-48dc-b2f9-b79107c5c237}</author><author>tc={e0acd7ed-4fdd-47a9-b525-9d71e5c02753}</author><author>tc={e81ddda4-a4c8-4cf0-a9ef-bb12b09991de}</author><author>tc={f3926612-6a39-4ed9-b1ac-f51a881c10aa}</author></authors><commentList><comment authorId="0" xr:uid="{05d2aaad-accb-48cf-b87f-b1de02a1b965}" ref="C31"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	выбирается только один тип
+</t></text></comment><comment authorId="1" xr:uid="{09c02fc1-10a3-48f9-a5f6-5b6bf4cd9f71}" ref="B4"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	при введении артикула, тут появляется или наименование транспортера или наименование детали
+</t></text></comment><comment authorId="2" xr:uid="{0adfd86d-d6a3-4de5-abf5-f902298a02c5}" ref="A55"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	при расчете сталкивателей определенного вида, автоматически учитывается скоба (метиз)
+</t></text></comment><comment authorId="3" xr:uid="{0cdd3a16-5a11-4307-9da7-29aea8e3bcf8}" ref="A9"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	при выборе данной ячейки после заполнения данных по транспортеру, автоматически присваивается новый артикул (номер) после нажатия кнопки добавить новый транспортер
+</t></text></comment><comment authorId="4" xr:uid="{0e71f8f3-a1d8-46cb-8161-d8eb8b2f422f}" ref="B2"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	Выполняется поиск транспортеров в таблице &quot;Транспортеры&quot;, существующие данные из таблицы заполняются в опросник (те данные что есть)
+</t></text></comment><comment authorId="5" xr:uid="{0ec038cc-3e5b-46d8-a8cf-22b58c1111c9}" ref="E1"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	при введении скидки, проверяет соответствие нормы прибыли минимальной. Если порог превышен цена горит красным
+</t></text></comment><comment authorId="6" xr:uid="{156c2554-d165-4660-9ca1-a307bd9b5e8a}" ref="A54"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	при расчете хлопушек автоматически учитывается скоба (метиз)
+</t></text></comment><comment authorId="7" xr:uid="{22dec646-e0f9-4453-a2c6-0678501585d7}" ref="A64"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	при выборе пальцев, в расчете транспортера учитывается &quot;склиз&quot;
+</t></text></comment><comment authorId="8" xr:uid="{2c468fe0-b29f-41d0-9491-2e9d5e3a1858}" ref="F44"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	выбор на основе введенных данных
+</t></text></comment><comment authorId="9" xr:uid="{399cd2e5-af8a-487d-b1e0-4a46e38ddb0e}" ref="A73"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	активно если выбран мех замок
+</t></text></comment><comment authorId="10" xr:uid="{406a3c8c-7d8e-4088-83c7-1d1c4f7dbd2a}" ref="A46"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	поле активно только если выбран 3х или 4х рядный транспортер
+</t></text></comment><comment authorId="11" xr:uid="{5046e83b-b391-4cec-a1b3-95b808f82ca7}" ref="L49"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	отсеивается по ширине транспортера и диаметру прутка и ширине по осям
+</t></text></comment><comment authorId="12" xr:uid="{50feadce-2995-459c-af1e-ba3e04ef8eb5}" ref="C44"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	толщина подставляется автоматически на основе выбора типа ремня. У типов N и DN может быть две толщины. Поле можно исправить (корректировать)
+</t></text></comment><comment authorId="13" xr:uid="{67356405-e3b3-473f-8c5f-5125159ba460}" ref="B6"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	После выбора бренда техники, сортируется список марок техники
+</t></text></comment><comment authorId="14" xr:uid="{7955fbc3-e413-4427-9766-e284602ab909}" ref="A15"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	Поле активно только если выбран 3х или 4х рядный транспортер. Если выбран пункт со смещением активируются ячейки расстояния между ремнями.
+</t></text></comment><comment authorId="15" xr:uid="{cd8b501d-22db-4281-86e5-25cc6dc4deb6}" ref="C28"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	Цифра в этом поле должна быть равна общему кол-ву прутков в транспортере. Если нет, то ячейка горит красным
+</t></text></comment><comment authorId="16" xr:uid="{dd8e34d8-3f74-48dc-b2f9-b79107c5c237}" ref="D31"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	выбирается только один тип. Доступно только если выбрать 2х или 3х рядный тип транспортера
+</t></text></comment><comment authorId="17" xr:uid="{e0acd7ed-4fdd-47a9-b525-9d71e5c02753}" ref="B20"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	поле активно если выбран 3х или 4х рядный транспортер
+</t></text></comment><comment authorId="18" xr:uid="{e81ddda4-a4c8-4cf0-a9ef-bb12b09991de}" ref="B11"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	можно выбрать только один тип
+</t></text></comment><comment authorId="19" xr:uid="{f3926612-6a39-4ed9-b1ac-f51a881c10aa}" ref="B69"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	можно выбрать только один вид
+</t></text></comment></commentList></comments>

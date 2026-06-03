@@ -1,0 +1,78 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пруткон | Отчетность</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body style="background: #07090e;">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="top-header no-print">
+                <div class="view-header" style="margin-bottom:0; border:none; padding:0"><h2>Аналитика и финансовые отчеты</h2></div>
+                <div class="header-actions" style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='catalog.html'"><i class="fa-solid fa-book"></i> Справочники</button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='prices.html'"><i class="fa-solid fa-tags"></i> Прайсы</button>
+                    <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> Печать </button>
+                    <button class="btn btn-primary" onclick="window.refreshReportsData()"><i class="fa-solid fa-rotate"></i> Обновить</button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                <div class="module-shell">
+                    <div class="module-hero">
+                        <div class="module-hero-card">
+                            <div class="module-hero-title">Сводка по заказам и выручке</div>
+                            <div class="module-hero-copy">Панель показывает актуальную выручку по заказам, средний чек и распределение текущего портфеля без ручного пересчета.</div>
+                        </div>
+                        <div class="metric-strip">
+                            <div class="metric-tile">
+                                <div class="metric-tile-label">Источник</div>
+                                <div class="metric-tile-value">ERP</div>
+                                <div class="metric-tile-note">Данные берутся из заказов системы</div>
+                            </div>
+                            <div class="metric-tile">
+                                <div class="metric-tile-label">Режим</div>
+                                <div class="metric-tile-value">Live</div>
+                                <div class="metric-tile-note">Обновление доступно в один клик</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid" style="display:grid; grid-template-columns: 1fr 1.5fr; gap:40px;">
+                    <div class="glass-panel">
+                        <h3 class="mb-4" style="color:var(--brand-red);"><i class="fa-solid fa-coins"></i> Итоговые данные</h3>
+                        <div class="stats-list" style="display:flex; flex-direction:column; gap:25px;">
+                            <div style="border-bottom:1px solid var(--border-color); padding-bottom:15px;"><div class="neutral text-xs">Выручка за период</div><h2 id="rep-revenue" style="font-size:2rem">0 ₽</h2></div>
+                            <div style="border-bottom:1px solid var(--border-color); padding-bottom:15px;"><div class="neutral text-xs">Количество заказов</div><h1 id="rep-orders" style="color:#fff; font-size:2.5rem">0</h1></div>
+                            <div><div class="neutral text-xs">Средний чек</div><h2 id="rep-avg" style="font-size:2rem">0 ₽</h2></div>
+                        </div>
+                    </div>
+
+                    <div class="panel glass-panel">
+                        <h3 class="mb-4" style="color:var(--brand-red);"><i class="fa-solid fa-chart-simple"></i> Группировка доходов</h3>
+                        <table class="data-table">
+                            <thead><tr><th>Категория</th><th>Кол-во</th><th>Сумма</th></tr></thead>
+                            <tbody id="reports-breakdown-body"></tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/firebase_config.js"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/handlers/reports.js?v=19.0.0"></script>
+</body>
+</html>

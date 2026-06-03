@@ -1,0 +1,73 @@
+﻿=== USER MESSAGE Step 552 ===
+<USER_REQUEST>
+Круг - это сырье из которого делается - изделие нужно добавить как в 1с добавление контрагента и нового металла (круга с сохранием) и обнули остаток на складе - 0
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:42:07+05:00.
+</ADDITIONAL_METADATA>
+==============================
+
+=== USER MESSAGE Step 632 ===
+<USER_REQUEST>
+контрагент договор и накладная все в первую вкладку. как в нормальной программе учета! и посмотривнимательгно пимер накладной
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:46:36+05:00.
+</ADDITIONAL_METADATA>
+==============================
+
+=== USER MESSAGE Step 684 ===
+<USER_REQUEST>
+верно
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:48:46+05:00.
+</ADDITIONAL_METADATA>
+==============================
+
+=== USER MESSAGE Step 708 ===
+<USER_REQUEST>
+окна не ровно, проверь расчеты и на 3й вкладке авторасчет на основании 2й вкладки?\
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:50:47+05:00.
+</ADDITIONAL_METADATA>
+==============================
+
+=== USER MESSAGE Step 734 ===
+<USER_REQUEST>
+верно
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:53:12+05:00.
+</ADDITIONAL_METADATA>
+==============================
+
+=== USER MESSAGE Step 796 ===
+<USER_REQUEST>
+Continue
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:58:04+05:00.
+</ADDITIONAL_METADATA>
+==============================
+
+=== USER MESSAGE Step 870 ===
+<USER_REQUEST>
+не удобно добвлять новый товар. посмотри накладную - вид круг лист - металл, марка стали 6000 это все что в накладной - осттальное авторасчет, вес мб типа 0,72 тонны - не поддерживается. цена за тонну в накладной внимательно перпероверь
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T14:04:23+05:00.
+</ADDITIONAL_METADATA>
+==============================
+
+=== USER MESSAGE Step 912 ===
+<USER_REQUEST>
+теперь перепроверь наклажную предстааь что данные внесены, союдутся ли все цыфры?
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T14:07:33+05:00.
+</ADDITIONAL_METADATA>
+==============================
+

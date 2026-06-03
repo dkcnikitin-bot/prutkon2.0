@@ -1,0 +1,142 @@
+﻿=== STEP 0 ===
+<USER_REQUEST>
+почему заходишь под радионовой входит как администратор что за путанница с пользователями исправь ошибки 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-20T13:23:12+05:00.
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from None to Gemini 3.5 Flash (High). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>
+==========================
+
+=== STEP 104 ===
+<USER_REQUEST>
+соберись и перепроверь проект почему не верная авторизация и запрос на кавждой странице
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-20T15:06:39+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 126 ===
+<USER_REQUEST>
+наведи порядок и разложи все файлы по папкам на каждоую обработку отдельный файл обработчика
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-20T15:09:06+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 130 ===
+<USER_REQUEST>
+действуй
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-20T15:09:35+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 346 ===
+<USER_REQUEST>
+продолжай
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-20T17:48:55+05:00.
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from Gemini 3.1 Pro (Low) to Claude Sonnet 4.6 (Thinking). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>
+==========================
+
+=== STEP 350 ===
+<USER_REQUEST>
+куда пропала шапка меню и подвал?
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-20T17:50:54+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 380 ===
+<USER_REQUEST>
+Continue
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:35:32+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 552 ===
+<USER_REQUEST>
+Круг - это сырье из которого делается - изделие нужно добавить как в 1с добавление контрагента и нового металла (круга с сохранием) и обнули остаток на складе - 0
+
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:42:07+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 632 ===
+<USER_REQUEST>
+контрагент договор и накладная все в первую вкладку. как в нормальной программе учета! и посмотривнимательгно пимер накладной
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:46:36+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 684 ===
+<USER_REQUEST>
+верно
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:48:46+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 708 ===
+<USER_REQUEST>
+окна не ровно, проверь расчеты и на 3й вкладке авторасчет на основании 2й вкладки?\
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:50:47+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 734 ===
+<USER_REQUEST>
+верно
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:53:12+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 796 ===
+<USER_REQUEST>
+Continue
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T13:58:04+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 870 ===
+<USER_REQUEST>
+не удобно добвлять новый товар. посмотри накладную - вид круг лист - металл, марка стали 6000 это все что в накладной - осттальное авторасчет, вес мб типа 0,72 тонны - не поддерживается. цена за тонну в накладной внимательно перпероверь
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T14:04:23+05:00.
+</ADDITIONAL_METADATA>
+==========================
+
+=== STEP 912 ===
+<USER_REQUEST>
+теперь перепроверь наклажную предстааь что данные внесены, союдутся ли все цыфры?
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T14:07:33+05:00.
+</ADDITIONAL_METADATA>
+==========================
+

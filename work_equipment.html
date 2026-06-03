@@ -1,0 +1,73 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пруткон | Ресурсы и Оборудование</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..700;1,100..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="with-hero-bg">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="top-header no-print">
+                <div class="view-header"><h2>Ресурсы и Оборудование</h2></div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='catalog.html'"><i class="fa-solid fa-book"></i></button>
+                    <button class="btn btn-primary btn-sm" onclick="window.saveWorkEquipmentSettings()"><i class="fa-solid fa-save"></i> Сохранить</button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                <div class="module-shell">
+                    <div class="module-hero">
+                        <div class="module-hero-card">
+                            <h2 class="mb-2 text-white">Производственные ресурсы</h2>
+                            <p class="text-sm neutral">Настройка себестоимости, циклов оборудования и фонда оплаты труда.</p>
+                        </div>
+                        <div class="metric-strip">
+                            <div class="metric-tile">
+                                <div class="metric-tile-label">Режим</div>
+                                <div class="metric-tile-value text-sm">Industrial</div>
+                            </div>
+                            <div class="metric-tile">
+                                <div class="metric-tile-label">Синхро</div>
+                                <div class="metric-tile-value text-sm">Active</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="work-tabs" class="tabs-scrollable mb-4">
+                        <button class="btn btn-secondary btn-sm active" data-cat="conveyor_belts">Ленты</button>
+                        <button class="btn btn-secondary btn-sm" data-cat="metal_rod">Металл</button>
+                        <button class="btn btn-secondary btn-sm" data-cat="equipment_cycles">Оборудование</button>
+                        <button class="btn btn-secondary btn-sm" data-cat="salary">ФОТ / ЗП</button>
+                        <button class="btn btn-secondary btn-sm" data-cat="costs">Затраты</button>
+                        <button class="btn btn-secondary btn-sm" data-cat="electricity">Энерго</button>
+                        <button class="btn btn-secondary btn-sm" data-cat="tools">Оснастка</button>
+                    </div>
+
+                    <div class="panel glass-panel">
+                        <h3 id="work-content-title" class="mb-4 brand-red">Параметры раздела</h3>
+                        <div id="work-content-area" class="grid grid-2 gap-4">
+                            <!-- Injected -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/firebase_config.js"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/handlers/work_equipment.js?v=19.0.0"></script>
+</body>
+</html>

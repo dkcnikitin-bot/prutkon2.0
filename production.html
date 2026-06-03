@@ -1,0 +1,87 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ПРУТКОН | Цех</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..700;1,100..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="with-hero-bg">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="top-header no-print">
+                <div class="view-header"><h2>Производственный терминал</h2></div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="window.refreshProductionData()"><i class="fa-solid fa-sync"></i> Обновить</button>
+                    <button class="btn btn-primary btn-sm" onclick="window.location.href='orders.html'"><i class="fa-solid fa-list-check"></i> К заказам</button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                <div class="module-shell">
+                    <div class="module-hero">
+                        <div class="module-hero-card">
+                            <h2 class="mb-2 text-white">Управление очередью цеха</h2>
+                            <p class="text-sm neutral">Статусы производства синхронизированы с отделом продаж в реальном времени.</p>
+                        </div>
+                        <div class="metric-strip">
+                            <div class="metric-tile">
+                                <div class="metric-tile-label">Заданий</div>
+                                <div id="summary-orders-count" class="metric-tile-value">0</div>
+                            </div>
+                            <div class="metric-tile">
+                                <div class="metric-tile-label">Прутков</div>
+                                <div id="summary-rods" class="metric-tile-value">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-3 gap-4 mb-4">
+                        <div class="panel flex items-center gap-3">
+                            <i class="fa-solid fa-weight-hanging blue text-lg"></i>
+                            <div>
+                                <div class="text-xs neutral">Сырье (Вес)</div>
+                                <div id="summary-weight" class="text-bold text-white">0 кг</div>
+                            </div>
+                        </div>
+                        <div class="panel flex items-center gap-3">
+                            <i class="fa-solid fa-tape purple text-lg"></i>
+                            <div>
+                                <div class="text-xs neutral">Ремни (Метраж)</div>
+                                <div id="summary-belts" class="text-bold text-white">0 м</div>
+                            </div>
+                        </div>
+                        <div class="panel flex items-center gap-3">
+                             <i class="fa-solid fa-stopwatch amber text-lg"></i>
+                             <div>
+                                 <div class="text-xs neutral">Средний цикл</div>
+                                 <div class="text-bold text-white">45 мин</div>
+                             </div>
+                        </div>
+                    </div>
+
+                    <div class="panel glass-panel">
+                        <h3 class="mb-4 brand-red"><i class="fa-solid fa-stream"></i> Очередь активных заданий</h3>
+                        <div id="production-queue" class="flex flex-col gap-4">
+                            <!-- Injected -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/firebase_config.js"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/handlers/production.js?v=19.0.0"></script>
+</body>
+</html>

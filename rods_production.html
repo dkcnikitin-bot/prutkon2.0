@@ -1,0 +1,367 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пруткон | Конструктор прутков</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .step-container { display: none; }
+        .step-container.active { display: block; }
+        .calc-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .result-box { background: rgba(226, 31, 38, 0.1); border: 1px solid var(--brand-red); padding: 15px; border-radius: 8px; margin-top: 10px; }
+        .mini-stat { font-size: 0.85rem; color: var(--text-muted); }
+        .mini-stat strong { color: #fff; }
+        
+        /* Production Pipeline Styles */
+        .production-pipeline { display: flex; align-items: stretch; justify-content: space-between; gap: 15px; overflow-x: auto; padding-bottom: 10px; }
+        .pipeline-stage { flex: 1; min-width: 220px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; }
+        .stage-header { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 0.9rem; color: #fff; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; display:flex; align-items:center; gap:8px;}
+        .stage-arrow { color: var(--brand-red); font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
+        .stage-body { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
+        .stage-desc { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 15px; line-height: 1.3; }
+        .badge-tech { background: rgba(255,255,255,0.1); color: var(--brand-gold); padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; text-transform: uppercase; margin-top: 4px; display: inline-block; border: 1px solid rgba(255,180,0,0.2); }
+    </style>
+</head>
+<body class="with-hero-bg">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="top-header no-print">
+                <div class="view-header" style="margin-bottom:0; border:none; padding:0">
+                    <h2>Инженерия и производство</h2>
+                </div>
+                <div class="header-actions" style="display: flex; gap: 10px;">
+                    <button class="btn btn-success btn-sm" onclick="window.openProductionModal()" style="background: var(--neon-emerald); border-color: var(--neon-emerald); color: #000; font-weight: bold;"><i class="fa-solid fa-industry"></i> Изготовить детали</button>
+                    <button class="btn btn-primary btn-sm" onclick="window.PrutkonFeatures.openRodCard()"><i class="fa-solid fa-ruler-horizontal"></i> Пруток (Карточка)</button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='catalog.html'"><i class="fa-solid fa-book"></i> Справочники</button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='prices.html'"><i class="fa-solid fa-tags"></i> Прайсы</button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.updatePricesFromDirectory()"><i class="fa-solid fa-sync"></i> Обновить цены</button>
+                    <button class="btn btn-secondary" onclick="window.resetRodsWorkflow()"><i class="fa-solid fa-rotate"></i> Сброс</button>
+                    <button class="btn btn-primary" onclick="saveCurrentStep()"><i class="fa-solid fa-floppy-disk"></i> Сохранить в базу</button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                <div class="module-shell">
+                    <div class="module-hero">
+                        <div class="module-hero-card">
+                            <div class="module-hero-title">Инженерия и производство</div>
+                            <div class="module-hero-copy">Модуль теперь сохраняет металл, заготовки и готовые исполнения локально, а шаги расчета не падают при пустых базах или незаполненных полях.</div>
+                        </div>
+                        <div class="metric-strip">
+                            <div class="metric-tile">
+                                <div class="metric-tile-label">Контур</div>
+                                <div class="metric-tile-value">Rods</div>
+                                <div class="metric-tile-note">Металл, заготовки и все типы прутков</div>
+                            </div>
+                            <div class="metric-tile">
+                                <div class="metric-tile-label">Хранение</div>
+                                <div class="metric-tile-value">Local</div>
+                                <div class="metric-tile-note">База модуля не теряется после обновления страницы</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel glass-panel mb-4">
+                        <h3 class="mb-4 purple"><i class="fa-solid fa-project-diagram"></i> Маршрутная карта производства (Процесс по порядку)</h3>
+                        <div class="production-pipeline">
+                            <div class="pipeline-stage">
+                                <div class="stage-header"><span class="badge" style="background:#333;">1</span> Сырье</div>
+                                <div class="stage-body">
+                                    <div class="stage-desc">Закупка и приемка металла или ленты на склад</div>
+                                    <button class="btn btn-secondary w-100 mb-2" onclick="document.querySelector('[data-step=\'1\']').click()"><i class="fa-solid fa-truck-loading"></i> Металл</button>
+                                </div>
+                            </div>
+                            <div class="stage-arrow"><i class="fa-solid fa-caret-right"></i></div>
+                            <div class="pipeline-stage">
+                                <div class="stage-header"><span class="badge" style="background:#333;">2</span> Рубка</div>
+                                <div class="stage-body">
+                                    <div class="stage-desc">Берем металл, рубим из него заготовки</div>
+                                    <button class="btn btn-primary w-100" onclick="document.querySelector('[data-step=\'2\']').click()"><i class="fa-solid fa-gavel"></i> Нарубить заготовки</button>
+                                </div>
+                            </div>
+                            <div class="stage-arrow"><i class="fa-solid fa-caret-right"></i></div>
+                            <div class="pipeline-stage">
+                                <div class="stage-header"><span class="badge" style="background:#333;">3</span> Базовые прутки</div>
+                                <div class="stage-body">
+                                    <div class="stage-desc">Из заготовки делаем прямой или сдвоенный пруток</div>
+                                    <button class="btn btn-primary w-100 mb-2" onclick="document.querySelector('[data-step=\'3\']').click()"><i class="fa-solid fa-ruler-horizontal"></i> Прямой пруток</button>
+                                    <button class="btn btn-primary w-100" onclick="document.querySelector('[data-step=\'6\']').click()"><i class="fa-solid fa-grip-lines"></i> Сдвоенный</button>
+                                </div>
+                            </div>
+                            <div class="stage-arrow"><i class="fa-solid fa-caret-right"></i></div>
+                            <div class="pipeline-stage">
+                                <div class="stage-header"><span class="badge" style="background:#333;">4</span> Модификация</div>
+                                <div class="stage-body">
+                                    <div class="stage-desc">Из прямого делаем гнутый, обрезиненный или ёжный</div>
+                                    <button class="btn btn-primary w-100 mb-2" onclick="document.querySelector('[data-step=\'4\']').click()">Гнутый / Ёжный пруток</button>
+                                </div>
+                            </div>
+                            <div class="stage-arrow"><i class="fa-solid fa-caret-right"></i></div>
+                            <div class="pipeline-stage">
+                                <div class="stage-header"><span class="badge" style="background:#333;">5</span> Финализация</div>
+                                <div class="stage-body">
+                                    <div class="stage-desc">Сложные составные изделия (например, из гнутого)</div>
+                                    <button class="btn btn-primary w-100" onclick="document.querySelector('[data-step=\'5\']').click()">Сложные изделия</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="rods-tabs" class="tabs-scrollable mb-4">
+                        <button class="btn btn-secondary btn-sm active" data-step="1">1. Металл</button>
+                        <button class="btn btn-secondary btn-sm" data-step="2">2. Заготовка</button>
+                        <button class="btn btn-secondary btn-sm" data-step="3">3. Пруток (Стандарт)</button>
+                        <button class="btn btn-secondary btn-sm" data-step="4">4. Гнутый / Сварной</button>
+                        <button class="btn btn-secondary btn-sm" data-step="5">5. Обрезиненный</button>
+                        <button class="btn btn-secondary btn-sm" data-step="6">6. Сдвоенный</button>
+                    </div>
+
+                    <!-- STEP 1: METAL -->
+                    <div id="step-1" class="step-container active panel glass-panel">
+                    <h3 class="mb-4"><i class="fa-solid fa-weight-hanging" style="color:var(--brand-red)"></i> Шаг 1: Закупка / Выбор со склада</h3>
+                    <div class="calc-form-grid">
+                        <div class="form-group" style="grid-column: span 2; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">
+                            <label style="color:var(--brand-gold)"><i class="fa-solid fa-warehouse"></i> Выбрать партию со склада (Добавить в расчет)</label>
+                            <div class="flex gap-2">
+                                <select id="m-warehouse-select" class="form-control" onchange="window.addBatchToCalculation()"></select>
+                                <button class="btn btn-secondary btn-sm" onclick="window.clearSelectedBatches()"><i class="fa-solid fa-eraser"></i></button>
+                            </div>
+                            <div id="m-selected-batches-list" class="mt-2 text-xs" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
+                        </div>
+                        <div class="form-group"><label>Марка/Тип металла</label><select id="m-name" class="form-control" onchange="window.autoPullMetalData()"></select></div>
+                        <div class="form-group"><label>Диаметр (мм)</label><select id="m-dia" class="form-control" onchange="window.autoPullMetalData()"></select></div>
+                        <div class="form-group"><label>Вес партии (кг)</label><input type="number" id="m-batch-kg" class="form-control" oninput="calcStep1()"></div>
+                        <div class="form-group"><label>Стоимость доставки партии (₽)</label><input type="number" id="m-delivery-cost" class="form-control" oninput="calcStep1()"></div>
+                        <div class="form-group"><label>Ставка НДС</label><select id="m-vat-rate" class="form-control" onchange="calcStep1()"><option value="1.2">20%</option><option value="1.22">22%</option><option value="1">Без НДС</option></select></div>
+                        <div class="form-group"><label>Цена за тонну (с НДС, ₽)</label><input type="number" id="m-price-ton-vat" class="form-control" oninput="calcStep1Price('vat')"></div>
+                        <div class="form-group"><label>Цена за тонну (без НДС, ₽)</label><input type="number" id="m-price-ton-no-vat" class="form-control" oninput="calcStep1Price('no-vat')"></div>
+                        <div class="form-group"><label>Вес 1 м.п. прутка (кг)</label><input type="number" id="m-weight-m" class="form-control" step="0.001" oninput="calcStep1()"></div>
+                    </div>
+                    <div id="m-hardness-info" class="mt-2 text-xs" style="display:none; color:var(--brand-gold)">
+                        <i class="fa-solid fa-gauge-high"></i> Твердость партии: <span id="m-res-hardness">--</span>
+                    </div>
+                    <div class="result-box mt-4">
+                        <div class="mini-stat">Доставка 1 кг: <strong id="m-res-del-kg">0 ₽</strong></div>
+                        <div class="mini-stat">Доставка 1 м.п.: <strong id="m-res-del-m">0 ₽</strong></div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--neon-emerald); margin-top: 10px;">ИТОГО (Сырье) 1 м.п.: <span id="m-res-total-m">0 ₽</span></div>
+                    </div>
+                    </div>
+
+                    <!-- STEP 2: BLANK -->
+                    <div id="step-2" class="step-container panel glass-panel">
+                    <h3 class="mb-4"><i class="fa-solid fa-scissors" style="color:var(--brand-red)"></i> Шаг 2: Заготовка (нарезка)</h3>
+                    <div class="calc-form-grid">
+                        <div class="form-group"><label>Артикул (Код)</label><input type="text" id="b-article" class="form-control" readonly placeholder="Автоматически..."></div>
+                        <div class="form-group"><label>Выбрать металл</label><select id="b-metal-select" class="form-control" onchange="calcStep2()"></select></div>
+                        <div class="form-group"><label>Длина заготовки (мм)</label><input type="number" id="b-length" class="form-control" oninput="calcStep2()"></div>
+                        <div class="form-group"><label>Размер хлыста (мм)</label><input type="number" id="b-rod-length" class="form-control" value="6000" oninput="calcStep2()"></div>
+                        <div class="form-group"><label>Отход на 1 руб (зазор, мм)</label><input type="number" id="b-gap" class="form-control" value="10" oninput="calcStep2()"></div>
+                        <div class="form-group"><label>Стоимость работ (₽)</label><input type="number" id="b-labor" class="form-control" value="50" oninput="calcStep2()"></div>
+                    </div>
+                    <div class="result-box mt-4">
+                        <div class="mini-stat">Кол-во заготовок в хлысте: <strong id="b-res-qty">0 шт</strong></div>
+                        <div class="mini-stat">Остаток с хлыста: <strong id="b-res-remainder">0 мм</strong></div>
+                        <div class="mini-stat" id="b-waste-container">Отход: <strong id="b-res-waste">0 %</strong></div>
+                        <div class="mini-stat" style="margin-top:8px;">Цена металла в заготовке: <strong id="b-res-metal-cost">0 ₽</strong></div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--neon-emerald); margin-top: 10px;">ЦЕНА ЗАГОТОВКИ: <span id="b-res-total">0 ₽</span></div>
+                    </div>
+                    </div>
+
+                    <!-- STEP 3: ROD -->
+                    <div id="step-3" class="step-container panel glass-panel">
+                    <h3 class="mb-4"><i class="fa-solid fa-ruler-combined" style="color:var(--brand-red)"></i> Шаг 3: Пруток (Готовое изделие)</h3>
+                    <div class="calc-form-grid">
+                        <div class="form-group"><label>Диаметр детали (мм)</label><select id="r-dia-select" class="form-control" onchange="updateBlanksForStep3()"></select></div>
+                        <div class="form-group"><label>Длина прутка (L, мм)</label><input type="number" id="r-length" class="form-control" oninput="calcStep3()"></div>
+                        <div class="form-group"><label>Центральная часть / Особенности</label>
+                            <select id="r-center" class="form-control" onchange="calcStep3()">
+                                <option value="0">Нет</option>
+                                <option value="10">1 центр. часть (+10 мм)</option>
+                                <option value="20">2 центр. части (+20 мм)</option>
+                                <option value="30">3 центр. части (+30 мм)</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Заготовка</label>
+                            <div style="display:flex; gap:10px;">
+                                <select id="r-blank-select" class="form-control" onchange="calcStep3()"></select>
+                                <button class="btn btn-secondary btn-sm" onclick="suggestBlank(3)">Рассчитать</button>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Диаметр отверстий (мм)</label><select id="r-holes" class="form-control"></select></div>
+                        <div class="form-group"><label>Межосевое (мм)</label><select id="r-pitch" class="form-control"></select></div>
+                        <div class="form-group"><label>Тип техники</label><input type="text" id="r-tech-type" class="form-control" list="tech-types-list"></div>
+                        <div class="form-group"><label>Артикул (авто)</label><input type="text" id="r-article" class="form-control" readonly></div>
+                        <div class="form-group"><label>Чертеж (URL/Путь)</label><input type="text" id="r-drawing" class="form-control"></div>
+                        <div class="form-group"><label>Стоимость работ (сборка/сверловка) (₽)</label>
+                            <div class="flex gap-2">
+                                <select id="r-labor-dir" class="form-control" onchange="window.onLaborDirChange('r')"></select>
+                                <input type="number" id="r-labor" class="form-control" value="100" oninput="calcStep3()">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="result-box mt-4">
+                        <div class="mini-stat">Цена заготовки: <strong id="r-res-blank-cost">0 ₽</strong></div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--neon-emerald); margin-top: 10px;">ЦЕНА ПРУТКА (Стандарт): <span id="r-res-total">0 ₽</span></div>
+                    </div>
+                    </div>
+
+                    <!-- STEP 4: BENT -->
+                    <div id="step-4" class="step-container panel glass-panel">
+                    <h3 class="mb-4"><i class="fa-solid fa-wave-square" style="color:var(--brand-red)"></i> Шаг 4: Гнутый или Сварной пруток</h3>
+                    <div class="calc-form-grid">
+                        <div class="form-group"><label>Базовый пруток (из Шага 3)</label><select id="bent-rod-select" class="form-control" onchange="calcStep4()"></select></div>
+                        <div class="form-group"><label>Тип обработки</label><select id="bent-type" class="form-control"><option value="гнутый">Гнутый</option><option value="сварной">Сварной</option><option value="комби">Комбинированный</option></select></div>
+                        <div class="form-group"><label>Артикул</label><input type="text" id="bent-article" class="form-control"></div>
+                        <div class="form-group"><label>Чертеж гнутья</label><input type="text" id="bent-drawing" class="form-control"></div>
+                        <div class="form-group"><label>Стоимость доп. работ (₽)</label>
+                            <div class="flex gap-2">
+                                <select id="bent-labor-dir" class="form-control" onchange="window.onLaborDirChange('bent')"></select>
+                                <input type="number" id="bent-labor" class="form-control" value="250" oninput="calcStep4()">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="result-box mt-4">
+                        <div class="mini-stat">Базовая цена: <strong id="bent-res-base">0 ₽</strong></div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--neon-emerald); margin-top: 10px;">ЦЕНА ИЗДЕЛИЯ: <span id="bent-res-total">0 ₽</span></div>
+                    </div>
+                    </div>
+
+                    <!-- STEP 5: RUBBER -->
+                    <div id="step-5" class="step-container panel glass-panel">
+                    <h3 class="mb-4"><i class="fa-solid fa-circle-dot" style="color:var(--brand-red)"></i> Шаг 5: Обрезиненный пруток</h3>
+                    <div class="calc-form-grid">
+                        <div class="form-group"><label>Пруток (Шаг 3 или 4)</label><select id="rub-rod-select" class="form-control" onchange="calcStep5()"></select></div>
+                        <div class="form-group"><label>Тип техники</label><input type="text" id="rub-tech-type" class="form-control" list="tech-types-list"></div>
+                        <div class="form-group"><label>Артикул</label><input type="text" id="rub-article" class="form-control"></div>
+                        <div class="form-group"><label>Марка материала (Резина/ПУ)</label><input type="text" id="rub-material" class="form-control" placeholder="Напр. ТКМЩ"></div>
+                        <div class="form-group"><label>Диаметр по резине (мм)</label><input type="number" id="rub-dia" class="form-control"></div>
+                        <div class="form-group"><label>Ширина по резине (мм)</label><input type="number" id="rub-width" class="form-control"></div>
+                        <div class="form-group"><label>Стоимость обрезинивания (₽)</label>
+                            <div class="flex gap-2">
+                                <select id="rub-labor-dir" class="form-control" onchange="window.onLaborDirChange('rub')"></select>
+                                <input type="number" id="rub-labor" class="form-control" value="800" oninput="calcStep5()">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="result-box mt-4">
+                        <div class="mini-stat">Базовый пруток: <strong id="rub-res-base">0 ₽</strong></div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--neon-emerald); margin-top: 10px;">ЦЕНА ОБРЕЗИНЕННОГО ПРУТКА: <span id="rub-res-total">0 ₽</span></div>
+                    </div>
+                    </div>
+
+                    <!-- STEP 6: DOUBLE -->
+                    <div id="step-6" class="step-container panel glass-panel">
+                    <h3 class="mb-4"><i class="fa-solid fa-equals" style="color:var(--brand-red)"></i> Шаг 6: Сдвоенный пруток</h3>
+                    <div class="calc-form-grid">
+                        <div class="form-group"><label>Диаметр (мм)</label><select id="d-dia-select" class="form-control" onchange="updateBlanksForStep6()"></select></div>
+                        <div class="form-group"><label>Длина (L, мм)</label><input type="number" id="d-length" class="form-control" oninput="calcStep6()"></div>
+                        <div class="form-group"><label>Заготовка (нужно 2 шт)</label>
+                            <div style="display:flex; gap:10px;">
+                                <select id="d-blank-select" class="form-control" onchange="calcStep6()"></select>
+                                <button class="btn btn-secondary btn-sm" onclick="suggestBlank(6)">Рассчитать</button>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Центральное крепление</label><input type="text" id="d-center-hook" class="form-control"></div>
+                        <div class="form-group"><label>Выбор хомута (2 шт)</label><select id="d-clamp-select-type" class="form-control" onchange="window.onClampSelect()"></select></div>
+                        <div class="form-group"><label>Цена корд-хомутов (₽)</label><input type="number" id="d-clamp-price" class="form-control" value="150" oninput="calcStep6()"></div>
+                        <div class="form-group"><label>Выбор центр. хомута</label><select id="d-center-clamp-select-type" class="form-control" onchange="window.onClampSelect()"></select></div>
+                        <div class="form-group"><label>Цена центр. хомута (₽)</label><input type="number" id="d-center-clamp-price" class="form-control" value="0" oninput="calcStep6()"></div>
+                        <div class="form-group"><label>Артикул</label><input type="text" id="d-article" class="form-control"></div>
+                        <div class="form-group"><label>Стоимость сборки (₽)</label><input type="number" id="d-labor" class="form-control" value="300" oninput="calcStep6()"></div>
+                    </div>
+                    <div class="result-box mt-4">
+                        <div class="mini-stat">Заготовки (2x): <strong id="d-res-blanks">0 ₽</strong></div>
+                        <div class="mini-stat">Хомуты: <strong id="d-res-clamps">0 ₽</strong></div>
+                        <div style="font-size: 1.2rem; font-weight: 700; color: var(--neon-emerald); margin-top: 10px;">ЦЕНА СДВОЕННОГО ПРУТКА: <span id="d-res-total">0 ₽</span></div>
+                    </div>
+                    </div>
+
+                    <div class="mt-4 panel glass-panel">
+                        <h4 class="mb-3">Реестр созданных деталей (База)</h4>
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>Тип</th><th>Наименование</th><th>Параметры</th><th>Себестоимость</th><th style="width:50px"></th></tr>
+                            </thead>
+                            <tbody id="rods-registry-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- PRODUCTION MODAL WINDOW (GLASSMORPHIC) -->
+    <div id="modal-production-run" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter:blur(15px); z-index:1000; align-items:center; justify-content:center;">
+        <div class="glass-panel" style="width:550px; padding:35px; border-top:4px solid var(--neon-emerald); position:relative; max-height: 90vh; overflow-y: auto;">
+            <button onclick="window.closeProductionModal()" style="position:absolute; top:20px; right:20px; background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+            <div style="text-align:center; margin-bottom:25px;">
+                <i class="fa-solid fa-industry" style="font-size:3rem; color:var(--neon-emerald); filter:drop-shadow(0 0 15px rgba(0, 255, 157, 0.4)); margin-bottom:15px;"></i>
+                <h2 style="font-family:'Outfit'; margin:0 0 5px; font-size:1.6rem; color:#fff;">Запустить производство деталей</h2>
+                <p style="color:var(--text-muted); font-size:0.85rem; margin:0;">Списание сырья и оприходование готовой продукции на склад</p>
+            </div>
+            
+            <div class="form-group mb-3">
+                <label style="color:#fff; font-weight:600;">1. Выберите тип производства</label>
+                <select id="prod-type" class="form-control" onchange="window.updateProductionItemDropdown()" style="background:#111; color:#fff;">
+                    <option value="blank">Нарезка заготовок (Сырье -> Заготовки)</option>
+                    <option value="straight">Изготовление прямого прутка (Заготовки -> Прямые прутки)</option>
+                    <option value="double">Изготовление сдвоенного прутка (Заготовки -> Сдвоенные прутки)</option>
+                    <option value="bent">Гнутье прутка (Прямые прутки -> Гнутые прутки)</option>
+                    <option value="rubberized">Обрезинивание прутка (Прямые/Гнутые -> Обрезиненные прутки)</option>
+                </select>
+            </div>
+
+            <div class="form-group mb-3" id="prod-batch-group">
+                <label style="color:#fff; font-weight:600;">2. Выберите партию металла на складе</label>
+                <select id="prod-metal-batch" class="form-control" onchange="window.updateProductionRequirements()" style="background:#111; color:#fff;"></select>
+            </div>
+
+            <div class="form-group mb-3" id="prod-item-group">
+                <label style="color:#fff; font-weight:600;" id="prod-item-label">3. Выберите изделие из базы инженерии</label>
+                <select id="prod-item-select" class="form-control" onchange="window.updateProductionRequirements()" style="background:#111; color:#fff;"></select>
+            </div>
+
+            <div class="form-group mb-3" id="prod-rubber-base-group" style="display:none;">
+                <label style="color:#fff; font-weight:600;">Базовый пруток для обрезинивания</label>
+                <select id="prod-rubber-base-type" class="form-control" onchange="window.updateProductionRequirements()" style="background:#111; color:#fff;">
+                    <option value="straight">Прямой пруток (из остатков на складе)</option>
+                    <option value="bent">Гнутый пруток (из остатков на складе)</option>
+                </select>
+            </div>
+
+            <div class="form-group mb-3">
+                <label style="color:#fff; font-weight:600;">Количество к выпуску (шт)</label>
+                <input type="number" id="prod-qty" class="form-control" value="10" min="1" oninput="window.updateProductionRequirements()" style="background:#111; color:#fff;">
+            </div>
+
+            <!-- Requirements analysis block -->
+            <div id="prod-requirements-box" class="result-box mt-3 mb-4" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:15px; border-radius:8px;">
+                <!-- Rendered dynamically -->
+            </div>
+
+            <button id="btn-submit-production" class="btn btn-primary w-100" style="height:48px; font-size:1rem; background:var(--neon-emerald); border-color:var(--neon-emerald); color:#000; font-weight:700;" onclick="window.submitProductionRun()">
+                <i class="fa-solid fa-play"></i> Запустить производство
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/core/supabase_config.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/handlers/rods_production.js?v=19.0.0"></script>
+    <script src="js/handlers/engineering_steps/step1_metal.js?v=19.0.0"></script>
+    <script src="js/handlers/engineering_steps/step2_blank.js?v=19.0.0"></script>
+    <script src="js/handlers/engineering_steps/step3_standard.js?v=19.0.0"></script>
+    <script src="js/handlers/engineering_steps/step4_bent.js?v=19.0.0"></script>
+    <script src="js/handlers/engineering_steps/step6_double.js?v=19.0.0"></script>
+    <script src="js/utils/prutkon_features.js?v=1.0.0"></script>
+</body>
+</html>

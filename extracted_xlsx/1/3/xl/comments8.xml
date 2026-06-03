@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><comments xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision"><authors><author></author><author>tc={0a37119d-a7cc-49f6-a084-d82681e87b4b}</author><author>tc={1936d7d8-a06d-42ba-a0ac-54a5c0960190}</author><author>tc={83d99603-56c5-429d-b5a6-3ba6d21a3e09}</author><author>tc={c7b291d4-d98b-41e5-a0d7-9a8877a244c2}</author><author>tc={d018a742-06c2-44c9-a13a-c0544907f444}</author></authors><commentList><comment authorId="0" ref="K1"><text><t xml:space="preserve">Указывается кол-во средних креплений ремня на прутке.
+Пример: пруток идет под три ремня, соответственно имеет 1 среднее плющенье.
+Пруток идет под 4 ремня, соответственно идет 2 средних плющания.</t></text></comment><comment authorId="1" xr:uid="{0a37119d-a7cc-49f6-a084-d82681e87b4b}" ref="H1"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	отсеивает отбор по указанному диаметру и расчетной длине заготовки
+</t></text></comment><comment authorId="2" xr:uid="{1936d7d8-a06d-42ba-a0ac-54a5c0960190}" ref="H1"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	отсеивает отбор по диаметру и расчетной длине заготовки
+</t></text></comment><comment authorId="3" xr:uid="{83d99603-56c5-429d-b5a6-3ba6d21a3e09}" ref="L1"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	фактически вес заготовки (в идеале минус пробитые отверстия грамм)
+</t></text></comment><comment authorId="4" xr:uid="{c7b291d4-d98b-41e5-a0d7-9a8877a244c2}" ref="F1"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	себестоимость * норму прибыли
+</t></text></comment><comment authorId="5" xr:uid="{d018a742-06c2-44c9-a13a-c0544907f444}" ref="O1"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	себестоимость прутка с учетом работ. 1- стоимость плющанья концов и середины + стоимость прбивки отверстий
+</t></text></comment></commentList></comments>

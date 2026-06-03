@@ -1,0 +1,77 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пруткон | ФОТ и ЗП</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body style="background: #07090e;">
+    <div class="app-container">
+        <!-- Dynamic Sidebar -->
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="top-header no-print">
+                <div class="view-header" style="margin-bottom:0; border:none; padding:0"><h2>Финансовые расчеты (ФОТ / Зарплаты)</h2></div>
+                <div class="header-actions" style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='catalog.html'"><i class="fa-solid fa-book"></i> Справочники</button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='prices.html'"><i class="fa-solid fa-tags"></i> Прайсы</button>
+                    <button class="btn btn-secondary" onclick="window.print()"><i class="fa-solid fa-print"></i> Печать </button>
+                    <button class="btn btn-primary" onclick="window.payAllSalaries()"><i class="fa-solid fa-check-double"></i> Выплатить всё</button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                <div class="module-shell">
+                    <div class="module-hero">
+                        <div class="module-hero-card">
+                            <div class="module-hero-title">Ведомость ФОТ и персональных выплат</div>
+                            <div class="module-hero-copy">Суммы считаются по живым заказам системы, а фиксированные доплаты сохраняются отдельно по каждому сотруднику.</div>
+                        </div>
+                        <div class="metric-strip">
+                            <div class="metric-tile">
+                                <div class="metric-tile-label">База расчета</div>
+                                <div class="metric-tile-value">25%</div>
+                                <div class="metric-tile-note">ФОТ считается от активной выручки</div>
+                            </div>
+                            <div class="metric-tile">
+                                <div class="metric-tile-label">Источник</div>
+                                <div class="metric-tile-value">ERP</div>
+                                <div class="metric-tile-note">Берем данные из заказов и сотрудников</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid mb-4" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:20px;">
+                        <div class="glass-panel" style="padding:25px;"><div class="neutral text-xs">Всего к выплате</div><h2 id="total-net">0 ₽</h2></div>
+                        <div class="glass-panel" style="padding:25px;"><div class="neutral text-xs">Общий ФОТ заказов</div><h2 id="total-fot">0 ₽</h2></div>
+                        <div class="glass-panel" style="padding:25px;"><div class="neutral text-xs">Реестр начислений</div><h2 id="total-tax">0 ₽</h2></div>
+                    </div>
+
+                    <div class="panel glass-panel">
+                        <h3 class="mb-4" style="color:var(--brand-red);">Ведомость по сотрудникам</h3>
+                        <table class="data-table">
+                            <thead>
+                                <tr><th>ФИО Сотрудника</th><th>Оклад</th><th>Премия (%)</th><th>Премия (Фикс)</th><th>ГРОСС</th><th>К ВЫПЛАТЕ</th></tr>
+                            </thead>
+                            <tbody id="salary-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/firebase_config.js"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/handlers/salary.js?v=19.0.0"></script>
+</body>
+</html>

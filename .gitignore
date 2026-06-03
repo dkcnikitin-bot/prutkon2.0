@@ -1,0 +1,12 @@
+# Среда Python и зависимости
+__pycache__/
+*.pyc
+
+# Временные файлы и сборка
+.DS_Store
+Thumbs.db
+
+# Настройки IDE
+.vscode/
+.idea/
+.gemini/

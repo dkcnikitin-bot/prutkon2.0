@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пруткон | Настройки системы</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..700;1,100..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="with-hero-bg">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="top-header no-print">
+                <div class="view-header"><h2>Настройки и доступы</h2></div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='catalog.html'"><i class="fa-solid fa-book"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='prices.html'"><i class="fa-solid fa-tags"></i></button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                <div id="settings-main-container">
+                    <!-- Будет заполнено через settings_ui.js -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/i18n.js?v=19.0.0"></script>
+    <script src="js/core/version_history.js?v=19.0.0"></script>
+    <script src="js/core/firebase_config.js"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/utils/bitrix.js?v=19.0.0"></script>
+    <script src="js/handlers/settings_ui.js?v=19.0.0"></script>
+    <script src="js/handlers/settings.js?v=19.0.0"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!window.settingsUI) {
+                console.error("CRITICAL: settingsUI is MISSING!");
+                alert("Ошибка: Модуль интерфейса (settings_ui.js) не загружен. Проверьте кодировку файла.");
+            } else {
+                console.log("OK: settingsUI is present.");
+            }
+        });
+    </script>
+</body>
+</html>

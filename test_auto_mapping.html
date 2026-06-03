@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Тест автоопределения фото</title>
+    <style>
+        body { font-family: monospace; background: #0a0a14; color: #fff; padding: 20px; }
+        .test { background: rgba(255,255,255,0.05); padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .pass { border-left: 4px solid #00ff9d; }
+        .fail { border-left: 4px solid #ff1e27; }
+        h2 { color: #00ff9d; }
+        code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h2>🧪 Тест автоопределения полей Photo_Path и Photo_Filename</h2>
+    <div id="results"></div>
+
+    <script>
+        // Эмуляция детектора из prices.js
+        const baseFields = {
+            'photo_filename': ['photo_filename', 'photo filename', 'filename', 'имя файла', 'img_name', 'image name', 'фото файл', 'фото имя'],
+            'photo_path':     ['photo_path', 'photo path', 'image path', 'img path', 'путь к фото', 'папка фото', 'фото путь'],
+            'art':            ['артикул', 'код товара', 'код-артикул', 'article', 'арт.', 'sku', 'item no', 'код', 'номер'],
+            'price':          ['цена с ндс', 'цена без ндс', 'цена', 'стоимость', 'price', 'прайс', 'сумма', 'руб', 'cost'],
+            'stock':          ['остаток', 'склад', 'количество', 'кол-во', 'stock', 'qty', 'штук', 'шт'],
+            'name':           ['наименование', 'название', 'товар', 'имя товара', 'title', 'description', 'продукт', 'изделие'],
+        };
+
+        const detectField = (colName, colData) => {
+            const lower = colName.toLowerCase().replace(/_/g, ' ').replace(/-/g, ' ').trim();
+            
+            // Проход 1: точное совпадение
+            for (let [field, synonyms] of Object.entries(baseFields)) {
+                for (let s of synonyms) {
+                    if (lower === s || lower.startsWith(s + ' ') || lower.startsWith(s + '_')) return field;
+                }
+            }
+            
+            // Проход 2: вхождение
+            for (let [field, synonyms] of Object.entries(baseFields)) {
+                for (let s of synonyms) {
+                    if (s.length >= 4 && lower.includes(s)) return field;
+                }
+            }
+            
+            // Проход 3: анализ данных
+            if (colData && colData.length > 0) {
+                for (let val of colData) {
+                    const v = String(val).toLowerCase();
+                    if (v.includes('extracted_xlsx') || v.includes('extracted')) return 'photo_path';
+                    if (/\.(png|jpg|jpeg|gif|webp)$/i.test(val)) return 'photo_filename';
+                    if (/^[a-z]:\\/i.test(val) || (val.includes('\\') && val.includes('extracted'))) return 'photo_path';
+                }
+            }
+            
+            return '';
+        };
+
+        // Тестовые данные
+        const tests = [
+            {
+                name: 'Photo_Path (англ)',
+                colName: 'Photo_Path',
+                data: ['C:\\Users\\Test\\extracted_xlsx\\1\\3\\Paltsy\\'],
+                expected: 'photo_path'
+            },
+            {
+                name: 'Photo_Filename (англ)',
+                colName: 'Photo_Filename',
+                data: ['row_0002_img_01.png'],
+                expected: 'photo_filename'
+            },
+            {
+                name: 'Путь с extracted_xlsx',
+                colName: 'Путь к фото',
+                data: ['C:\\Users\\Никитин Иван\\Documents\\Пруткон 3\\extracted_xlsx\\1\\3\\Paltsy\\'],
+                expected: 'photo_path'
+            },
+            {
+                name: 'Имя файла .png',
+                colName: 'Изображение',
+                data: ['test_image.png'],
+                expected: 'photo_filename'
+            },
+            {
+                name: 'Артикул',
+                colName: 'Артикул',
+                data: ['001-RTI-25'],
+                expected: 'art'
+            },
+            {
+                name: 'Цена',
+                colName: 'Цена',
+                data: ['1500'],
+                expected: 'price'
+            }
+        ];
+
+        let passed = 0;
+        let failed = 0;
+
+        tests.forEach((test, i) => {
+            const result = detectField(test.colName, test.data);
+            const ok = result === test.expected;
+            if (ok) passed++; else failed++;
+
+            const div = document.createElement('div');
+            div.className = `test ${ok ? 'pass' : 'fail'}`;
+            div.innerHTML = `
+                <strong>${ok ? '✅' : '❌'} Тест ${i+1}: ${test.name}</strong><br>
+                Колонка: <code>${test.colName}</code><br>
+                Данные: <code>${test.data[0]}</code><br>
+                Ожидалось: <code>${test.expected}</code><br>
+                Получено: <code>${result}</code>
+            `;
+            document.getElementById('results').appendChild(div);
+        });
+
+        // Итог
+        const summary = document.createElement('div');
+        summary.style.marginTop = '20px';
+        summary.style.padding = '15px';
+        summary.style.background = failed === 0 ? 'rgba(0,255,157,0.1)' : 'rgba(255,30,39,0.1)';
+        summary.style.borderRadius = '8px';
+        summary.innerHTML = `
+            <h3>${failed === 0 ? '🎉 Все тесты пройдены!' : '⚠️ Есть ошибки'}</h3>
+            <p>✅ Успешно: ${passed} | ❌ Провалено: ${failed}</p>
+        `;
+        document.getElementById('results').appendChild(summary);
+    </script>
+</body>
+</html>

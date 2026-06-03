@@ -1,0 +1,184 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пруткон ОС | Консоль управления</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..700;1,100..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="with-hero-bg">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <section id="dashboard" class="view-section active">
+                <div id="constructor-main">
+                    <!-- UI Blocks injected by core.js:renderConstructor -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>window.DB_VERSION = "19.0.0";</script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/i18n.js?v=19.0.0"></script>
+    <script src="js/core/version_history.js?v=19.0.0"></script>
+    <script src="js/core/supabase_config.js"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const updateDate = () => {
+                const el = document.getElementById('dash-date');
+                if (el) {
+                    const d = new Date();
+                    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                    el.innerText = d.toLocaleDateString('ru-RU', options);
+                }
+            };
+
+            window.updateDashboardData = () => {
+                updateDate();
+                
+                // Fallbacks for warehouse state
+                if (!window.dbWarehouseInv) {
+                    try {
+                        const whRaw = localStorage.getItem('prutkon_warehouse_inv');
+                        window.dbWarehouseInv = whRaw ? JSON.parse(whRaw) : {};
+                    } catch(e) { window.dbWarehouseInv = {}; }
+                }
+                if (!window.dbWarehouseLog) {
+                    try {
+                        const logRaw = localStorage.getItem('prutkon_warehouse_log');
+                        window.dbWarehouseLog = logRaw ? JSON.parse(logRaw) : [];
+                    } catch(e) { window.dbWarehouseLog = []; }
+                }
+
+                // 1. Calculate metal weight on warehouse
+                let totalMetalWeight = 0;
+                for (let key in window.dbWarehouseInv) {
+                    if (key === 'metal' || key.startsWith('metal_')) {
+                        totalMetalWeight += parseFloat(window.dbWarehouseInv[key]) || 0;
+                    }
+                }
+                const metalEl = document.getElementById('dash-metal-weight');
+                if (metalEl) {
+                    const formatter = new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+                    metalEl.innerText = `${formatter.format(totalMetalWeight)} кг`;
+                }
+
+                // 2. Format currency & calculate CRM stats
+                if (window.formatCurrency) {
+                    const ords = window.orders || [];
+                    let sum = 0; 
+                    ords.forEach(o => sum += (parseFloat(o.total) || 0));
+                    
+                    const rev = document.getElementById('dash-revenue');
+                    const cnt = document.getElementById('dash-orders-count');
+                    const load = document.getElementById('dash-load-value');
+                    const ring = document.getElementById('dash-progress-ring');
+
+                    if (rev) rev.innerText = window.formatCurrency(sum);
+                    if (cnt) cnt.innerText = ords.length;
+                    
+                    const loadPercent = Math.min(100, Math.round((ords.length / 20) * 100));
+                    if (load) load.innerText = `${loadPercent}%`;
+                    if (ring) {
+                        const offset = 251.2 - (251.2 * loadPercent / 100);
+                        ring.style.strokeDashoffset = offset;
+                    }
+                    
+                    // 3. Render CRM Deals
+                    const list = document.getElementById('dash-orders-list');
+                    if (list && ords.length > 0) {
+                        list.innerHTML = ords.slice(-5).reverse().map(o => `
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td style="padding:12px 15px;">
+                                    <div class="text-bold text-white" style="font-size:0.9rem;">${o.id || '---'}</div>
+                                    <div class="text-xs text-muted" style="margin-top:2px;">${o.clientName || o.customer || 'Новый клиент'}</div>
+                                </td>
+                                <td style="padding:12px 15px;"><span class="badge status-info" style="font-size:0.7rem; padding:3px 8px; border-radius:4px;">${o.status || 'В работе'}</span></td>
+                                <td class="text-bold emerald text-right" style="padding:12px 15px; text-align:right; font-weight:700; color:var(--neon-emerald);">${window.formatCurrency(o.total)}</td>
+                            </tr>
+                        `).join('');
+                    } else if (list) {
+                        list.innerHTML = `<tr><td colspan="3" class="dash-empty" style="text-align:center; padding:20px; color:var(--text-muted);">Нет сделок для отображения</td></tr>`;
+                    }
+                    
+                    // 4. Combined Activity Feed (CRM Audits + Warehouse Logs)
+                    const feed = document.getElementById('dash-audit-feed');
+                    if (feed) {
+                        let timeline = [];
+                        
+                        // Parse CRM Audit Log
+                        if (window.dbAuditLog) {
+                            window.dbAuditLog.forEach(l => {
+                                const tsVal = l.ts || l.time || Date.now();
+                                timeline.push({
+                                    time: String(l.time || l.ts || new Date().toLocaleString()),
+                                    timestamp: typeof tsVal === 'number' ? tsVal : new Date(tsVal).getTime() || Date.now(),
+                                    user: l.user || 'Система',
+                                    action: l.action || 'Событие безопасности',
+                                    type: 'system'
+                                });
+                            });
+                        }
+                        
+                        // Parse Warehouse Log
+                        if (window.dbWarehouseLog) {
+                            window.dbWarehouseLog.forEach(w => {
+                                const tsVal = w.id || Date.now();
+                                timeline.push({
+                                    time: w.date || new Date().toLocaleString(),
+                                    timestamp: typeof tsVal === 'number' ? tsVal : new Date(tsVal).getTime() || Date.now(),
+                                    user: w.user || 'Склад',
+                                    action: `${w.type}: ${w.details}`,
+                                    type: 'warehouse'
+                                });
+                            });
+                        }
+
+                        // Sort descending chronologically
+                        timeline.sort((a, b) => b.timestamp - a.timestamp);
+                        const latest = timeline.slice(0, 10);
+
+                        if (latest.length === 0) {
+                            feed.innerHTML = `<div class="dash-empty" style="text-align:center; padding:20px; color:var(--text-muted);">Журнал событий пуст</div>`;
+                        } else {
+                            feed.innerHTML = latest.map(item => {
+                                const isWh = item.type === 'warehouse';
+                                const iconColor = isWh ? 'var(--accent-blue)' : 'var(--brand-red)';
+                                const icon = isWh ? '<i class="fa-solid fa-warehouse"></i>' : '<i class="fa-solid fa-gears"></i>';
+                                const timeStr = item.time.includes(',') ? item.time.split(',')[1]?.trim() || item.time : item.time;
+                                return `
+                                    <div class="activity-item" style="border-left: 2px solid ${iconColor}; padding-left: 15px; margin-bottom: 12px; position: relative;">
+                                        <div style="position: absolute; left: -9px; top: 2px; background: #0c0c14; padding: 2px; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: ${iconColor};">
+                                            ${icon}
+                                        </div>
+                                        <div class="flex justify-between mb-1" style="font-size: 0.75rem; display: flex; justify-content: space-between;">
+                                            <strong class="text-white">${item.user}</strong>
+                                            <span class="text-muted text-xs" style="color:var(--text-muted); font-size:0.65rem;">${timeStr}</span>
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.3;">${item.action}</div>
+                                    </div>
+                                `;
+                            }).join('');
+                        }
+                    }
+                }
+            };
+
+            window.renderConstructor();
+            
+            window.addEventListener('db_updated', window.updateDashboardData);
+            window.addEventListener('ordersSynced', window.updateDashboardData);
+            setTimeout(window.updateDashboardData, 800);
+        });
+    </script>
+</body>
+</html>

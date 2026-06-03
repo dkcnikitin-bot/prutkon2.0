@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><comments xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision"><authors><author></author><author>tc={1001c596-2184-4828-a829-7d22174fbc8e}</author><author>tc={b922f083-e102-44db-af3c-2d935114aa0b}</author><author>tc={db79f67e-3794-488f-84ef-bb1e586cd580}</author><author>tc={fb8cc054-00e1-4816-926d-193cc5348657}</author></authors><commentList><comment authorId="0" ref="U1"><text><t xml:space="preserve">Справочное поле, указано среднее количество заготовок в хлысте. Поле используется для дальнейшего расчета.
+</t></text></comment><comment authorId="1" xr:uid="{1001c596-2184-4828-a829-7d22174fbc8e}" ref="D1"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	ПОДСВЕЧИВАТЬ ДУБЛИ (диаметр прутка и длина)
+</t></text></comment><comment authorId="2" xr:uid="{b922f083-e102-44db-af3c-2d935114aa0b}" ref="J1"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	при установке флажка меняется способ расчета стоимости заготовки
+расчет ведется не от прутка, а от фактической длинны
+</t></text></comment><comment authorId="3" xr:uid="{db79f67e-3794-488f-84ef-bb1e586cd580}" ref="C1"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	марка отсеивается по введенному диаметру
+</t></text></comment><comment authorId="4" xr:uid="{fb8cc054-00e1-4816-926d-193cc5348657}" ref="A1"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	невозможность создание одинаковых заготовок
+</t></text></comment></commentList></comments>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?><comments xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision"><authors><author>tc={13996df8-ec4e-4a34-9138-8f8a2dde29e4}</author><author>tc={2d16a879-4115-498f-bb73-d15e2a290d4c}</author><author>tc={bff9a2dd-0283-4618-a28b-193b022db182}</author><author>tc={cac95cdc-14c0-44b7-911a-43e64b7ab864}</author><author>tc={dbbedba0-951a-4eaf-bcc8-22b4b75dc718}</author><author>tc={dd0a7330-90d9-49ad-a21d-f5de6de7afc1}</author><author>tc={f6804fd8-ab6c-4bfc-81d9-94d09dddfc57}</author><author>tc={f98da03b-5dde-4504-9fe6-2499ad2dfec7}</author></authors><commentList><comment authorId="0" xr:uid="{13996df8-ec4e-4a34-9138-8f8a2dde29e4}" ref="E31"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	как опция, не обязательное поле
+</t></text></comment><comment authorId="1" xr:uid="{2d16a879-4115-498f-bb73-d15e2a290d4c}" ref="I2"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	необходимо продумать способ заполнения таблицы по этому параметру. Брендов очень много, таблица получиться огромная.
+</t></text></comment><comment authorId="2" xr:uid="{bff9a2dd-0283-4618-a28b-193b022db182}" ref="B31"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	Запросы приходят огромными списками с артикулами деталей, нужно сделать сортировку с разбором. Требуется мозговой штурм по способу реализации.
+</t></text></comment><comment authorId="3" xr:uid="{cac95cdc-14c0-44b7-911a-43e64b7ab864}" ref="A1"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	отсеивает прутки не подходящие по ширине транспортера
+</t></text></comment><comment authorId="4" xr:uid="{dbbedba0-951a-4eaf-bcc8-22b4b75dc718}" ref="F31"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	как опция, не обязательное поле
+</t></text></comment><comment authorId="5" xr:uid="{dd0a7330-90d9-49ad-a21d-f5de6de7afc1}" ref="L2"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	сколько штук запрашивалось (расчитывалось), №заказ нарядов-заказов сколько шт, период времени по годам.
+</t></text></comment><comment authorId="6" xr:uid="{f6804fd8-ab6c-4bfc-81d9-94d09dddfc57}" ref="J2"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	В идеале проставить автоматом информацию, как вариант ячейкой в конце таблицы
+</t></text></comment><comment authorId="7" xr:uid="{f98da03b-5dde-4504-9fe6-2499ad2dfec7}" ref="B3"><text><t xml:space="preserve">[Threaded comment]
+ Your version of Excel allows you to read this threaded comment; however, any edits to it will get removed if the file is opened in a newer version of Excel. Learn more: https://go.microsoft.com/fwlink/?linkid=870924
+Comment:
+	вероятнее всего нужно разделить на 3-4 отдельных таблиц. для того чтобы привести в адекватное состояние размеры таблиц.
+</t></text></comment></commentList></comments>

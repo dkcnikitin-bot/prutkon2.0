@@ -1,0 +1,259 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ДОКУМЕНТООБОРОТ | ПРУТКОН ОС</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .doc-registry-table { width: 100%; border-collapse: collapse; }
+        .doc-registry-table th { 
+            background: #111418; color: #fff; padding: 15px 20px; text-align: left; 
+            font-size: 11px; text-transform: uppercase; font-weight: 900; border-bottom: 2px solid var(--brand-red);
+        }
+        .doc-registry-table td { padding: 12px 20px; border-bottom: 1px solid var(--border-glass); }
+        .doc-status { padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+        .status-draft { background: rgba(255,255,255,0.05); color: #aaa; }
+        .status-issued { background: rgba(0,147,255,0.1); color: #0093ff; }
+        .status-paid { background: rgba(0,255,157,0.1); color: #00ff9d; }
+
+        .kpi-docs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Боковая панель -->
+        <aside class="sidebar" id="global-sidebar"></aside>
+
+        <!-- Главный экран -->
+        <main class="main-content">
+            
+            <header class="top-header">
+                <div class="view-header">
+                    <h2 style="color:var(--brand-red);">ЦЕНТР ДОКУМЕНТООБОРОТА</h2>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="window.syncDocs()"><i class="fa-solid fa-sync"></i> ОБНОВИТЬ КНИГУ</button>
+                    <button class="btn btn-primary" onclick="window.exportDocRegistry()"><i class="fa-solid fa-file-excel"></i> ЭКСПОРТ РЕЕСТРА</button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                
+                <!-- KPI Документов -->
+                <div class="kpi-docs">
+                    <div class="panel">
+                        <div style="font-size:10px; font-weight:800; color:var(--text-muted); margin-bottom:10px;">ВЫПИСАНО СЧЕТОВ</div>
+                        <div style="font-family:'JetBrains Mono'; font-size:1.5rem; font-weight:900;" id="kpi-bills-count">0</div>
+                    </div>
+                    <div class="panel">
+                        <div style="font-size:10px; font-weight:800; color:var(--text-muted); margin-bottom:10px;">ОГРУЖЕНО ПО ТТН</div>
+                        <div style="font-family:'JetBrains Mono'; font-size:1.5rem; font-weight:900;" id="kpi-ttn-count">0</div>
+                    </div>
+                    <div class="panel">
+                        <div style="font-size:10px; font-weight:800; color:var(--text-muted); margin-bottom:10px;">СУММА ПО РЕЕСТРУ</div>
+                        <div style="font-family:'JetBrains Mono'; font-size:1.5rem; font-weight:900; color:var(--emerald-neon);" id="kpi-total-sum">0 ₽</div>
+                    </div>
+                    <div class="panel">
+                        <div style="font-size:10px; font-weight:800; color:var(--text-muted); margin-bottom:10px;">ДЕБИТОРСКАЯ ЗАДОЛЖ.</div>
+                        <div style="font-family:'JetBrains Mono'; font-size:1.5rem; font-weight:900; color:var(--brand-red);" id="kpi-debt">0 ₽</div>
+                    </div>
+                </div>
+
+                <!-- Расширенные Фильтры -->
+                <div class="panel glass-panel" style="margin-bottom:20px; padding:20px;">
+                    <div class="grid" style="display:grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr; gap:15px; align-items:flex-end;">
+                        <div>
+                            <label style="font-size:10px; font-weight:900; color:var(--text-muted); display:block; margin-bottom:5px;">ПОИСК (НОМЕР, ФИО)</label>
+                            <input type="text" id="doc-search" class="form-control" placeholder="Начните ввод..." oninput="window.renderDocs()">
+                        </div>
+                        <div>
+                            <label style="font-size:10px; font-weight:900; color:var(--text-muted); display:block; margin-bottom:5px;">ПЕРИОД С</label>
+                            <input type="date" id="filter-date-from" class="form-control" onchange="window.renderDocs()">
+                        </div>
+                        <div>
+                            <label style="font-size:10px; font-weight:900; color:var(--text-muted); display:block; margin-bottom:5px;">ПЕРИОД ПО</label>
+                            <input type="date" id="filter-date-to" class="form-control" onchange="window.renderDocs()">
+                        </div>
+                        <div>
+                            <label style="font-size:10px; font-weight:900; color:var(--text-muted); display:block; margin-bottom:5px;">ТИП ДОКУМЕНТА</label>
+                            <select id="filter-doc-type" class="form-control" onchange="window.renderDocs()">
+                                <option value="all">ВСЕ ТИПЫ</option>
+                                <option value="bill">СЧЕТА</option>
+                                <option value="ttn">ТТН</option>
+                                <option value="prod">НАРЯДЫ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:10px; font-weight:900; color:var(--text-muted); display:block; margin-bottom:5px;">СТАТУС ПОДПИСИ</label>
+                            <select id="filter-sig-status" class="form-control" onchange="window.renderDocs()">
+                                <option value="all">ЛЮБОЙ</option>
+                                <option value="signed">ПОДПИСАН</option>
+                                <option value="pending">ОЖИДАЕТ</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top:15px; display:flex; gap:10px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
+                        <button class="btn btn-secondary btn-sm" onclick="window.clearFilters()"><i class="fa-solid fa-eraser"></i> СБРОСИТЬ</button>
+                        <button class="btn btn-secondary btn-sm" onclick="window.exportToExcel()"><i class="fa-solid fa-file-csv"></i> ВЫГРУЗИТЬ CSV</button>
+                    </div>
+                </div>
+
+                <!-- Таблица реестра -->
+                <div class="table-wrapper">
+                    <table class="doc-registry-table">
+                        <thead>
+                            <tr>
+                                <th style="width:140px;">НОМЕР ДОК.</th>
+                                <th style="width:100px;">ДАТА</th>
+                                <th style="width:100px;">ТИП</th>
+                                <th>КОНТРАГЕНТ / ОСНОВАНИЕ</th>
+                                <th style="width:145px;">СУММА (РУБ.)</th>
+                                <th style="width:130px;">ПОДПИСЬ (ЭЦП)</th>
+                                <th style="width:120px;">СТАТУС</th>
+                                <th style="text-align:right; width:120px;">ДЕЙСТВИЯ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="docs-tbody"></tbody>
+                    </table>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <!-- Модальное окно подписи -->
+    <div id="sign-modal" class="modal">
+        <div class="glass-panel" style="width:400px; padding:40px; text-align:center;">
+            <div style="margin-bottom:25px;">
+                <i class="fa-solid fa-file-signature" style="font-size:3.5rem; color:var(--emerald-neon); margin-bottom:15px;"></i>
+                <h3 style="font-family:'Outfit';">ПРОСТАЯ ЭЦП</h3>
+                <p style="font-size:0.8rem; color:var(--text-muted);">Введите пароль сотрудника для заверения документа</p>
+            </div>
+            <div id="sign-doc-info" style="background:rgba(0,0,0,0.2); padding:15px; border-radius:10px; margin-bottom:20px; font-size:0.85rem; text-align:left;">
+                <div style="margin-bottom:5px;">ДОКУМЕНТ: <strong id="sign-modal-doc-id" style="color:var(--brand-red);">---</strong></div>
+                <div>СУММА: <strong id="sign-modal-sum">---</strong></div>
+            </div>
+            <input type="password" id="sign-password" class="form-control" placeholder="ВАШ ПАРОЛЬ" style="height:50px; font-size:1.2rem; letter-spacing:5px; text-align:center; margin-bottom:20px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button class="btn btn-secondary" onclick="window.closeSignModal()">ОТМЕНА</button>
+                <button class="btn btn-primary" style="background:var(--emerald-neon);" onclick="window.confirmSign()">ПОДПИСАТЬ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ПЛАТИНОВЫЙ РЕДАКТОР ДОКУМЕНТОВ (v18.0.0 PLATINUM INDUSTRIAL) -->
+    <div id="edit-modal" class="modal">
+        <div class="glass-panel" style="width:98%; height:96%; padding:0; display:flex; flex-direction:column; overflow:hidden; background: radial-gradient(circle at top left, #1a1d21, #0f1113); border: 2px solid #ed1c24; box-shadow: 0 0 100px rgba(0,0,0,0.9); border-radius:15px;">
+            <!-- VIP Header -->
+            <div style="background: rgba(0,0,0,0.4); backdrop-filter: blur(20px); padding:25px 50px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; z-index:100;">
+                <div style="display:flex; align-items:center; gap:30px;">
+                    <img src="assets/logo.png" style="height:50px; filter: brightness(1.2);">
+                    <div style="width:2px; height:40px; background:rgba(255,255,255,0.1);"></div>
+                    <div>
+                        <h2 style="margin:0; font-size:1.6rem; color:#fff; font-family:'Outfit'; font-weight:900; letter-spacing:1px; text-transform:uppercase;">EDITOR <span id="editor-title" style="color:#ed1c24;">PLATINUM</span></h2>
+                        <div style="font-size:10px; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:900; letter-spacing:2px; margin-top:2px;">Advanced Industrial Flow Control v18.0.0</div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:20px;">
+                    <button class="btn btn-secondary" style="border-radius:12px; font-weight:900; border:1px solid #444; background:transparent; color:#fff; padding:12px 25px; font-size:12px;" onclick="window.closeEditModal()">ОТКЛОНИТЬ ПРАВКИ</button>
+                    <button class="btn btn-primary" style="background:#ed1c24; border:none; padding:15px 40px; border-radius:12px; font-weight:900; font-family:'Outfit'; letter-spacing:1px; box-shadow: 0 10px 30px rgba(237, 28, 36, 0.3);" onclick="window.saveDocChanges()">ПРОВЕСТИ И СИНХРОНИЗИРОВАТЬ</button>
+                </div>
+            </div>
+
+            <!-- Deep Workspace -->
+            <div style="flex:1; overflow-y:auto; padding:50px; background:transparent;">
+                
+                <!-- Metadata Cockpit -->
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:30px; margin-bottom:50px;">
+                    <div style="background:rgba(255,255,255,0.02); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                        <label style="font-size:10px; font-weight:900; color:#ed1c24; display:block; margin-bottom:10px; text-transform:uppercase; letter-spacing:2px;">№ ДОКУМЕНТА</label>
+                        <input type="text" id="edit-doc-id" class="form-control" style="background:#000; border:1px solid #333; color:#fff; font-weight:900; font-family:'JetBrains Mono'; height:50px; font-size:16px; border-radius:8px; padding-left:15px;">
+                    </div>
+                    <div style="background:rgba(255,255,255,0.02); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                        <label style="font-size:10px; font-weight:900; color:#ed1c24; display:block; margin-bottom:10px; text-transform:uppercase; letter-spacing:2px;">ДАТА РЕГИСТРАЦИИ</label>
+                        <input type="text" id="edit-doc-date" class="form-control" style="background:#000; border:1px solid #333; color:#fff; font-weight:900; font-family:'JetBrains Mono'; height:50px; font-size:16px; border-radius:8px; padding-left:15px;">
+                    </div>
+                    <div style="background:rgba(255,255,255,0.02); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.05);">
+                        <label style="font-size:10px; font-weight:900; color:#ed1c24; display:block; margin-bottom:10px; text-transform:uppercase; letter-spacing:2px;">КОНТРАГЕНТ</label>
+                        <input type="text" id="edit-doc-client" class="form-control" style="background:#000; border:1px solid #333; color:#fff; font-weight:900; height:50px; font-size:16px; border-radius:8px; padding-left:15px;">
+                    </div>
+                    <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; background:rgba(237, 28, 36, 0.05); border-radius:12px; border:1px solid rgba(237, 28, 36, 0.2);">
+                        <div style="font-size:10px; font-weight:900; color:#ed1c24; text-transform:uppercase; margin-bottom:5px;"><i class="fa-solid fa-shield-halved"></i> STATUS: SYNC ACTIVE</div>
+                        <div style="font-size:11px; color:#fff; opacity:0.6; font-weight:700;">Bitrix24 Bridge v3.1</div>
+                    </div>
+                </div>
+
+                <!-- Grid Specification -->
+                <div style="background:rgba(0,0,0,0.3); border-radius:15px; border:1px solid rgba(255,255,255,0.05); overflow:hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.4);">
+                    <div style="padding:25px 40px; background:rgba(255,255,255,0.02); border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:14px; text-transform:uppercase; letter-spacing:2px; color:#fff; font-family:'Outfit';">Спецификация Номенклатуры</strong>
+                        <button class="btn btn-secondary btn-sm" onclick="window.addRowToEditor()" style="font-size:11px; background:#fff; color:#000; border:none; padding:8px 20px; border-radius:8px; font-weight:900;"><i class="fa-solid fa-plus-circle"></i> ДОБАВИТЬ ПОЗИЦИЮ</button>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse;" id="editor-table">
+                        <thead style="background:rgba(255,255,255,0.02); font-size:10px; text-transform:uppercase; font-weight:900; color:rgba(255,255,255,0.3);">
+                            <tr>
+                                <th style="padding:20px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.05); width:50px;">№</th>
+                                <th style="padding:20px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.05);">НОМЕНКЛАТУРНОЕ НАИМЕНОВАНИЕ</th>
+                                <th style="padding:20px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.05); width:180px;">АРТИКУЛ</th>
+                                <th style="padding:20px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.05); width:100px;">КОЛ-ВО</th>
+                                <th style="padding:20px; text-align:right; border-bottom:1px solid rgba(255,255,255,0.05); width:160px;">ЦЕНА (RUB)</th>
+                                <th style="padding:20px; text-align:right; border-bottom:1px solid rgba(255,255,255,0.05); width:200px;">СУММА</th>
+                                <th style="padding:20px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.05); width:60px;">DEL</th>
+                            </tr>
+                        </thead>
+                        <tbody id="editor-tbody"></tbody>
+                    </table>
+                </div>
+
+                <!-- Footer Totals Platinum -->
+                <div style="display:flex; justify-content:space-between; margin-top:50px; align-items:flex-end;">
+                    <div style="width:50%; display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+                        <div style="padding:25px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:15px;">
+                            <div style="font-size:10px; color:rgba(255,255,255,0.3); text-transform:uppercase; font-weight:900; margin-bottom:15px;">ИНИЦИАТОР (SES SIGN)</div>
+                            <div style="font-size:14px; color:#fff; font-weight:900; display:flex; align-items:center; gap:10px;">
+                                <i class="fa-solid fa-user-gear" style="color:#ed1c24;"></i> <span id="editor-current-user">Система ПРУТКОН</span>
+                            </div>
+                        </div>
+                        <div style="padding:25px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:15px;">
+                            <div style="font-size:10px; color:rgba(255,255,255,0.3); text-transform:uppercase; font-weight:900; margin-bottom:15px;">ТЕХНИЧЕСКИЙ АУДИТ</div>
+                            <div style="font-size:12px; color:rgba(255,255,255,0.5); font-style:italic;">Ожидание финальной верификации...</div>
+                        </div>
+                    </div>
+
+                    <div style="width:400px; padding:40px; background:#000; border-radius:20px; border:2px solid #222; box-shadow: 0 40px 80px rgba(0,0,0,0.6); position:relative; overflow:hidden;">
+                        <div style="position:absolute; right:-20px; top:-20px; width:100px; height:100px; background:#ed1c24; filter:blur(80px); opacity:0.2;"></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:20px; font-size:14px;">
+                            <span style="color:rgba(255,255,255,0.4); font-weight:700;">БАЗОВАЯ СУММА:</span>
+                            <span id="editor-total-netto" style="color:#fff; font-family:'JetBrains Mono';">0 ₽</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:20px; font-size:14px;">
+                            <span style="color:#ed1c24; font-weight:900;">НДС (22.00%):</span>
+                            <span id="editor-total-vat" style="color:#fff; font-family:'JetBrains Mono';">0 ₽</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-weight:900; font-size:1.8rem; border-top:1px solid #333; padding-top:30px; color:#fff;">
+                            <span>ИТОГО К ОПЛАТЕ:</span>
+                            <span id="editor-total-final" style="color:#ed1c24; font-family:'Outfit';">0 ₽</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Системные скрипты -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/firebase_config.js"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/utils/printer.js?v=19.0.0"></script>
+    <script src="js/handlers/documents.js?v=19.0.0"></script>
+</body>
+</html>

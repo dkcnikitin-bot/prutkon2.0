@@ -1,0 +1,406 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Пруткон | Прайсы заготовки</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="with-hero-bg">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="top-header no-print">
+                <div class="view-header"><h2>Прайс-листы заготовки</h2></div>
+                <div class="header-actions">
+                    <button id="mass-delete-btn" class="btn btn-danger btn-sm" style="display:none;" onclick="window.massDeleteProducts()"><i class="fa-solid fa-trash-can"></i> Удалить выбранные (<span id="mass-delete-count">0</span>)</button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.showDuplicateFinder()" title="Дубликаты"><i class="fa-solid fa-clone emerald"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.cleanupEmptyRows()" title="Очитка"><i class="fa-solid fa-broom"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.manageCategories()" title="Категории"><i class="fa-solid fa-folder-tree"></i></button>
+                    <button class="btn btn-primary btn-sm" onclick="window.startAddWizard()"><i class="fa-solid fa-plus-circle"></i> Добавить товар</button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.openExcelImport()" title="Импорт"><i class="fa-solid fa-file-excel"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.refreshPrices()"><i class="fa-solid fa-rotate"></i></button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                <div id="price-tabs" class="tabs-scrollable mb-4">
+                    <!-- Categories -->
+                </div>
+
+                <div class="panel glass-panel">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 id="price-title" class="mb-0">Заготовки и комплектующие</h4>
+                        <div class="flex gap-2 items-center">
+                            <input type="text" id="price-search-input" class="form-control" placeholder="Поиск в прайсе..." style="width:280px;" oninput="window.renderPriceTable()">
+                        </div>
+                    </div>
+                    
+                    <!-- Умные фильтры -->
+                    <div id="smart-filters" class="flex flex-wrap gap-3 mb-4 padding-15" style="background:rgba(0,0,0,0.25); border-radius:12px; border:1px solid var(--border-glass);">
+                        <div class="filter-group">
+                            <label class="text-xs neutral uppercase mb-1">Цена от</label>
+                            <input type="number" id="filter-price-min" class="form-control form-control-sm" placeholder="0" oninput="window.renderPriceTable()" style="width:120px;">
+                        </div>
+                        <div class="filter-group">
+                            <label class="text-xs neutral uppercase mb-1">Цена до</label>
+                            <input type="number" id="filter-price-max" class="form-control form-control-sm" placeholder="Без лимита" oninput="window.renderPriceTable()" style="width:120px;">
+                        </div>
+                        <div class="filter-group">
+                            <label class="text-xs neutral uppercase mb-1">Остаток</label>
+                            <select id="filter-stock" class="form-control form-control-sm" onchange="window.renderPriceTable()" style="width:140px;">
+                                <option value="">Все</option>
+                                <option value="in_stock">В наличии</option>
+                                <option value="low_stock">Мало (< 10)</option>
+                                <option value="out_of_stock">Нет в наличии</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="text-xs neutral uppercase mb-1">Только с фото</label>
+                            <div class="checkbox-custom" style="padding:5px 0;">
+                                <label style="font-size:0.85rem; cursor:pointer;">
+                                    <input type="checkbox" id="filter-has-photo" onchange="window.renderPriceTable()">
+                                    <span>Есть изображение</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <label class="text-xs neutral uppercase mb-1">Поле категории</label>
+                            <select id="filter-category-field" class="form-control form-control-sm" onchange="window.renderPriceTable()" style="width:160px;">
+                                <option value="">-- Выберите поле --</option>
+                            </select>
+                            <input type="text" id="filter-category-value" class="form-control form-control-sm" placeholder="Значение" oninput="window.renderPriceTable()" style="width:160px; margin-top:5px;">
+                        </div>
+                        <div class="filter-group" style="align-self:flex-end;">
+                            <button class="btn btn-secondary btn-sm" onclick="window.clearFilters()" title="Сбросить фильтры"><i class="fa-solid fa-rotate-left"></i> Сброс</button>
+                        </div>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="data-table" id="price-table"></table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- WIZARD: EXCEL IMPORT -->
+    <div id="excel-modal" class="modal">
+        <div class="card-cockpit" style="max-width:1100px; height:auto; max-height:95vh;">
+            <header class="padding-25 flex justify-between items-center" style="border-bottom:1px solid var(--border-glass); background:rgba(255,255,255,0.02);">
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center justify-center brand-red-bg" style="width:50px; height:50px; border-radius:12px; background:rgba(226,31,38,0.1); border:1px solid var(--brand-red-dim);">
+                        <i class="fa-solid fa-file-excel text-lg brand-red"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0">Мастер импорта прайса</h3>
+                        <div id="excel-wizard-subtitle" class="text-xs text-muted text-bold mt-1">ОБРАБОТКА EXCEL...</div>
+                    </div>
+                </div>
+                <button class="action-btn" onclick="window.closeExcelImport()"><i class="fa-solid fa-times"></i></button>
+            </header>
+
+            <div class="padding-40 flex-1 overflow-auto">
+                <div class="wiz-stepper mb-5" id="excel-wizard-steps">
+                    <div class="wiz-step active" data-step="1"><div class="wiz-dot">1</div><div class="wiz-label">Файл</div></div>
+                    <div class="wiz-step" data-step="2"><div class="wiz-dot">2</div><div class="wiz-label">Маппинг</div></div>
+                    <div class="wiz-step" data-step="3"><div class="wiz-dot">3</div><div class="wiz-label">Проверка</div></div>
+                    <div class="wiz-step" data-step="4"><div class="wiz-dot">4</div><div class="wiz-label">Завершение</div></div>
+                </div>
+
+                <div id="excel-wiz-1" class="wiz-content active">
+                    <div style="max-width:600px; margin:0 auto;">
+                        <div class="drop-zone flex flex-col items-center justify-center"
+                            onclick="document.getElementById('excel-input').click()"
+                            ondragover="event.preventDefault(); this.style.borderColor='var(--brand-red)';"
+                            ondragleave="this.style.borderColor='var(--border-glass)';"
+                            ondrop="event.preventDefault(); this.style.borderColor='var(--border-glass)'; window.handleExcelFile({target:{files:event.dataTransfer.files}});"
+                            style="border:2px dashed var(--border-glass); padding:80px 40px; border-radius:24px; background:rgba(255,255,255,0.01); cursor:pointer; transition:border-color 0.2s;">
+                            <i class="fa-solid fa-file-excel brand-red mb-4" style="font-size:4rem;"></i>
+                            <h4 class="mb-2">Загрузите прайс-лист</h4>
+                            <p class="neutral text-sm">Перетащите XLSX файл или нажмите для выбора</p>
+                            <input type="file" id="excel-input" class="hidden" accept=".xlsx, .xls" onchange="window.handleExcelFile(event)">
+                        </div>
+                        <div id="excel-file-info" class="panel mt-3 hidden" style="background:rgba(0,200,100,0.05); border:1px solid rgba(0,200,100,0.2);">
+                            <div class="flex items-center gap-3">
+                                <i class="fa-solid fa-check-circle emerald"></i>
+                                <div>
+                                    <div id="excel-file-name" class="text-sm text-bold"></div>
+                                    <div id="excel-file-info-text" class="text-xs text-muted"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel mt-4">
+                            <label class="stat-label">Целевая категория</label>
+                            <select id="excel-target-category" class="form-control text-bold"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="excel-wiz-2" class="wiz-content hidden">
+                    <div style="display:flex; gap:24px; align-items:flex-start;">
+                        <!-- Боковая панель -->
+                        <aside style="width:220px; flex-shrink:0; display:flex; flex-direction:column; gap:12px;">
+                            <div class="panel" style="padding:15px; background:rgba(226,31,38,0.03);">
+                                <label class="stat-label">Активный лист</label>
+                                <select id="excel-sheet-select" class="form-control" onchange="window.selectExcelSheet(this.value)"></select>
+                            </div>
+                            <div class="panel" style="padding:15px;">
+                                <h5 class="text-xs text-bold mb-3">Соответствие полей</h5>
+                                <div id="mapping-summary" class="text-xs"></div>
+                            </div>
+                            <div class="panel" style="padding:15px; background:rgba(0,180,255,0.03); border-color:rgba(0,180,255,0.15);">
+                                <div style="font-size:0.65rem; color:rgba(0,180,255,0.8); line-height:1.6; opacity:0.9;">
+                                    <b>Подсказка:</b><br>
+                                    Строки с красной чертой слева — назначены.<br><br>
+                                    Назначьте <b>Photo_Filename</b> + <b>Photo_Path</b> для автозагрузки фото из папки.
+                                </div>
+                            </div>
+                        </aside>
+                        <!-- Таблица маппинга -->
+                        <div style="flex:1; min-width:0;">
+                            <h4 class="mb-3">Назначение столбцов</h4>
+                            <div id="mappings-container"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="excel-wiz-3" class="wiz-content hidden">
+                    <div class="panel amber-bg" style="border-left:4px solid var(--brand-gold); background:rgba(255,180,0,0.05);">
+                        <h4 class="brand-gold mb-1">Предварительный аудит</h4>
+                        <p class="text-sm neutral">Проверьте корректность маппинга данных перед импортом в базу.</p>
+                    </div>
+                    <div class="table-wrapper">
+                        <table class="data-table" id="excel-preview-table"></table>
+                    </div>
+                </div>
+
+                <div id="excel-wiz-4" class="wiz-content hidden" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px; min-height:300px;">
+                    <div id="wiz-progress-idle" class="w-100" style="opacity:0.5;">
+                        <i class="fa-solid fa-hourglass-half brand-red mb-4" style="font-size:3rem;"></i>
+                        <h4>Готово к импорту</h4>
+                        <p class="text-sm neutral">Нажмите «Далее» для запуска...</p>
+                    </div>
+                    <div id="wiz-progress-active" class="w-100" style="display:none;">
+                        <h2 id="wiz-status-title" class="mb-4">Импорт данных...</h2>
+                        <div id="wiz-processed-count" class="text-sm text-muted mb-3">Обработка...</div>
+                        <div style="height:12px; background:rgba(255,255,255,0.05); border-radius:20px; overflow:hidden; max-width:600px; margin:0 auto 10px;">
+                            <div id="excel-progress-bar" style="width:0%; height:100%; background:var(--brand-red); transition:width 0.3s;"></div>
+                        </div>
+                        <div id="excel-progress-text" class="text-bold brand-red mb-4">0%</div>
+                        <div id="excel-log-container" style="max-width:600px; margin:0 auto; max-height:200px; overflow-y:auto; background:rgba(0,0,0,0.3); border-radius:12px; padding:15px; text-align:left; font-size:0.7rem; font-family:monospace; color:rgba(255,255,255,0.6);"></div>
+                    </div>
+                    <div id="wiz-progress-done" style="display:none;">
+                        <i class="fa-solid fa-check-circle emerald mb-4" style="font-size:5rem;"></i>
+                        <h2 class="emerald mb-4">Данные успешно импортированы!</h2>
+                        <p id="wiz-final-stats" class="text-sm neutral mb-4"></p>
+                        <button class="btn btn-primary" onclick="window.closeExcelImport(); window.renderPriceTable();">Готово</button>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="padding-25 flex justify-between items-center" style="border-top:1px solid var(--border-glass); background:rgba(0,0,0,0.2);">
+                <button id="btn-wiz-prev" class="btn btn-secondary" style="visibility:hidden;" onclick="window.excelWizBack()"><i class="fa-solid fa-chevron-left"></i> Назад</button>
+                <button id="btn-wiz-next" class="btn btn-primary" onclick="window.excelWizNext()">Далее <i class="fa-solid fa-chevron-right"></i></button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ADD PRODUCT WIZARD MODAL -->
+    <div id="add-master-modal" class="modal">
+        <div class="glass-panel" style="width:700px; padding:35px; max-height:90vh; overflow-y:auto;">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="mb-0">Добавление товара</h3>
+                    <div id="add-wizard-subtitle" class="text-xs text-muted text-bold mt-1">ШАГ 1: БАЗОВАЯ ИНФОРМАЦИЯ</div>
+                </div>
+                <button class="action-btn" onclick="window.closeAddMaster()"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="wiz-stepper mb-5" id="add-wizard-steps">
+                <div class="wiz-step active" data-step="1"><div class="wiz-dot">1</div><div class="wiz-label">Основное</div></div>
+                <div class="wiz-step" data-step="2"><div class="wiz-dot">2</div><div class="wiz-label">Параметры</div></div>
+                <div class="wiz-step" data-step="3"><div class="wiz-dot">3</div><div class="wiz-label">Контроль</div></div>
+            </div>
+            <div id="add-wiz-1" class="wiz-content-add">
+                <datalist id="existing-names"></datalist>
+                <div class="grid grid-2 gap-4">
+                    <div class="form-group"><label>Артикул <i class="fa-solid fa-flag text-xs brand-red"></i></label><input type="text" id="add-art" class="form-control" placeholder="Напр: 001-RTI-25"></div>
+                    <div class="form-group"><label>Наименование <i class="fa-solid fa-flag text-xs brand-red"></i></label><input type="text" id="add-name" class="form-control" list="existing-names" placeholder="Название товара"></div>
+                    <div class="form-group"><label>Цена (₽) <i class="fa-solid fa-flag text-xs brand-red"></i></label><input type="number" id="add-price" class="form-control" placeholder="0.00" min="0" step="0.01"></div>
+                    <div class="form-group"><label>Остаток (шт)</label><input type="number" id="add-stock" class="form-control" placeholder="0" min="0"></div>
+                    <div class="form-group" style="grid-column:1/-1;"><label>Категория</label><select id="add-category" class="form-control"></select></div>
+                </div>
+            </div>
+            <div id="add-wiz-2" class="wiz-content-add" style="display:none;">
+                <div id="add-dynamic-fields" class="flex flex-col gap-3"></div>
+            </div>
+            <div id="add-wiz-3" class="wiz-content-add" style="display:none;">
+                <div class="panel" style="background:rgba(226,31,38,0.04); border:1px solid var(--brand-red-dim);">
+                    <div id="sum-name" class="text-bold" style="font-size:1.2rem;"></div>
+                    <div id="sum-art" class="text-muted text-xs mt-1"></div>
+                    <div id="sum-price" class="brand-red text-bold mt-2" style="font-size:1.4rem;"></div>
+                </div>
+            </div>
+            <div class="flex justify-between mt-4">
+                <button id="btn-add-prev" class="btn btn-secondary" style="visibility:hidden;" onclick="window.addWizBack()"><i class="fa-solid fa-chevron-left"></i> Назад</button>
+                <button id="btn-add-next" class="btn btn-primary" onclick="window.addWizNext()">Далее <i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRODUCT CARD MODAL -->
+    <div id="product-card-modal" class="modal">
+        <div class="glass-panel" style="width:850px; max-height:90vh; padding:35px; overflow-y:auto;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="mb-0"><i class="fa-solid fa-pen-to-square"></i> Редактирование товара</h3>
+                <button class="action-btn" onclick="window.closeProductCard()"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <input type="hidden" id="pc-id">
+            
+            <div class="grid grid-2 gap-4">
+                <div class="form-group">
+                    <label>Артикул <i class="fa-solid fa-flag text-xs brand-red"></i></label>
+                    <input type="text" id="pc-art" class="form-control" placeholder="Напр: 001-RTI-25">
+                </div>
+                <div class="form-group">
+                    <label>Наименование <i class="fa-solid fa-flag text-xs brand-red"></i></label>
+                    <input type="text" id="pc-name" class="form-control" placeholder="Название товара">
+                </div>
+                <div class="form-group">
+                    <label>Цена (₽) <i class="fa-solid fa-flag text-xs brand-red"></i></label>
+                    <input type="number" id="pc-price" class="form-control" placeholder="0.00" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Остаток (шт)</label>
+                    <input type="number" id="pc-stock" class="form-control" placeholder="0" min="0">
+                </div>
+                <div class="form-group" style="grid-column:1/-1;">
+                    <label>Категория</label>
+                    <select id="pc-category" class="form-control" onchange="window.loadProductCategoryFields()"></select>
+                </div>
+                <div class="form-group" style="grid-column:1/-1;">
+                    <label>Фото</label>
+                    <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
+                        <input type="text" id="pc-photo" class="form-control" style="flex:1; min-width:200px;" placeholder="Путь к изображению">
+                        <input type="file" id="pc-photo-upload" class="hidden" accept="image/*" onchange="window.handlePhotoUpload(this)">
+                        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('pc-photo-upload').click()" title="Загрузить фото">
+                            <i class="fa-solid fa-upload"></i> Фото
+                        </button>
+                        <img id="product-card-img" style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:2px solid var(--border-glass);" src="placeholder.jpg" onerror="this.src='placeholder.jpg'">
+                    </div>
+                    <div id="pc-photo-path-hint" class="text-xs text-muted mt-2" style="opacity:0.6;"></div>
+                </div>
+            </div>
+            
+            <!-- Динамические поля категории -->
+            <div id="pc-dynamic-fields" class="mt-4" style="padding:20px; background:rgba(0,0,0,0.2); border-radius:12px; border:1px solid var(--border-glass);">
+                <h5 class="mb-3" style="color:var(--accent-blue); font-size:0.85rem;"><i class="fa-solid fa-sliders"></i> Параметры категории</h5>
+                <div id="pc-dynamic-fields-container" class="grid grid-2 gap-3"></div>
+            </div>
+            
+            <div class="flex justify-between mt-4" style="border-top:1px solid var(--border-glass); padding-top:20px;">
+                <div>
+                    <button class="btn btn-danger btn-sm" onclick="window.deleteProductFromCard()"><i class="fa-solid fa-trash-can"></i> Удалить</button>
+                </div>
+                <div class="flex gap-2">
+                    <button class="btn btn-secondary" onclick="window.closeProductCard()">Отмена</button>
+                    <button class="btn btn-primary" onclick="window.saveProductCard()"><i class="fa-solid fa-save"></i> Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ITEM HISTORY MODAL -->
+    <div id="item-history-modal" class="modal">
+        <div class="glass-panel" style="width:600px; padding:30px;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="mb-0"><i class="fa-solid fa-clock-rotate-left"></i> История изменений</h3>
+                <button class="action-btn" onclick="document.getElementById('item-history-modal').classList.remove('active')"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div id="item-history-details" class="mb-3"></div>
+            <div id="item-history-list" style="max-height:400px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- CLEANUP MODAL -->
+    <div id="cleanup-modal" class="modal">
+        <div class="glass-panel" style="width:500px; padding:30px;">
+            <h3 class="mb-3"><i class="fa-solid fa-broom brand-red"></i> Очистка пустых строк</h3>
+            <p class="neutral text-sm mb-4">Будут удалены все записи без артикула или наименования (заглушки и пустые строки).</p>
+            <div class="flex justify-end gap-2">
+                <button class="btn btn-secondary" onclick="document.getElementById('cleanup-modal').classList.remove('active')">Отмена</button>
+                <button class="btn btn-primary" onclick="window.startFinalCleanup()"><i class="fa-solid fa-trash-can"></i> Очистить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DUPLICATE MODAL -->
+    <div id="duplicate-modal" class="modal">
+        <div class="glass-panel" style="width:600px; padding:30px;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="mb-0"><i class="fa-solid fa-clone emerald"></i> Поиск дубликатов</h3>
+                <button class="action-btn" onclick="document.getElementById('duplicate-modal').classList.remove('active')"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="flex justify-end mb-3">
+                <button class="btn btn-primary btn-sm" onclick="window.scanForDuplicates()"><i class="fa-solid fa-magnifying-glass"></i> Сканировать</button>
+            </div>
+            <div id="duplicate-content" style="max-height:400px; overflow-y:auto; opacity:0.6; text-align:center; padding:40px;">Нажмите «Сканировать» для анализа</div>
+        </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div id="category-modal" class="modal">
+        <div class="glass-panel" style="width:750px; padding:35px;">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="mb-0 brand-red"><i class="fa-solid fa-folder-tree"></i> Управление категориями</h3>
+                <button class="btn btn-secondary btn-sm" onclick="window.closeCategoryModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="grid grid-2 gap-4">
+                <div class="cat-list-wrap">
+                    <label class="text-xs neutral uppercase mb-2">Дерево категорий</label>
+                    <div id="categories-list" class="flex flex-col gap-2" style="max-height:500px; overflow-y:auto; padding:10px; background:rgba(0,0,0,0.2); border-radius:12px;"></div>
+                </div>
+                
+                <div class="cat-form-wrap panel">
+                    <h5 class="mb-3">Создать / Изменить</h5>
+                    <div class="form-group mb-3">
+                        <label class="text-xs">Название категории</label>
+                        <input type="text" id="cat-name-input" class="form-control" placeholder="Напр: Прутки РТИ">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="text-xs">Родительская категория</label>
+                        <select id="cat-parent-select" class="form-control">
+                            <option value="null">-- Корневой раздел --</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn btn-primary btn-sm flex-1" onclick="window.saveCategoryAction()"><i class="fa-solid fa-save"></i> Сохранить</button>
+                        <button class="btn btn-secondary btn-sm" onclick="window.resetCategoryForm()"><i class="fa-solid fa-rotate-left"></i></button>
+                    </div>
+                    <div class="mt-4 pt-4 border-top" style="opacity:0.6; font-size:0.7rem;">
+                        <p><i class="fa-solid fa-info-circle"></i> Корневые разделы создаются с родителем "Корневой раздел".</p>
+                        <p><i class="fa-solid fa-info-circle"></i> Категории, в которых нет товаров, можно удалять.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script>window.DB_VERSION = "19.0.0";</script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/i18n.js?v=19.0.0"></script>
+    <script src="js/core/version_history.js?v=19.0.0"></script>
+    <script src="js/core/firebase_config.js"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/handlers/prices.js?v=19.0.0"></script>
+</body>
+</html>
