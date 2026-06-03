@@ -47,9 +47,9 @@ window.CatalogStep1 = {
                         </div>
                     </div>
 
-                    <!-- СТРОКА 3: КУЛЬТУРЫ (PILLS) -->
+                    <!-- СТРОКА 3: ТРАНСПОРТЕРЫ (PILLS) -->
                     <div class="form-group" style="margin-bottom:15px;">
-                        <label style="font-size:0.6rem; color:#555; text-transform:uppercase; font-weight:900; margin-bottom:8px; display:block;">Применимость (культуры):</label>
+                        <label style="font-size:0.6rem; color:#555; text-transform:uppercase; font-weight:900; margin-bottom:8px; display:block;">Применимость (транспортеры техники):</label>
                         <div style="display:flex; flex-wrap:wrap; gap:6px;">
                             ${dicts.crops.map(crop => {
                                 const active = s.crops.includes(crop);

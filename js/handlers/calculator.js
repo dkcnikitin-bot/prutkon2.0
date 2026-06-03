@@ -130,14 +130,33 @@ function initCalculator() {
     }
 
     const artInput = document.getElementById('calc-article-full');
-    if (artInput) {
-        artInput.addEventListener('input', (e) => {
-            const val = e.target.value.trim().toLowerCase();
-            if (val.length < 3) return;
-            const source = [...(window.catalogData || []), ...(window.dbTransProducts || []), ...(window.dbProducts || [])];
-            const found = source.find(t => (t.art && t.art.toLowerCase().includes(val)));
-            if (found) window.fillForm(found);
+    const nameInput = document.getElementById('calc-name-full');
+
+    const handleSearchInput = (e) => {
+        const val = e.target.value.trim().toLowerCase();
+        if (val.length < 3) return;
+        const source = [...(window.catalogData || []), ...(window.dbTransProducts || []), ...(window.dbProducts || [])];
+        const queryWords = val.split(/\s+/).filter(Boolean);
+        const found = source.find(t => {
+            const searchStr = `${t.art || ''} ${t.name || ''} ${t.brand || ''} ${t.model || ''} ${t.pitch || t.p || ''}`.toLowerCase();
+            return queryWords.every(word => searchStr.includes(word));
         });
+        if (found) {
+            window.fillForm(found);
+            if (window.showToast) {
+                if (!window.lastToastTime || Date.now() - window.lastToastTime > 3000) {
+                    window.showToast(`Найдено: ${found.brand || ''} ${found.model || ''} (${found.pitch || found.p || '—'} мм)`, 'success');
+                    window.lastToastTime = Date.now();
+                }
+            }
+        }
+    };
+
+    if (artInput) {
+        artInput.addEventListener('input', handleSearchInput);
+    }
+    if (nameInput) {
+        nameInput.addEventListener('input', handleSearchInput);
     }
 
     ['calc-length', 'calc-width', 'calc-pitch'].forEach(id => {
