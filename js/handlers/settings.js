@@ -768,7 +768,7 @@ window.addEmployee = function() {
         id: Math.max(...(window.dbEmployees.map(e => e.id || 0)), 0) + 1,
         name: 'Новый сотрудник', 
         role: 'Менеджер', 
-        pwd: '623401', 
+        pwd: '1234', 
         base: 50000, 
         share: 0, 
         signature: '',

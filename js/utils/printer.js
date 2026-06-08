@@ -88,6 +88,136 @@
             const total = doc.sum || order.total || 0;
             const vat = total * 0.22 / 1.22;
 
+            const findDrawingForArticle = (art, name) => {
+                if (!art && !name) return '';
+                
+                // 1. Search in dbProducts (Price list products)
+                if (window.dbProducts) {
+                    const p = window.dbProducts.find(x => (x.art && String(x.art) === String(art)) || (x.name && String(x.name) === String(name)));
+                    if (p && (p.drawing || p.photo)) return p.drawing || p.photo;
+                }
+                
+                // 2. Search in dbDirectories (Directories)
+                if (window.dbDirectories) {
+                    const d = window.dbDirectories.find(x => (x.art_prutkon && String(x.art_prutkon) === String(art)) || (x.name && String(x.name) === String(name)));
+                    if (d && (d.drawing || d.photo)) return d.drawing || d.photo;
+                }
+                
+                // 3. Search in rods registry
+                let rodsObj = {};
+                try {
+                    const raw = localStorage.getItem('prutkon_rods_registry');
+                    if (raw) rodsObj = JSON.parse(raw);
+                } catch(e) {}
+                if (window.db) {
+                    const RODS_KEYS = ['rods_metal', 'rods_blanks', 'rods_standard', 'rods_bent', 'rods_rubber', 'rods_double'];
+                    RODS_KEYS.forEach(k => {
+                        if (window.db[k] && Array.isArray(window.db[k])) rodsObj[k] = window.db[k];
+                    });
+                }
+                
+                const lists = [rodsObj.rods_standard, rodsObj.rods_bent, rodsObj.rods_rubber, rodsObj.rods_double];
+                for (let list of lists) {
+                    if (list && Array.isArray(list)) {
+                        const found = list.find(x => (x.article && String(x.article) === String(art)) || (x.name && String(x.name) === String(name)));
+                        if (found && (found.drawing || found.photo)) return found.drawing || found.photo;
+                    }
+                }
+                
+                return '';
+            };
+
+            if (type === 'production_order') {
+                const itemsRows = items.map((it, idx) => {
+                    const drawing = findDrawingForArticle(it.art, it.name);
+                    const imgHtml = drawing 
+                        ? `<img src="${drawing}" style="max-height:85px; max-width:140px; object-fit:contain; border:1px solid #ddd; padding:2px; border-radius:4px; background:#fff;">`
+                        : `<div style="font-size:10px; color:#aaa; font-style:italic;">Чертеж отсутствует</div>`;
+                    
+                    return `
+                        <tr style="${idx % 2 === 0 ? 'background:#fcfcfc;' : ''}">
+                            <td style="text-align:center; font-family:'JetBrains Mono';">${idx + 1}</td>
+                            <td style="font-weight:700; font-size:12px;">${it.name}</td>
+                            <td style="text-align:center; font-family:'JetBrains Mono'; opacity:0.8;">
+                                <strong>${it.art || '---'}</strong>
+                                ${it.stroke ? `<div style="font-size:10px; color:#555; margin-top:3px;">Ход: ${it.stroke} мм</div>` : ''}
+                            </td>
+                            <td style="text-align:center; font-weight:900; font-size:13px; font-family:'JetBrains Mono';">${it.qty} шт</td>
+                            <td style="text-align:center; padding:5px;">${imgHtml}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                return `
+                <div class="page">
+                    <div class="brand-border" style="background:#555;"></div>
+                    <div class="watermark" style="color:rgba(0,0,0,0.015);">PRODUCTION</div>
+                    <div class="content">
+                        
+                        <!-- HEADER -->
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px; border-bottom:4px solid #555; padding-bottom:20px;">
+                            <img src="logo.png" style="height:70px; object-fit:contain;" onerror="this.style.display='none'">
+                            <div style="text-align:right;">
+                                <div style="font-size:10px; color:#555; font-weight:900; text-transform:uppercase; letter-spacing:2px; margin-bottom:5px;">ПРОИЗВОДСТВЕННЫЙ ОТДЕЛ</div>
+                                <h1 style="margin:0; font-size:32px; font-weight:900; color:#1a1d21;">ЗАКАЗ-НАРЯД</h1>
+                                <div style="font-size:20px; font-weight:400; font-family:'JetBrains Mono';">НАРЯД <strong>№ ${order.id}</strong></div>
+                                <div style="font-size:13px; margin-top:5px; opacity:0.6;">ОТ ${timestamp}</div>
+                            </div>
+                        </div>
+
+                        <!-- META INFO -->
+                        <table style="margin-bottom:30px; border:none;">
+                            <tr>
+                                <td style="width:50%; border:none; padding:0 20px 0 0; vertical-align:top;">
+                                    <div style="font-size:10px; font-weight:900; color:#888; margin-bottom:8px; text-transform:uppercase; border-left:3px solid #555; padding-left:10px;">ТЕХНИЧЕСКИЕ ДАННЫЕ</div>
+                                    <div style="font-size:12px; margin:3px 0;">Объект/Кратко: <strong>${order.art || 'Не указан'}</strong></div>
+                                    <div style="font-size:12px; margin:3px 0;">Клиент: <strong>${order.clientName || '---'}</strong></div>
+                                    <div style="font-size:12px; margin:3px 0;">Статус заказа: <strong>${order.status || 'В производстве'}</strong></div>
+                                </td>
+                                <td style="width:50%; border:none; padding:0 0 0 20px; vertical-align:top;">
+                                    <div style="font-size:10px; font-weight:900; color:#888; margin-bottom:8px; text-transform:uppercase; border-left:3px solid #555; padding-left:10px;">НАЗНАЧЕНИЕ / ОТВЕТСТВЕННЫЕ</div>
+                                    <div style="font-size:12px; margin:3px 0;">Цех: <strong>Сборочно-механический</strong></div>
+                                    <div style="font-size:12px; margin:3px 0;">Исполнитель: <strong>Мастера смены ОТК</strong></div>
+                                    <div style="font-size:12px; margin:3px 0;">Создатель наряда: <strong>${order.responsibleName || 'Оператор ERP'}</strong></div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- ITEMS GRID -->
+                        <table style="flex-grow:1; margin-bottom:20px;">
+                            <thead>
+                                <tr>
+                                    <th style="width:30px; background:#555; border-color:#555;">№</th>
+                                    <th style="text-align:left; background:#555; border-color:#555;">Наименование детали</th>
+                                    <th style="width:140px; background:#555; border-color:#555;">Артикул / Параметры</th>
+                                    <th style="width:80px; background:#555; border-color:#555;">Кол-во</th>
+                                    <th style="background:#555; border-color:#555;">Чертеж детали</th>
+                                </tr>
+                            </thead>
+                            <tbody>${itemsRows}</tbody>
+                        </table>
+
+                        <!-- WORKORDER FOOTER -->
+                        <div style="margin-top:auto; display:grid; grid-template-columns: 1fr 1fr; gap:60px; padding-bottom:10px; border-top:1px solid #ddd; padding-top:20px;">
+                            <div>
+                                <div style="font-size:10px; font-weight:900; color:#888; text-transform:uppercase; margin-bottom:10px; letter-spacing:1px;">СДАЛ (МЕНЕДЖЕР)</div>
+                                <div style="font-size:12px; margin-top:25px; border-bottom:1px solid #000; width:200px;"></div>
+                                <div style="font-size:10px; color:#555; margin-top:5px;">Подпись / Расшифровка подписи</div>
+                            </div>
+                            <div>
+                                <div style="font-size:10px; font-weight:900; color:#888; text-transform:uppercase; margin-bottom:10px; letter-spacing:1px;">ПРИНЯЛ В ЦЕХУ (МАСТЕР)</div>
+                                <div style="font-size:12px; margin-top:25px; border-bottom:1px solid #000; width:200px;"></div>
+                                <div style="font-size:10px; color:#555; margin-top:5px;">Подпись / Расшифровка подписи</div>
+                            </div>
+                        </div>
+
+                        <div style="font-size:9px; color:#aaa; line-height:1.6; padding-top:15px; text-align:center;">
+                            ПРУТКОН ОС v${window.DB_VERSION} | Наряд-заказ на производство сформирован автоматически
+                        </div>
+                    </div>
+                </div>`;
+            }
+
             const itemsRows = items.map((it, idx) => `
                 <tr style="${idx % 2 === 0 ? 'background:#fcfcfc;' : ''}">
                     <td style="text-align:center; font-family:'JetBrains Mono';">${idx + 1}</td>

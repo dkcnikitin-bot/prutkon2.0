@@ -159,6 +159,7 @@ window.buildFiltersBar = function() {
 };
 
 window.renderPriceTable = function() {
+    if (typeof window.syncWarehouseToPrices === 'function') window.syncWarehouseToPrices();
     if (!Array.isArray(window.dbProducts)) window.dbProducts = [];
     const tableContainer = document.getElementById('price-table');
     if (!tableContainer) return;

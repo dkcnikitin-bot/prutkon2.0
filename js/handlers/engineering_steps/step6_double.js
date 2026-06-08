@@ -1,6 +1,6 @@
-/* engineering_steps/step6_double.js - Шаг 5 (бывший 6): Производство сдвоенных прутков */
+/* engineering_steps/step6_double.js - Шаг 6: Производство сдвоенных прутков */
 
-window.calcStep5 = function() {
+window.calcStep6 = function() {
     const blankSelect = document.getElementById('d-blank-select');
     if (!blankSelect) return { K: 0, H: 0, I: 0 };
 
@@ -11,10 +11,17 @@ window.calcStep5 = function() {
     const centerPrice = parseFloat(document.getElementById('d-center-clamp-price')?.value) || 0;
     const labor = parseFloat(document.getElementById('d-labor')?.value) || 0;
 
-    const blankCost = blank ? (parseFloat(blank.priceNoVat || blank.price) || 0) * 2 : 0;
-    const K = blankCost + clampPrice + centerPrice + labor;
-    const H = K * 2;
-    const I = H / 105;
+    // Загружаем себестоимость заготовки без НДС
+    const blankCostNoVat = blank ? parseFloat(blank.costPrice || blank.priceNoVat || blank.price || 0) : 0;
+    const blankCost = blankCostNoVat * 2;
+
+    const costPriceNoVat = blankCost + clampPrice + centerPrice + labor;
+    const vatRate = parseFloat(blank?.vatRate || 1.20);
+    const costPriceVat = costPriceNoVat * vatRate;
+
+    const priceNoVat = costPriceNoVat * 2.0; // 100% наценка
+    const priceVat = priceNoVat * vatRate; // Продажная цена с НДС (Прайс)
+    const priceEuro = priceVat / 105;
 
     const diaSelect = document.getElementById('d-dia-select');
     const lengthInput = document.getElementById('d-length');
@@ -29,17 +36,17 @@ window.calcStep5 = function() {
     const drawingVal = document.getElementById('d-drawing')?.value.trim() || '';
 
     // Автосохранение сессии
-    localStorage.setItem('prutkon_step5_state', JSON.stringify({ blankId, clampPrice, centerPrice, labor, dia, len, drawing: drawingVal, article: articleInput?.value }));
+    localStorage.setItem('prutkon_step6_state', JSON.stringify({ blankId, clampPrice, centerPrice, labor, dia, len, drawing: drawingVal, article: articleInput?.value }));
 
     if (document.getElementById('d-res-blanks')) document.getElementById('d-res-blanks').innerText = window.formatCurr(blankCost);
     if (document.getElementById('d-res-clamps')) document.getElementById('d-res-clamps').innerText = window.formatCurr(clampPrice + centerPrice);
-    if (document.getElementById('d-res-cost')) document.getElementById('d-res-cost').innerText = window.formatCurr(K);
-    if (document.getElementById('d-res-total')) document.getElementById('d-res-total').innerText = window.formatCurr(H);
+    if (document.getElementById('d-res-cost')) document.getElementById('d-res-cost').innerText = window.formatCurr(costPriceNoVat);
+    if (document.getElementById('d-res-total')) document.getElementById('d-res-total').innerText = window.formatCurr(priceVat);
 
-    return { K, H, I };
+    return { K: costPriceNoVat, H: priceVat, I: priceEuro };
 };
 
-window.saveStep5 = function() {
+window.saveStep6 = function() {
     const blankSelect = document.getElementById('d-blank-select');
     const lengthInput = document.getElementById('d-length');
 
@@ -52,7 +59,7 @@ window.saveStep5 = function() {
     if (!blank) return notify('Сначала подготовьте и выберите заготовку (Шаг 2)', 'warning');
     if (length <= 0) return notify('Укажите корректную длину сдвоенного прутка (мм)', 'warning');
 
-    const res = window.calcStep5();
+    const res = window.calcStep6();
     if (res.H <= 0) return notify('Прайсовая цена сдвоенного прутка должна быть больше 0', 'warning');
 
     const dia = blank.dia;
@@ -77,8 +84,10 @@ window.saveStep5 = function() {
         photo: drawingVal,
         blankId,
         costPrice: res.K,
-        priceNoVat: res.K,
-        price: res.H,
+        costPriceVat: res.K * (blank.vatRate || 1.20),
+        priceNoVat: res.K * 2.0,
+        price: res.H, // Продажная цена с НДС (Прайс)
+        priceVat: res.H,
         priceEuro: res.I,
         ts: Date.now()
     };
@@ -94,7 +103,7 @@ window.saveStep5 = function() {
     }
 };
 
-window.updateBlanksForStep5 = function() {
+window.updateBlanksForStep6 = function() {
     const diaSelect = document.getElementById('d-dia-select');
     const blankSel = document.getElementById('d-blank-select');
     if (!diaSelect || !blankSel) return;
@@ -110,23 +119,23 @@ window.updateBlanksForStep5 = function() {
     if (filtered.some(b => String(b.originalIdx) === String(prevVal))) {
         blankSel.value = prevVal;
     }
-    window.calcStep5();
+    window.calcStep6();
 };
 
-window.restoreLastStep5Session = function() {
-    const savedState = localStorage.getItem('prutkon_step5_state');
+window.restoreLastStep6Session = function() {
+    const savedState = localStorage.getItem('prutkon_step6_state');
     if (savedState) {
         try {
             const s = JSON.parse(savedState);
             if (s.dia !== undefined) document.getElementById('d-dia-select').value = s.dia;
-            window.updateBlanksForStep5();
+            window.updateBlanksForStep6();
             if (s.blankId !== undefined && window.db.rods_blanks?.[s.blankId]) document.getElementById('d-blank-select').value = s.blankId;
             if (s.clampPrice !== undefined) document.getElementById('d-clamp-price').value = s.clampPrice;
             if (s.centerPrice !== undefined) document.getElementById('d-center-clamp-price').value = s.centerPrice;
             if (s.labor !== undefined) document.getElementById('d-labor').value = s.labor;
             if (s.len !== undefined) document.getElementById('d-length').value = s.len;
             if (s.drawing !== undefined && document.getElementById('d-drawing')) document.getElementById('d-drawing').value = s.drawing;
-            window.calcStep5();
+            window.calcStep6();
             notify('🔄 Данные Сдвоенного прутка успешно восстановлены из сессии!', 'info');
         } catch(e) { console.error(e); }
     } else {

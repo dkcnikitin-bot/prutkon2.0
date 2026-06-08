@@ -19,7 +19,15 @@ window.dbCategories = window.safeParse('prutkon_categories', [
 ]);
 window.dbProducts = window.safeParse('prutkon_products', []);
 window.orders = window.safeParse('prutkon_orders', []);
-window.dbEmployees = window.safeParse('prutkon_employees', [{ name: 'Администратор', role: 'Admin', pwd: '123' }]);
+window.dbEmployees = window.safeParse('prutkon_employees', [
+    { id: 1, name: 'Никитин Иван Андреевич', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 100000, share: 0 },
+    { id: 2, name: 'Ивахненко Иван', role: 'Менеджер', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 50000, share: 0 },
+    { id: 3, name: 'Кокарев Сергей', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 80000, share: 0 },
+    { id: 4, name: 'Метелла Артем', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 80000, share: 0 },
+    { id: 5, name: 'Жарикова Джульетта', role: 'Менеджер', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 50000, share: 0 },
+    { id: 6, name: 'Власов Алексей', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 80000, share: 0 },
+    { id: 7, name: 'Родионова Анастасия', role: 'Менеджер', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 50000, share: 0 }
+]);
 
 // 3. ОТРИСОВКА ИНТЕРФЕЙСА (UI SHELL)
 window.renderLayout = () => {

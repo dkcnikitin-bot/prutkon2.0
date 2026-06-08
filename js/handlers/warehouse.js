@@ -21,6 +21,13 @@ let WAREHOUSE_CATALOG = {
 };
 
 window.initWarehouseCatalog = () => {
+    // Очищаем старые динамические ключи прутков, чтобы не дублировать
+    for (let key in WAREHOUSE_CATALOG) {
+        if (key.includes('_') && key !== 'belt_blank' && key !== 'belt_strip' && key !== 'bent_rubberized') {
+            delete WAREHOUSE_CATALOG[key];
+        }
+    }
+
     if (window.dbDirectories) {
         const metals = window.dbDirectories.filter(d => d.category === 'metal' || (d.data && d.data.category === 'metal'));
         metals.forEach(m => {
@@ -86,6 +93,95 @@ window.initWarehouseCatalog = () => {
                 name: nameVal,
                 unit: 'м.п.',
                 icon: 'fa-grip-lines-vertical'
+            };
+        });
+    }
+
+    // Загружаем реестр прутков из localStorage / window.db
+    let rodsObj = {};
+    try {
+        const raw = localStorage.getItem('prutkon_rods_registry');
+        if (raw) rodsObj = JSON.parse(raw);
+    } catch(e) {
+        console.error('Failed to parse rods registry in warehouse', e);
+    }
+    
+    if (window.db) {
+        const RODS_KEYS = ['rods_metal', 'rods_blanks', 'rods_standard', 'rods_bent', 'rods_rubber', 'rods_double'];
+        RODS_KEYS.forEach(k => {
+            if (window.db[k] && Array.isArray(window.db[k])) {
+                rodsObj[k] = window.db[k];
+            }
+        });
+    }
+
+    // Заготовки
+    if (rodsObj.rods_blanks) {
+        rodsObj.rods_blanks.forEach(b => {
+            const key = b.article ? `blank_${b.article}` : `blank_${b.dia}_${b.length}`;
+            WAREHOUSE_CATALOG[key] = {
+                name: `Заготовка L=${b.length} мм, Ø${b.dia} мм`,
+                unit: 'шт',
+                icon: 'fa-cube',
+                parentGroup: 'blank'
+            };
+        });
+    }
+
+    // Прямые / Стандартные прутки
+    if (rodsObj.rods_standard) {
+        rodsObj.rods_standard.forEach(r => {
+            const key = r.article ? `straight_${r.article}` : `straight_${r.name}`;
+            const nameLower = (r.name || '').toLowerCase();
+            const isHedge = nameLower.includes('еж') || nameLower.includes('ёж') || nameLower.includes('палец');
+            WAREHOUSE_CATALOG[key] = {
+                name: r.name,
+                unit: 'шт',
+                icon: isHedge ? 'fa-star-of-life' : 'fa-ruler-horizontal',
+                parentGroup: isHedge ? 'hedge' : 'straight'
+            };
+        });
+    }
+
+    // Сдвоенные прутки
+    if (rodsObj.rods_double) {
+        rodsObj.rods_double.forEach(r => {
+            const key = r.article ? `double_${r.article}` : `double_${r.name}`;
+            WAREHOUSE_CATALOG[key] = {
+                name: r.name,
+                unit: 'шт',
+                icon: 'fa-grip-lines',
+                parentGroup: 'double'
+            };
+        });
+    }
+
+    // Гнутые прутки
+    if (rodsObj.rods_bent) {
+        rodsObj.rods_bent.forEach(r => {
+            const key = r.article ? `bent_${r.article}` : `bent_${r.name}`;
+            const nameLower = (r.name || '').toLowerCase();
+            const isHedge = nameLower.includes('еж') || nameLower.includes('ёж') || nameLower.includes('палец');
+            WAREHOUSE_CATALOG[key] = {
+                name: r.name,
+                unit: 'шт',
+                icon: isHedge ? 'fa-star-of-life' : 'fa-wave-square',
+                parentGroup: isHedge ? 'hedge' : 'bent'
+            };
+        });
+    }
+
+    // Обрезиненные прутки
+    if (rodsObj.rods_rubber) {
+        rodsObj.rods_rubber.forEach(r => {
+            const key = r.article ? `rubberized_${r.article}` : `rubberized_${r.name}`;
+            const nameLower = (r.name || '').toLowerCase();
+            const isBent = nameLower.includes('гнут') || nameLower.includes('сварн') || nameLower.includes('комби') || nameLower.includes('bent');
+            WAREHOUSE_CATALOG[key] = {
+                name: r.name,
+                unit: 'шт',
+                icon: isBent ? 'fa-bacon' : 'fa-ring',
+                parentGroup: isBent ? 'bent_rubberized' : 'rubberized'
             };
         });
     }
@@ -269,109 +365,110 @@ function renderInventory() {
     const tbody = document.querySelector('#inventory-table tbody');
     if (!tbody) return;
 
-    window.expandedGroups = window.expandedGroups || { belt: false, metal: false };
+    window.expandedGroups = window.expandedGroups || {
+        metal: false,
+        belt: false,
+        blank: false,
+        straight: false,
+        double: false,
+        bent: false,
+        rubberized: false,
+        hedge: false,
+        bent_rubberized: false
+    };
 
     let html = '';
 
-    // Gather belt, metal, and other keys
-    let beltKeys = [];
-    let otherKeys = [];
-    let metalKeys = [];
+    const groupsConfig = {
+        metal: { name: 'Материалы (в ассортименте)', unit: 'кг', icon: 'fa-cubes', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.05)', border: 'rgba(255,180,0,0.15)' },
+        belt: { name: 'Ленты (рулоны, заготовки, полосы)', unit: 'м.п.', icon: 'fa-tape', color: 'var(--accent-blue)', bg: 'rgba(0,147,255,0.05)', border: 'rgba(0,147,255,0.15)' },
+        blank: { name: 'Заготовки прутков', unit: 'шт', icon: 'fa-cube', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.03)', border: 'rgba(255,180,0,0.1)' },
+        straight: { name: 'Прутки прямые (стандартные)', unit: 'шт', icon: 'fa-ruler-horizontal', color: 'var(--neon-emerald)', bg: 'rgba(0,255,157,0.03)', border: 'rgba(0,255,157,0.1)' },
+        double: { name: 'Сдвоенные прутки', unit: 'шт', icon: 'fa-grip-lines', color: '#af52de', bg: 'rgba(175,82,222,0.03)', border: 'rgba(175,82,222,0.1)' },
+        bent: { name: 'Гнутые / Сварные прутки', unit: 'шт', icon: 'fa-wave-square', color: '#af52de', bg: 'rgba(175,82,222,0.03)', border: 'rgba(175,82,222,0.1)' },
+        rubberized: { name: 'Обрезиненные прутки', unit: 'шт', icon: 'fa-ring', color: '#00c7be', bg: 'rgba(0,199,190,0.03)', border: 'rgba(0,199,190,0.1)' },
+        hedge: { name: 'Ёжные и пальцевые прутки', unit: 'шт', icon: 'fa-star-of-life', color: '#ff2d55', bg: 'rgba(255,45,85,0.03)', border: 'rgba(255,45,85,0.1)' },
+        bent_rubberized: { name: 'Гнутые обрезиненные прутки', unit: 'шт', icon: 'fa-bacon', color: '#00c7be', bg: 'rgba(0,199,190,0.03)', border: 'rgba(0,199,190,0.1)' }
+    };
 
-    for (let key in WAREHOUSE_CATALOG) {
-        if (key === 'belt' || key.startsWith('belt_') || key.startsWith('belt_blank') || key.startsWith('belt_strip')) {
-            beltKeys.push(key);
-        } else if (key === 'metal' || key.startsWith('metal_')) {
-            metalKeys.push(key);
-        } else {
-            otherKeys.push(key);
-        }
-    }
-
-    // --- GROUP 1: Belts ---
-    let totalBeltQty = 0;
-    beltKeys.forEach(k => {
-        totalBeltQty += (window.dbWarehouseInv[k] || 0);
-    });
-
-    const beltIcon = window.expandedGroups.belt ? 'fa-square-minus' : 'fa-square-plus';
-    html += `
-        <tr class="group-header-row" onclick="window.toggleGroup('belt')" style="cursor:pointer; background:rgba(0,147,255,0.05); font-weight:bold; border-bottom:1px solid rgba(0,147,255,0.15);">
-            <td>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <i class="fa-solid ${beltIcon} text-blue" style="font-size:1.1rem; color: var(--accent-blue);"></i>
-                    <strong style="color:#fff; font-size:0.85rem;">Ленты (рулоны, заготовки, полосы)</strong>
-                </div>
-            </td>
-            <td style="color:var(--text-muted); font-size:0.8rem;">м.п.</td>
-            <td style="text-align: right; padding-right:15px;">
-                <span style="font-family:'JetBrains Mono', monospace; font-size:1rem; color:var(--accent-blue); font-weight:800;">
-                    ${window.formatWhNumber(totalBeltQty, 2)}
-                </span>
-            </td>
-        </tr>
-    `;
-
-    if (window.expandedGroups.belt) {
-        beltKeys.forEach(key => {
+    for (let groupKey in groupsConfig) {
+        const conf = groupsConfig[groupKey];
+        
+        let childKeys = [];
+        for (let key in WAREHOUSE_CATALOG) {
             const item = WAREHOUSE_CATALOG[key];
-            const qty = window.dbWarehouseInv[key] || 0;
-            html += renderInventoryChildRow(key, item, qty, 'belt');
-        });
-    }
-
-    // --- OTHER FLAT ITEMS (blanks, rods, etc.) ---
-    otherKeys.forEach(key => {
-        const item = WAREHOUSE_CATALOG[key];
-        const qty = window.dbWarehouseInv[key] || 0;
-        html += renderInventoryRow(key, item, qty);
-    });
-
-    // --- GROUP 2: Metals/Materials ---
-    let totalMetalQty = 0;
-    metalKeys.forEach(k => {
-        totalMetalQty += (window.dbWarehouseInv[k] || 0);
-    });
-
-    const metalIcon = window.expandedGroups.metal ? 'fa-square-minus' : 'fa-square-plus';
-    html += `
-        <tr class="group-header-row" onclick="window.toggleGroup('metal')" style="cursor:pointer; background:rgba(255,180,0,0.05); font-weight:bold; border-bottom:1px solid rgba(255,180,0,0.15); border-top: 1px solid rgba(255,255,255,0.05);">
-            <td>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <i class="fa-solid ${metalIcon} text-gold" style="font-size:1.1rem; color: var(--brand-gold);"></i>
-                    <strong style="color:#fff; font-size:0.85rem;">Материалы (в ассортименте)</strong>
-                </div>
-            </td>
-            <td style="color:var(--text-muted); font-size:0.8rem;">кг</td>
-            <td style="text-align: right; padding-right:15px;">
-                <span style="font-family:'JetBrains Mono', monospace; font-size:1rem; color:var(--brand-gold); font-weight:800;">
-                    ${window.formatWhNumber(totalMetalQty, 2)}
-                </span>
-            </td>
-        </tr>
-    `;
-
-    if (window.expandedGroups.metal) {
-        let hasChildMetals = false;
-        metalKeys.forEach(key => {
-            const item = WAREHOUSE_CATALOG[key];
-            if (!item) return;
-            const qty = window.dbWarehouseInv[key] || 0;
-            if (qty > 0 || key === 'metal') {
-                html += renderInventoryChildRow(key, item, qty, 'metal');
-                hasChildMetals = true;
+            let belongs = false;
+            
+            if (groupKey === 'metal') {
+                belongs = (key === 'metal' || key.startsWith('metal_'));
+            } else if (groupKey === 'belt') {
+                belongs = (key === 'belt' || key.startsWith('belt_') || key.startsWith('belt_blank') || key.startsWith('belt_strip'));
+            } else {
+                belongs = (item.parentGroup === groupKey || (key === groupKey && !item.parentGroup));
             }
+            
+            if (belongs && key !== groupKey) {
+                childKeys.push(key);
+            }
+        }
+        
+        // Суммируем остатки
+        let totalQty = 0;
+        childKeys.forEach(k => {
+            totalQty += (window.dbWarehouseInv[k] || 0);
         });
-        if (!hasChildMetals) {
-            html += `<tr><td colspan="3" style="text-align:center; opacity:0.5; font-size:0.8rem; padding:15px; padding-left:45px;">Нет остатков материала</td></tr>`;
+        
+        const genericQty = window.dbWarehouseInv[groupKey] || 0;
+        totalQty += genericQty;
+        
+        const isExpanded = window.expandedGroups[groupKey];
+        const expandIcon = isExpanded ? 'fa-square-minus' : 'fa-square-plus';
+        
+        html += `
+            <tr class="group-header-row" onclick="window.toggleGroup('${groupKey}')" style="cursor:pointer; background:${conf.bg}; font-weight:bold; border-bottom:1px solid ${conf.border}; border-top: 1px solid rgba(255,255,255,0.02);">
+                <td>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <i class="fa-solid ${expandIcon}" style="font-size:1.1rem; color: ${conf.color};"></i>
+                        <strong style="color:#fff; font-size:0.85rem;">${conf.name}</strong>
+                    </div>
+                </td>
+                <td style="color:var(--text-muted); font-size:0.8rem;">${conf.unit}</td>
+                <td style="text-align: right; padding-right:15px;">
+                    <span style="font-family:'JetBrains Mono', monospace; font-size:1rem; color:${conf.color}; font-weight:800;">
+                        ${window.formatWhNumber(totalQty, conf.unit === 'шт' ? 0 : 2)}
+                    </span>
+                </td>
+            </tr>
+        `;
+        
+        if (isExpanded) {
+            let hasChildren = false;
+            
+            if (genericQty > 0 || childKeys.length === 0) {
+                const genericItem = WAREHOUSE_CATALOG[groupKey] || { name: 'Нераспределенный остаток', unit: conf.unit, icon: conf.icon };
+                const nameDisplay = genericQty > 0 ? 'Общий нераспределенный остаток' : genericItem.name;
+                html += renderInventoryChildRow(groupKey, { ...genericItem, name: nameDisplay }, genericQty, groupKey);
+                hasChildren = true;
+            }
+            
+            childKeys.forEach(key => {
+                const item = WAREHOUSE_CATALOG[key];
+                const qty = window.dbWarehouseInv[key] || 0;
+                html += renderInventoryChildRow(key, item, qty, groupKey);
+                hasChildren = true;
+            });
+            
+            if (!hasChildren) {
+                html += `<tr><td colspan="3" style="text-align:center; opacity:0.5; font-size:0.8rem; padding:15px; padding-left:45px;">Нет остатков в этой группе</td></tr>`;
+            }
         }
     }
-
+    
     tbody.innerHTML = html;
 }
 
 window.toggleGroup = (groupName) => {
-    window.expandedGroups = window.expandedGroups || { belt: false, metal: false };
+    window.expandedGroups = window.expandedGroups || {};
     window.expandedGroups[groupName] = !window.expandedGroups[groupName];
     renderInventory();
 };

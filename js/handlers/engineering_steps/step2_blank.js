@@ -49,23 +49,39 @@ window.calcStep2 = function() {
     const L = T > 0 ? ((H + I) / T) * 100 : 0;
 
     const J = I >= 1000 ? `Деловой отход (${I.toFixed(0)} мм)` : `Неликвид / В лом (${I.toFixed(0)} мм)`;
-    const M = (dia * dia * D * Math.PI * 7.85) / 4000000; // вес 1 шт в кг
+    
+    // Динамический расчет плотности стали
+    const density = window.getSteelDensity ? window.getSteelDensity(C) : 7.85;
+    const M = (dia * dia * D * Math.PI * density) / 4000000; // точный вес 1 шт в кг
 
     const N = parseFloat(metal.pricePerM || 0);
-    const R = parseFloat(metal.vatRate || 1.22);
-    const N_vat = parseFloat(metal.pricePerMVat || N * R);
+    const R = parseFloat(metal.vatRate || 1.20);
 
-    const O = N * (D / 1000);
-    const P = G > 0 ? (N * (T / 1000)) / G : 0;
-    const Q_novat = P + V;
-    const E = (Q_novat * 2 + V) * R;
+    const O = N * (D / 1000); // Чистый металл на заготовку без угара
+    
+    // Расчет стоимости металла с учетом делового отхода
+    let P = 0;
+    if (G > 0) {
+        if (I >= 1000) {
+            P = (N * ((T - I) / 1000)) / G; // Вычитаем стоимость делового отхода
+        } else {
+            P = (N * (T / 1000)) / G; // Убыток от отхода делится на все заготовки
+        }
+    }
+    
+    // Структурированное ценообразование
+    const costPriceNoVat = P + V; // Себестоимость без НДС
+    const costPriceVat = costPriceNoVat * R; // Себестоимость с НДС
+    const priceNoVat = costPriceNoVat * 2.0; // Цена продажи без НДС (100% наценка)
+    const priceVat = priceNoVat * R; // Цена продажи с НДС (Прайс)
+
     const avgInfo = (T / (D + S)).toFixed(9);
 
     setT('b-f-article', A);
     setT('b-f-supplier', B);
     setT('b-f-steel', `${C} (Ø${dia} мм)`);
     setT('b-f-length', `${D} мм`);
-    setC('b-f-price-vat', E);
+    setC('b-f-price-vat', priceVat);
     setT('b-f-cuts-count', `${F} рубов`);
     setT('b-f-qty-rod', `${G} шт`);
     setT('b-f-waste-cuts', `${H} мм`);
@@ -77,15 +93,22 @@ window.calcStep2 = function() {
     setC('b-f-metal-price-m', N);
     setC('b-f-metal-cost-unit', O);
     setC('b-f-metal-cost-rod', P);
-    setC('b-f-cost-unit-novat', Q_novat);
+    setC('b-f-cost-unit-novat', costPriceNoVat);
     setT('b-f-vat-rate', R === 1.2 ? '20%' : (R === 1.22 ? '22%' : 'Без НДС'));
     setT('b-f-gap', `${S} мм`);
     setT('b-f-rod-len', `${T} мм`);
     setC('b-f-labor-cut', V);
     setT('b-f-avg-info', `Справочное поле, указано среднее количество заготовок в хлысте (${avgInfo} шт). Поле используется для дальнейшего расчета.`);
 
+    // Обновление UI элементов в rods_production.html
+    setT('b-res-qty', `${G} шт`);
+    setT('b-res-remainder', `${I.toFixed(0)} мм (${I >= 1000 ? 'Деловой' : 'Лом'})`);
+    setT('b-res-waste', `${L.toFixed(2)} %`);
+    setC('b-res-metal-cost', P);
+    setC('b-res-total', priceVat);
+
     // Подсветка отхода, если превышает норму
-    const wasteEl = document.getElementById('b-f-waste-pct');
+    const wasteEl = document.getElementById('b-f-waste-pct') || document.getElementById('b-res-waste');
     if (wasteEl) {
         if (L > K_norm) {
             wasteEl.style.color = 'var(--brand-red)';
@@ -98,8 +121,7 @@ window.calcStep2 = function() {
 
     const bArticleInp = document.getElementById('b-article');
     if (bArticleInp) bArticleInp.value = A;
-
-    return { totalNoVat: Q_novat, totalVat: Q_novat * R, vatRate: R, priceVat: E, article: A, qtyInRod: G };
+    return { totalNoVat: costPriceNoVat, totalVat: costPriceVat, vatRate: R, priceVat: priceVat, priceNoVat: priceNoVat, article: A, qtyInRod: G };
 };
 
 window.saveStep2 = function() {
@@ -129,12 +151,17 @@ window.saveStep2 = function() {
         dia: metal.dia,
         length,
         labor,
-        price: res.totalNoVat,
-        priceVat: res.totalVat,
+        costPrice: res.totalNoVat,
+        costPriceVat: res.totalVat,
+        priceNoVat: res.priceNoVat,
+        price: res.priceVat, // Цена продажи с НДС (Прайс)
+        priceVat: res.priceVat,
         vatRate: res.vatRate,
         article: res.article,
         metalName: metal.name,
         qtyInRod: res.qtyInRod,
+        rodLength: parseFloat(document.getElementById('b-rod-length')?.value) || 6000,
+        gap: parseFloat(document.getElementById('b-gap')?.value) || 10,
         drawing: drawingVal,
         photo: drawingVal,
         ts: Date.now()

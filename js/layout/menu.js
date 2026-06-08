@@ -41,6 +41,7 @@ window.renderNavItems = () => {
         { id: 'calculator.html', icon: 'fa-calculator', label: 'Калькулятор КП' },
         { id: 'orders.html', icon: 'fa-cart-shopping', label: 'Менеджер заказов' },
         { id: 'production.html', icon: 'fa-industry', label: 'Производство' },
+        { id: 'production_order.html', icon: 'fa-file-signature', label: 'Заказ-наряды' },
         { id: 'rods_production.html', icon: 'fa-drafting-compass', label: 'Инженерия' },
         { id: 'prices.html', icon: 'fa-tags', label: 'Прайс-листы' },
         { id: 'catalog.html', icon: 'fa-book-open', label: 'Реестр моделей' },

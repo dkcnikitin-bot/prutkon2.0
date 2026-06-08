@@ -26,8 +26,9 @@ window.calcStep3 = function() {
     }
 
     // 2. Столбец L: Вес прутка расчетный
-    // =(ПИ() * (G/2)^2 * J * 7,85) / 1 000 000
-    const L = (Math.PI * Math.pow(G / 2, 2) * J * 7.85) / 1000000;
+    const steelName = blank ? blank.metalName : '';
+    const density = window.getSteelDensity ? window.getSteelDensity(steelName) : 7.85;
+    const L = (Math.PI * Math.pow(G / 2, 2) * J * density) / 1000000;
     if (document.getElementById('r-calc-weight')) {
         document.getElementById('r-calc-weight').value = L.toFixed(3);
     }
@@ -36,22 +37,26 @@ window.calcStep3 = function() {
     }
 
     // 3. Столбец N & O: Цена за шт без НДС
-    const N = parseFloat(blank?.price) || 0;
+    const N = parseFloat(blank?.costPrice || blank?.priceNoVat || blank?.price || 0);
     if (document.getElementById('r-blank-price')) {
         document.getElementById('r-blank-price').value = N.toFixed(2);
     }
 
     const labor = parseFloat(document.getElementById('r-labor')?.value) || 0;
-    const O = N + labor;
+    const O = N + labor; // Себестоимость без НДС
     if (document.getElementById('r-res-price-no-vat')) {
         document.getElementById('r-res-price-no-vat').innerText = window.formatCurr(O);
     }
 
     // 4. Столбец F: Прайс. Цена за шт. с НДС
-    const S = parseFloat(document.getElementById('r-vat-rate')?.value) || 1.22;
-    const F = O * S;
+    const S = parseFloat(document.getElementById('r-vat-rate')?.value) || 1.20;
+    const priceNoVat = O * 2.0; // Продажная цена без НДС (наценка 100%)
+    const F = priceNoVat * S; // Продажная цена с НДС (Прайс)
     if (document.getElementById('r-res-total')) {
         document.getElementById('r-res-total').innerText = window.formatCurr(F);
+    }
+    if (document.getElementById('r-res-blank-cost')) {
+        document.getElementById('r-res-blank-cost').innerText = window.formatCurr(N);
     }
 
     const artInput = document.getElementById('r-article');
@@ -73,7 +78,7 @@ window.calcStep3 = function() {
     };
     localStorage.setItem('prutkon_step3_state', JSON.stringify(state));
 
-    return { O, F, J, L };
+    return { O, F, priceNoVat, J, L };
 };
 
 window.saveStep3 = function() {
@@ -96,6 +101,7 @@ window.saveStep3 = function() {
     if (!window.db.rods_standard) window.db.rods_standard = [];
     const existingIdx = window.db.rods_standard.findIndex(r => r.article === article || r.name === name);
 
+    const S = parseFloat(document.getElementById('r-vat-rate')?.value) || 1.20;
     const record = { 
         name, 
         article,
@@ -109,14 +115,17 @@ window.saveStep3 = function() {
         centerCount: K,
         weightKg: res.L,
         available: document.getElementById('r-available')?.checked !== false,
-        blankPrice: parseFloat(blank?.price || 0),
+        blankPrice: parseFloat(blank?.costPrice || blank?.price || 0),
         labor: parseFloat(document.getElementById('r-labor')?.value) || 0,
-        priceNoVat: res.O,
-        price: res.F,
+        costPrice: res.O, // Себестоимость без НДС
+        costPriceVat: res.O * S, // Себестоимость с НДС
+        priceNoVat: res.priceNoVat, // Цена продажи без НДС (100% наценка)
+        price: res.F, // Цена продажи с НДС (Прайс)
+        priceVat: res.F,
         extEnds: parseFloat(document.getElementById('r-ext-ends')?.value) || 0,
         extCenter: parseFloat(document.getElementById('r-ext-center')?.value) || 0,
         shrinkCenter: parseFloat(document.getElementById('r-shrink-center')?.value) || 0,
-        vatRate: parseFloat(document.getElementById('r-vat-rate')?.value) || 1.22,
+        vatRate: S,
         drawing: drawingVal,
         photo: drawingVal,
         blankId,

@@ -25,7 +25,8 @@ window.onSelectWarehouseBatch = function() {
     const vatRate = parseFloat(batch.vat_rate || document.getElementById('m-vat-rate')?.value || 1.2);
     
     // Расчет 19 финансовых показателей
-    const wpm = dia * dia * 0.006165; // вес 1 м.п. в кг
+    const density = window.getSteelDensity ? window.getSteelDensity(steel) : 7.85;
+    const wpm = (Math.PI * dia * dia * density) / 4000; // вес 1 м.п. в кг
     const rodLenM = 6; // стандартный хлыст 6 м
     const weightTonne = totalWeightKg / 1000;
     const priceTonVat = priceTonNoVat * vatRate;
@@ -293,7 +294,23 @@ window.clearStep1Data = function() {
     notify('Форма расчета сырья очищена', 'info');
 };
 
-window.calcStep1Manual = function() {
+window.calcStep1Price = function(mode) {
+    const vatRate = parseFloat(document.getElementById('m-vat-rate')?.value) || 1.2;
+    const priceVatEl = document.getElementById('m-price-ton-vat');
+    const priceNoVatEl = document.getElementById('m-price-ton-no-vat');
+    if (!priceVatEl || !priceNoVatEl) return;
+    
+    if (mode === 'vat') {
+        const val = parseFloat(priceVatEl.value) || 0;
+        priceNoVatEl.value = (val / vatRate).toFixed(2);
+    } else {
+        const val = parseFloat(priceNoVatEl.value) || 0;
+        priceVatEl.value = (val * vatRate).toFixed(2);
+    }
+    window.calcStep1();
+};
+
+window.calcStep1 = function() {
     const dia = parseFloat(document.getElementById('m-dia')?.value) || 0;
     const name = document.getElementById('m-name')?.value || 'Металл';
     const batchKg = parseFloat(document.getElementById('m-batch-kg')?.value) || 0;
@@ -301,21 +318,26 @@ window.calcStep1Manual = function() {
     const priceTonNoVat = parseFloat(document.getElementById('m-price-ton-no-vat')?.value) || 0;
     const vatRate = parseFloat(document.getElementById('m-vat-rate')?.value) || 1.2;
 
-    let wpm = parseFloat(document.getElementById('m-weight-m')?.value) || 0;
-    if (dia > 0 && wpm === 0) {
-        wpm = dia * dia * 0.006165;
-        document.getElementById('m-weight-m').value = wpm.toFixed(3);
+    let wpmInput = document.getElementById('m-weight-m');
+    let wpm = parseFloat(wpmInput?.value) || 0;
+    if (dia > 0 && (wpm === 0 || document.activeElement !== wpmInput)) {
+        const density = window.getSteelDensity ? window.getSteelDensity(name) : 7.85;
+        wpm = (Math.PI * dia * dia * density) / 4000;
+        if (wpmInput) wpmInput.value = wpm.toFixed(4);
     }
 
     const priceKg = priceTonNoVat / 1000;
     const delKg = batchKg > 0 ? delCost / batchKg : 0;
-    const totMNoVat = (priceKg * wpm) + (delKg * wpm);
+    
+    const priceMNoVat = priceKg * wpm;
+    const delMNoVat = delKg * wpm;
+    const totMNoVat = priceMNoVat + delMNoVat;
     const totMVat = totMNoVat * vatRate;
 
     window.currentStep1Metal = {
         code: 'Ручной ввод', dia, wpm, rodLenM: 6, steel: name, availWeightKg: batchKg, totalWeightKg: batchKg,
         priceTonNoVat, priceTonVat: priceTonNoVat * vatRate, sumNoVat: (batchKg/1000)*priceTonNoVat, sumVat: (batchKg/1000)*priceTonNoVat*vatRate,
-        priceMNoVat: priceKg*wpm, priceMVat: priceKg*wpm*vatRate, delMNoVat: delKg*wpm, delMVat: delKg*wpm*vatRate,
+        priceMNoVat, priceMVat: priceMNoVat * vatRate, delMNoVat, delMVat: delMNoVat * vatRate,
         totMNoVat, totMVat, vatRate, dateStr: new Date().toLocaleDateString('ru-RU'), vendorStr: 'Ручной ввод'
     };
 
@@ -324,8 +346,15 @@ window.calcStep1Manual = function() {
     if (detailsCard) detailsCard.style.display = 'block';
     if (cutPanel) cutPanel.style.display = 'block';
 
+    const setT = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+    setT('m-res-del-kg', window.formatCurr(delKg));
+    setT('m-res-del-m', window.formatCurr(delMNoVat));
+    setT('m-res-total-m', window.formatCurr(totMNoVat));
+
     window.onSelectWarehouseBatch_UpdateFromManual();
 };
+
+window.calcStep1Manual = window.calcStep1;
 
 window.onSelectWarehouseBatch_UpdateFromManual = function() {
     if (!window.currentStep1Metal) return;

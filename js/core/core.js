@@ -10,6 +10,7 @@ window.DB_KEY = "prutkon_data_v1";
 // --- 1. СИНХРОНИЗАЦИЯ (SUPABASE CLOUD) ---
 let _supabaseSyncTimeout = null;
 window.saveAllToLocal = async () => {
+    if (typeof window.syncWarehouseToPrices === 'function') window.syncWarehouseToPrices();
     const data = {
         products: window.dbProducts || [],
         categories: window.dbCategories || [],
@@ -106,6 +107,7 @@ window.saveAllToLocal = async () => {
 };
 
 window.saveAllToLocalQuiet = () => {
+    if (typeof window.syncWarehouseToPrices === 'function') window.syncWarehouseToPrices();
     const data = {
         products: window.dbProducts || [],
         categories: window.dbCategories || [],
@@ -224,6 +226,31 @@ window.loadFromCloud = async (force = false) => {
     console.log("☁️ Supabase: Инициализация потоков реального времени...");
     
     try {
+        if (window.supabase && !localStorage.getItem('prutkon_employees_migrated_v21')) {
+            console.log("🚀 Run employee migration to v21...");
+            const newEmps = [
+                { id: 1, name: 'Никитин Иван Андреевич', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 100000, share: 0 },
+                { id: 2, name: 'Ивахненко Иван', role: 'Менеджер', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 50000, share: 0 },
+                { id: 3, name: 'Кокарев Сергей', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 80000, share: 0 },
+                { id: 4, name: 'Метелла Артем', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 80000, share: 0 },
+                { id: 5, name: 'Жарикова Джульетта', role: 'Менеджер', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 50000, share: 0 },
+                { id: 6, name: 'Власов Алексей', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 80000, share: 0 },
+                { id: 7, name: 'Родионова Анастасия', role: 'Менеджер', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 50000, share: 0 }
+            ];
+            const { error: delErr } = await window.supabase.from('employees').delete().neq('id', '0');
+            if (delErr) console.error("Migration: delete old error", delErr);
+            const pack = (arr) => arr.map(obj => ({ id: String(obj.id), data: obj }));
+            const { error: insErr } = await window.supabase.from('employees').upsert(pack(newEmps));
+            if (!insErr) {
+                window.dbEmployees = newEmps;
+                localStorage.setItem('prutkon_employees', JSON.stringify(newEmps));
+                localStorage.setItem('prutkon_employees_migrated_v21', 'true');
+                console.log("✅ Employee migration to v21 completed successfully!");
+            } else {
+                console.error("Migration: insert error", insErr);
+            }
+        }
+
         // 1. Первоначальная загрузка заказов (Безопасное слияние)
         const { data: ords } = await window.supabase.from('orders').select('*').order('created_at', { ascending: false });
         if (ords) { 
@@ -486,9 +513,13 @@ window.orders = window.safeParse('prutkon_orders', []);
 window.dbEmployees = window.safeParse('prutkon_employees', []);
 if (!window.dbEmployees || window.dbEmployees.length === 0) {
     window.dbEmployees = [
-        { id: 1, name: 'Администратор', role: 'Админ', pwd: '123' },
-        { id: 2, name: 'Никитин Иван Андреевич', role: 'Руководитель', pwd: '123' },
-        { id: 3, name: 'Менеджер продаж', role: 'Менеджер', pwd: '123' }
+        { id: 1, name: 'Никитин Иван Андреевич', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 100000, share: 0 },
+        { id: 2, name: 'Ивахненко Иван', role: 'Менеджер', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 50000, share: 0 },
+        { id: 3, name: 'Кокарев Сергей', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 80000, share: 0 },
+        { id: 4, name: 'Метелла Артем', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 80000, share: 0 },
+        { id: 5, name: 'Жарикова Джульетта', role: 'Менеджер', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 50000, share: 0 },
+        { id: 6, name: 'Власов Алексей', role: 'Администратор', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 80000, share: 0 },
+        { id: 7, name: 'Родионова Анастасия', role: 'Менеджер', pwd: '1234', status: 'Активен', hired: '2026-01-01', base: 50000, share: 0 }
     ];
 }
 window.dbAuditLog = window.safeParse('prutkon_audit_log', []);
@@ -518,6 +549,15 @@ window.currentUser = window.getCurrentEmployee() || window.dbEmployees[0] || { n
 
 // --- 3. ГЛОБАЛЬНЫЕ КОНСТАНТЫ ---
 window.steelTypes = ['60С2ХА', 'Ст3', '40Х', '65Г', '60С2А', '50ХФА', 'AISI 304', 'AISI 316'];
+window.getSteelDensity = function(steelName) {
+    if (!steelName) return 7.85;
+    const name = String(steelName).toUpperCase().trim();
+    if (name.includes('316')) return 8.00;
+    if (name.includes('304') || name.includes('321') || name.includes('18Н10') || name.includes('12Х18') || name.includes('08Х18')) return 7.93;
+    if (name.includes('430') || name.includes('12Х17')) return 7.70;
+    if (name.includes('40Х') || name.includes('30ХГ') || name.includes('40ХН')) return 7.82;
+    return 7.85;
+};
 window.MEASURE_UNITS = ['кг', 'т', 'шт', 'м.п', 'рулон'];
 
 // --- 4. UI ХЕЛПЕРЫ ---
@@ -882,7 +922,7 @@ window.ensureLoginModal = () => {
                 </div>
                 <div class="form-group mb-4">
                     <select id="login-role" class="form-control" style="height:50px; font-size:1rem; font-weight:600;">
-                        ${window.dbEmployees.map((e) => `<option value="${e.id}">${e.name} (${e.role})</option>`).join('')}
+                        ${window.dbEmployees.map((e) => `<option value="${e.id}">${e.name}</option>`).join('')}
                     </select>
                 </div>
                 <div class="form-group mb-4">
@@ -892,7 +932,7 @@ window.ensureLoginModal = () => {
                     <i class="fa-solid fa-arrow-right-to-bracket"></i> Войти в систему
                 </button>
                 <div style="margin-top:25px; font-size:0.7rem; color:var(--text-muted);">
-                    Пароль по умолчанию: <strong style="color:var(--brand-red);">123</strong>
+                    Пароль по умолчанию: <strong style="color:var(--brand-red);">1234</strong>
                 </div>
             </div>`;
         document.body.appendChild(m);
@@ -933,7 +973,7 @@ window.checkAuth = () => {
 window.updateLoginSelect = () => {
     const sel = document.getElementById('login-role');
     if (sel && window.dbEmployees) {
-        sel.innerHTML = window.dbEmployees.map((e) => `<option value="${e.id}">${e.name} (${e.role})</option>`).join('');
+        sel.innerHTML = window.dbEmployees.map((e) => `<option value="${e.id}">${e.name}</option>`).join('');
     }
 };
 
@@ -955,6 +995,178 @@ window.doLogout = () => {
     localStorage.removeItem('prutkon_login_id'); 
     localStorage.removeItem('prutkon_login_idx'); 
     window.location.reload(); 
+};
+
+window.syncWarehouseToPrices = () => {
+    if (!window.dbWarehouseInv || !Array.isArray(window.dbProducts)) return;
+    
+    let rodsObj = {};
+    try {
+        const raw = localStorage.getItem('prutkon_rods_registry');
+        if (raw) rodsObj = JSON.parse(raw);
+    } catch(e) {}
+    if (window.db) {
+        const RODS_KEYS = ['rods_metal', 'rods_blanks', 'rods_standard', 'rods_bent', 'rods_rubber', 'rods_double'];
+        RODS_KEYS.forEach(k => {
+            if (window.db[k] && Array.isArray(window.db[k])) rodsObj[k] = window.db[k];
+        });
+    }
+
+    const findDirectoryItem = (id) => {
+        if (!window.dbDirectories) return null;
+        return window.dbDirectories.find(d => String(d.id) === String(id));
+    };
+
+    const WAREHOUSE_CATALOG_FALLBACK = {
+        'metal': { name: 'Материал (Прочее)', unit: 'кг', icon: 'fa-cubes' },
+        'belt': { name: 'Лента', unit: 'м', icon: 'fa-tape' },
+        'belt_blank': { name: 'Лента-Заготовка (обрезная)', unit: 'м.п.', icon: 'fa-box-tissue' },
+        'belt_strip': { name: 'Лента-Полоса (нарезная)', unit: 'м.п.', icon: 'fa-grip-lines-vertical' },
+        'blank': { name: 'Заготовка', unit: 'шт', icon: 'fa-cube' },
+        'straight': { name: 'Пруток (прямой)', unit: 'шт', icon: 'fa-ruler-horizontal' },
+        'double': { name: 'Сдвоенный пруток', unit: 'шт', icon: 'fa-grip-lines' },
+        'bent': { name: 'Гнутый пруток', unit: 'шт', icon: 'fa-wave-square' },
+        'rubberized': { name: 'Обрезиненный пруток', unit: 'шт', icon: 'fa-ring' },
+        'hedge': { name: 'Ёжные и пальцевые прутки', unit: 'шт', icon: 'fa-star-of-life' },
+        'bent_rubberized': { name: 'Гнутый пруток обрезиненный', unit: 'шт', icon: 'fa-bacon' }
+    };
+
+    for (let key in window.dbWarehouseInv) {
+        if (key === 'metal' || key.startsWith('metal_')) continue;
+        
+        const qty = parseFloat(window.dbWarehouseInv[key] || 0);
+        
+        let art = '';
+        let type = '';
+        if (key.includes('_')) {
+            const parts = key.split('_');
+            type = parts[0];
+            art = parts.slice(1).join('_');
+        } else {
+            type = key;
+            art = key;
+        }
+
+        let existingProd = window.dbProducts.find(p => p && String(p.art) === String(art));
+        if (qty <= 0 && !existingProd) continue;
+
+        let name = '';
+        let category = '';
+        let price = 0;
+        let drawing = '';
+        
+        if (type === 'belt' || type === 'belt_blank' || type === 'belt_strip') {
+            category = 'belts';
+            const dirId = key.replace('belt_blank_', '').replace('belt_strip_', '').replace('belt_', '');
+            const dirItem = findDirectoryItem(dirId);
+            if (dirItem) {
+                const d = dirItem.data || dirItem;
+                name = d.name || (type === 'belt_blank' ? 'Лента-Заготовка' : type === 'belt_strip' ? 'Лента-Полоса' : 'Лента');
+                drawing = d.drawing || d.photo || '';
+                price = parseFloat(String(d.price).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+            } else {
+                name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Лента';
+            }
+        } else if (type === 'blank') {
+            category = 'blanks';
+            const found = (rodsObj.rods_blanks || []).find(b => b.article === art);
+            if (found) {
+                name = `Заготовка L=${found.length} мм, Ø${found.dia} мм`;
+                price = found.price || 0;
+                drawing = found.drawing || found.photo || '';
+            } else {
+                name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Заготовка';
+            }
+        } else if (type === 'straight') {
+            const found = (rodsObj.rods_standard || []).find(r => r.article === art || r.name === art);
+            if (found) {
+                name = found.name;
+                price = found.price || 0;
+                drawing = found.drawing || found.photo || '';
+            } else {
+                name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Пруток прямой';
+            }
+            
+            const nameLower = name.toLowerCase();
+            if (nameLower.includes('еж') || nameLower.includes('ёж')) {
+                category = 'rods_hedgehog';
+            } else if (nameLower.includes('палец')) {
+                category = 'rods_finger';
+            } else if (nameLower.includes('резин') || nameLower.includes('rti') || nameLower.includes('рти')) {
+                category = 'rods_rti';
+            } else {
+                category = 'sec_rods';
+            }
+        } else if (type === 'double') {
+            category = 'rods_double';
+            const found = (rodsObj.rods_double || []).find(r => r.article === art || r.name === art);
+            if (found) {
+                name = found.name;
+                price = found.price || 0;
+                drawing = found.drawing || found.photo || '';
+            } else {
+                name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Сдвоенный пруток';
+            }
+        } else if (type === 'bent') {
+            const found = (rodsObj.rods_bent || []).find(r => r.article === art || r.name === art);
+            if (found) {
+                name = found.name;
+                price = found.price || 0;
+                drawing = found.drawing || found.photo || '';
+            } else {
+                name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Гнутый пруток';
+            }
+            
+            const nameLower = name.toLowerCase();
+            if (nameLower.includes('еж') || nameLower.includes('ёж') || nameLower.includes('палец')) {
+                category = 'rods_hedgehog';
+            } else {
+                category = 'rods_bent_metal';
+            }
+        } else if (type === 'rubberized' || type === 'bent_rubberized') {
+            const found = (rodsObj.rods_rubber || []).find(r => r.article === art || r.name === art);
+            if (found) {
+                name = found.name;
+                price = found.price || 0;
+                drawing = found.drawing || found.photo || '';
+            } else {
+                name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Обрезиненный пруток';
+            }
+            
+            const nameLower = name.toLowerCase();
+            if (nameLower.includes('гнут') || nameLower.includes('сварн') || nameLower.includes('комби') || nameLower.includes('bent') || type === 'bent_rubberized') {
+                category = 'rods_bent_rti';
+            } else {
+                category = 'rods_rti';
+            }
+        } else if (type === 'hedge') {
+            category = 'rods_hedgehog';
+            const nameLower = art.toLowerCase();
+            if (nameLower.includes('палец')) category = 'rods_finger';
+            name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Пруток ёжный';
+        }
+
+        if (!category) continue;
+
+        if (existingProd) {
+            existingProd.stock = qty;
+            if (name && !existingProd.name) existingProd.name = name;
+            if (price > 0 && !existingProd.price) existingProd.price = price;
+            if (drawing && !existingProd.drawing) existingProd.drawing = drawing;
+            if (category) existingProd.category = category;
+        } else {
+            window.dbProducts.push({
+                id: 'auto_prod_' + art + '_' + Date.now(),
+                art: art,
+                name: name || art,
+                category: category,
+                stock: qty,
+                price: price || 0,
+                drawing: drawing,
+                history: [{ time: new Date().toLocaleString(), user: 'Система', action: 'Автоматическое заведение из остатков склада' }]
+            });
+        }
+    }
 };
 
 // --- 9. SUPABASE BRIDGES ---

@@ -36,28 +36,42 @@ window.calcStep4 = function() {
     if (!rodSelect) return { K: 0, H: 0, I: 0 };
 
     const rodId = rodSelect.value;
-    const baseRod = window.db.rods_standard?.[rodId] || window.db.rods_bent?.[rodId];
-    const basePrice = parseFloat(baseRod?.priceNoVat || baseRod?.price || 0);
+    const allRods = [...(window.db.rods_standard || []), ...(window.db.rods_bent || [])];
+    const baseRod = allRods[rodId];
+    
+    const setT = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+    const setC = (id, val) => setT(id, window.formatCurr(val));
 
+    if (!baseRod) {
+        setT('bent-res-base', '--');
+        setT('bent-res-cost', '--');
+        setT('bent-res-total', '--');
+        return { K: 0, H: 0, I: 0 };
+    }
+
+    const baseCostNoVat = parseFloat(baseRod.costPrice || baseRod.priceNoVat || baseRod.price || 0);
     const labor = parseFloat(document.getElementById('bent-labor')?.value) || 0;
     
-    // Себестоимость K = BasePrice + AA
-    const K = basePrice + labor;
-    const H = K * 2;
-    const I = H / 105;
+    // Себестоимость без НДС
+    const costPriceNoVat = baseCostNoVat + labor;
+    const vatRate = parseFloat(baseRod.vatRate || 1.20);
+    const costPriceVat = costPriceNoVat * vatRate;
 
-    if (document.getElementById('bent-res-base')) document.getElementById('bent-res-base').innerText = window.formatCurr(basePrice);
-    if (document.getElementById('bent-res-cost')) document.getElementById('bent-res-cost').innerText = window.formatCurr(K);
-    if (document.getElementById('bent-res-total')) document.getElementById('bent-res-total').innerText = window.formatCurr(H);
+    // Продажные цены с 100% наценкой
+    const priceNoVat = costPriceNoVat * 2.0;
+    const priceVat = priceNoVat * vatRate;
+    const priceEuro = priceVat / 105;
 
-    const procType = document.getElementById('complex-processing-type')?.value || 'стальной гнутый';
+    setC('bent-res-base', baseRod.price || 0);
+    setC('bent-res-cost', costPriceNoVat);
+    setC('bent-res-total', priceVat);
+
+    const procType = document.getElementById('bent-type')?.value || 'гнутый';
     const artInput = document.getElementById('bent-article');
     if (baseRod && artInput && (!artInput.value || artInput.value.startsWith('PR-') || artInput.value.endsWith('-B') || artInput.value.endsWith('-R') || artInput.value.endsWith('-W') || artInput.value.endsWith('-N') || artInput.value.endsWith('-F'))) {
         let sfx = '-B';
-        if (procType.includes('обрезиненный')) sfx = '-R';
-        else if (procType.includes('сварной')) sfx = '-W';
-        else if (procType.includes('игольчатый')) sfx = '-N';
-        else if (procType.includes('пальчиковый')) sfx = '-F';
+        if (procType.includes('сварной')) sfx = '-W';
+        else if (procType.includes('комби')) sfx = '-C';
         artInput.value = baseRod.article + sfx;
     }
 
@@ -75,32 +89,29 @@ window.calcStep4 = function() {
     };
     localStorage.setItem('prutkon_step4_state', JSON.stringify(state));
 
-    return { K, H, I };
+    return { K: costPriceNoVat, H: priceVat, I: priceEuro };
 };
 
 window.saveStep4 = function() {
     const rodSelect = document.getElementById('bent-rod-select');
     const rodId = rodSelect?.value;
-    const baseRod = window.db.rods_standard?.[rodId] || window.db.rods_bent?.[rodId];
+    const allRods = [...(window.db.rods_standard || []), ...(window.db.rods_bent || [])];
+    const baseRod = allRods[rodId];
 
     if (!baseRod) return notify('Сначала выберите базовый пруток из Шага 3', 'warning');
 
     const res = window.calcStep4();
     if (res.H <= 0) return notify('Прайсовая цена изделия должна быть больше 0', 'warning');
 
-    const procType = document.getElementById('complex-processing-type')?.value || 'стальной гнутый';
+    const procType = document.getElementById('bent-type')?.value || 'гнутый';
     const name = `${baseRod.name} (${procType})`;
     let sfx = '-B';
-    if (procType.includes('обрезиненный')) sfx = '-R';
-    else if (procType.includes('сварной')) sfx = '-W';
-    else if (procType.includes('игольчатый')) sfx = '-N';
-    else if (procType.includes('пальчиковый')) sfx = '-F';
+    if (procType.includes('сварной')) sfx = '-W';
+    else if (procType.includes('комби')) sfx = '-C';
     const article = document.getElementById('bent-article')?.value || (baseRod.article + sfx);
 
-    const isRubber = procType.includes('обрезиненный');
-    const targetDb = isRubber ? 'rods_rubber' : 'rods_bent';
-    if (!window.db[targetDb]) window.db[targetDb] = [];
-    const existingIdx = window.db[targetDb].findIndex(r => r.article === article || r.name === name);
+    if (!window.db.rods_bent) window.db.rods_bent = [];
+    const existingIdx = window.db.rods_bent.findIndex(r => r.article === article || r.name === name);
 
     const record = {
         ...baseRod,
@@ -140,8 +151,10 @@ window.saveStep4 = function() {
         available: document.getElementById('bent-available')?.checked !== false,
         labor: parseFloat(document.getElementById('bent-labor')?.value) || 0,
         costPrice: res.K,
-        priceNoVat: res.K,
-        price: res.H,
+        costPriceVat: res.K * (baseRod.vatRate || 1.20),
+        priceNoVat: res.K * 2.0,
+        price: res.H, // Продажная цена с НДС
+        priceVat: res.H,
         priceEuro: res.I,
         baseId: rodId,
         ts: Date.now()
@@ -149,12 +162,133 @@ window.saveStep4 = function() {
 
     if (existingIdx !== -1) {
         if (confirm(`Изделие "${name}" (${article}) уже есть в базе. Обновить прайсовую цену до ${window.formatCurr(res.H)}?`)) {
-            window.db[targetDb][existingIdx] = { ...window.db[targetDb][existingIdx], ...record };
+            window.db.rods_bent[existingIdx] = { ...window.db.rods_bent[existingIdx], ...record };
             window.persistAndRender('Сложный пруток успешно обновлен в базе!');
         }
     } else {
-        window.db[targetDb].push(record);
+        window.db.rods_bent.push(record);
         window.persistAndRender('Сложный пруток успешно сохранен в базу!');
+    }
+};
+
+/* --- ШАГ 5: ОБРЕЗИНЕННЫЙ ПРУТОК --- */
+window.calcStep5 = function() {
+    const rodSelect = document.getElementById('rub-rod-select');
+    if (!rodSelect) return { K: 0, H: 0, I: 0 };
+
+    const rodId = rodSelect.value;
+    const allRods = [...(window.db.rods_standard || []), ...(window.db.rods_bent || [])];
+    const baseRod = allRods[rodId];
+    
+    const setT = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+    const setC = (id, val) => setT(id, window.formatCurr(val));
+
+    if (!baseRod) {
+        setT('rub-res-base', '--');
+        setT('rub-res-total', '--');
+        return { K: 0, H: 0, I: 0 };
+    }
+
+    const baseCostNoVat = parseFloat(baseRod.costPrice || baseRod.priceNoVat || baseRod.price || 0);
+    const labor = parseFloat(document.getElementById('rub-labor')?.value) || 0;
+    
+    // Себестоимость без НДС
+    const costPriceNoVat = baseCostNoVat + labor;
+    const vatRate = parseFloat(baseRod.vatRate || 1.20);
+    const costPriceVat = costPriceNoVat * vatRate;
+
+    // Продажные цены с 100% наценкой
+    const priceNoVat = costPriceNoVat * 2.0;
+    const priceVat = priceNoVat * vatRate;
+    const priceEuro = priceVat / 105;
+
+    setC('rub-res-base', baseRod.price || 0);
+    setC('rub-res-total', priceVat);
+
+    const artInput = document.getElementById('rub-article');
+    if (baseRod && artInput && (!artInput.value || artInput.value.startsWith('PR-') || !artInput.value.endsWith('-R'))) {
+        artInput.value = baseRod.article + '-R';
+    }
+
+    // Автосохранение в сессию
+    const state = {
+        rodId,
+        labor,
+        article: artInput?.value,
+        techType: document.getElementById('rub-tech-type')?.value,
+        material: document.getElementById('rub-material')?.value,
+        dia: document.getElementById('rub-dia')?.value,
+        width: document.getElementById('rub-width')?.value
+    };
+    localStorage.setItem('prutkon_step5_state_rubber', JSON.stringify(state));
+
+    return { K: costPriceNoVat, H: priceVat, I: priceEuro };
+};
+
+window.saveStep5 = function() {
+    const rodSelect = document.getElementById('rub-rod-select');
+    const rodId = rodSelect?.value;
+    const allRods = [...(window.db.rods_standard || []), ...(window.db.rods_bent || [])];
+    const baseRod = allRods[rodId];
+
+    if (!baseRod) return notify('Сначала выберите базовый пруток (Шаг 3 или 4)', 'warning');
+
+    const res = window.calcStep5();
+    if (res.H <= 0) return notify('Прайсовая цена изделия должна быть больше 0', 'warning');
+
+    const article = document.getElementById('rub-article')?.value || (baseRod.article + '-R');
+    const name = `${baseRod.name} (Обрезиненный)`;
+
+    if (!window.db.rods_rubber) window.db.rods_rubber = [];
+    const existingIdx = window.db.rods_rubber.findIndex(r => r.article === article || r.name === name);
+
+    const record = {
+        ...baseRod,
+        name,
+        article,
+        type: 'обрезиненный',
+        processingType: 'обрезиненный',
+        rubberMaterial: document.getElementById('rub-material')?.value || '',
+        rubberDia: parseFloat(document.getElementById('rub-dia')?.value) || 0,
+        rubberWidth: parseFloat(document.getElementById('rub-width')?.value) || 0,
+        techType: document.getElementById('rub-tech-type')?.value || baseRod.techType || '',
+        costPrice: res.K,
+        costPriceVat: res.K * (baseRod.vatRate || 1.20),
+        priceNoVat: res.K * 2.0,
+        price: res.H, // Продажная цена с НДС (Прайс)
+        priceVat: res.H,
+        priceEuro: res.I,
+        baseId: rodId,
+        ts: Date.now()
+    };
+
+    if (existingIdx !== -1) {
+        if (confirm(`Изделие "${name}" (${article}) уже есть в базе. Обновить прайсовую цену до ${window.formatCurr(res.H)}?`)) {
+            window.db.rods_rubber[existingIdx] = { ...window.db.rods_rubber[existingIdx], ...record };
+            window.persistAndRender('Обрезиненный пруток успешно обновлен в базе!');
+        }
+    } else {
+        window.db.rods_rubber.push(record);
+        window.persistAndRender('Обрезиненный пруток успешно сохранен в базу!');
+    }
+};
+
+window.restoreLastStep5Session = function() {
+    const savedState = localStorage.getItem('prutkon_step5_state_rubber');
+    if (savedState) {
+        try {
+            const s = JSON.parse(savedState);
+            if (s.rodId !== undefined) document.getElementById('rub-rod-select').value = s.rodId;
+            if (s.labor !== undefined) document.getElementById('rub-labor').value = s.labor;
+            if (s.article !== undefined) document.getElementById('rub-article').value = s.article;
+            if (s.techType !== undefined) document.getElementById('rub-tech-type').value = s.techType;
+            if (s.material !== undefined) document.getElementById('rub-material').value = s.material;
+            if (s.dia !== undefined) document.getElementById('rub-dia').value = s.dia;
+            if (s.width !== undefined) document.getElementById('rub-width').value = s.width;
+            
+            window.calcStep5();
+            notify('🔄 Данные Обрезиненного прутка успешно восстановлены из сессии!', 'info');
+        } catch(e) { console.error(e); }
     }
 };
 
@@ -168,7 +302,8 @@ window.restoreLastStep4Session = function() {
                 if (pSel) pSel.value = s.procType;
                 window.onComplexProcessingChange();
             }
-            if (s.rodId !== undefined && (window.db.rods_standard?.[s.rodId] || window.db.rods_bent?.[s.rodId])) document.getElementById('bent-rod-select').value = s.rodId;
+            const allRods = [...(window.db.rods_standard || []), ...(window.db.rods_bent || [])];
+            if (s.rodId !== undefined && allRods[s.rodId]) document.getElementById('bent-rod-select').value = s.rodId;
             if (s.article !== undefined) document.getElementById('bent-article').value = s.article;
             if (s.photo !== undefined) document.getElementById('bent-photo').value = s.photo;
             if (s.drawing !== undefined) document.getElementById('bent-drawing').value = s.drawing;

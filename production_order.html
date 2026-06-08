@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ПРУТКОН | Заказ-наряды на производство</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..700;1,100..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .order-selector-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            justify-content: space-between;
+        }
+        .order-details-card {
+            background: rgba(255, 255, 255, 0.01);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 35px;
+            margin-top: 20px;
+            border-top: 4px solid var(--gold-industrial);
+        }
+        .drawing-thumbnail {
+            max-height: 80px;
+            max-width: 120px;
+            object-fit: contain;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 2px;
+            background: rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .drawing-thumbnail:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body class="with-hero-bg">
+    <div class="app-container">
+        <aside id="global-sidebar"></aside>
+
+        <main class="main-content">
+            <header class="top-header no-print">
+                <div class="view-header">
+                    <h2>Обработка Заказ-Нарядов</h2>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='production.html'"><i class="fa-solid fa-industry"></i> Производство</button>
+                    <button class="btn btn-secondary btn-sm" onclick="window.location.href='orders.html'"><i class="fa-solid fa-cart-shopping"></i> CRM Продажи</button>
+                </div>
+            </header>
+
+            <section class="view-section active">
+                <div class="module-shell">
+                    <div class="order-selector-card">
+                        <div style="flex: 1; max-width: 450px;">
+                            <label style="color: var(--brand-gold); font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px;">Выберите активный заказ в производстве</label>
+                            <select id="active-orders-select" class="form-control" style="height: 48px; font-size: 1rem; font-weight: 600;" onchange="window.selectProductionOrder()"></select>
+                        </div>
+                        <div>
+                            <button id="print-order-btn" class="btn btn-primary" style="height: 48px; font-weight: bold; background: var(--gold-industrial); border-color: var(--gold-industrial); color: #000;" onclick="window.printCurrentOrder()" disabled>
+                                <i class="fa-solid fa-print"></i> ПЕЧАТЬ ЗАКАЗ-НАРЯДА
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="no-order-selected" style="text-align: center; padding: 100px; opacity: 0.3;">
+                        <i class="fa-solid fa-file-invoice" style="font-size: 4rem; margin-bottom: 20px;"></i>
+                        <h3>Нет выбранного наряда</h3>
+                        <p>Выберите заказ-наряд из списка выше для отображения номенклатуры и чертежей</p>
+                    </div>
+
+                    <div id="order-details-container" class="order-details-card" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 20px; margin-bottom: 25px;">
+                            <div>
+                                <span class="bx-badge bx-prod" id="order-status-badge">В ПРОИЗВОДСТВЕ</span>
+                                <h2 id="order-title-id" style="font-family: 'Outfit'; font-size: 2.2rem; font-weight: 900; color: #fff; margin-top: 10px; margin-bottom: 5px;">Заказ № 0</h2>
+                                <p id="order-meta-info" style="color: var(--text-muted); font-size: 0.9rem; margin: 0;"></p>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold;">Итого по заказу</div>
+                                <div id="order-total-sum" style="font-family: 'JetBrains Mono'; font-size: 2.2rem; font-weight: 900; color: #fff;">0 ₽</div>
+                            </div>
+                        </div>
+
+                        <h3 class="mb-4 text-white"><i class="fa-solid fa-list-check" style="color: var(--brand-gold);"></i> Спецификация наряда и чертежи деталей</h3>
+                        <div class="table-wrapper">
+                            <table class="data-table" id="order-items-table">
+                                <thead>
+                                    <tr>
+                                        <th>№</th>
+                                        <th>Наименование изделия</th>
+                                        <th>Артикул / Код</th>
+                                        <th>Количество</th>
+                                        <th style="text-align: center;">Чертеж / Эскиз</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Image preview modal -->
+    <div id="image-preview-modal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:99999; align-items:center; justify-content:center;" onclick="this.style.display='none'">
+        <img id="preview-image-element" src="" style="max-width:90%; max-height:90%; border-radius:10px; box-shadow:0 0 30px rgba(0,0,0,0.5);">
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/core/supabase_config.js"></script>
+    <script src="js/layout/header.js?v=19.0.0"></script>
+    <script src="js/layout/menu.js?v=19.0.0"></script>
+    <script src="js/layout/footer.js?v=19.0.0"></script>
+    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/utils/printer.js?v=19.0.0"></script>
+    <script src="js/handlers/production_order.js?v=19.0.0"></script>
+</body>
+</html>

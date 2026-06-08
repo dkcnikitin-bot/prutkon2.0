@@ -364,10 +364,12 @@ window.autoCalculateMetal = (event) => {
     let M = getVal('delivery_m_no_vat');
     const Q = getVal('vat_rate');
 
-    // 1. Авто-расчет веса 1 м.п.
-    if (trigger === 'diameter' || (trigger !== 'weight_per_m' && !C)) {
+    // 1. Авто-расчет веса 1 м.п. с использованием точной плотности стали
+    if (trigger === 'diameter' || trigger === 'steel_type' || (trigger !== 'weight_per_m' && !C)) {
         if (B > 0) {
-            C = B * B * 0.00616;
+            const steelName = form.querySelector('[name="steel_type"]')?.value || '';
+            const density = window.getSteelDensity ? window.getSteelDensity(steelName) : 7.85;
+            C = (Math.PI * B * B * density) / 4000;
             setVal('weight_per_m', C, 'weight');
         }
     }
