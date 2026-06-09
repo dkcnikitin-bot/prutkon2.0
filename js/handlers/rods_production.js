@@ -741,6 +741,14 @@ window.updateProductionRequirements = () => {
     const itemSel = document.getElementById('prod-item-select');
     const reqBox = document.getElementById('prod-requirements-box');
     const submitBtn = document.getElementById('btn-submit-production');
+
+    const isClientProvided = document.getElementById('prod-client-provided')?.checked || false;
+    let clientQty = isClientProvided ? (parseInt(document.getElementById('prod-client-qty').value) || 0) : 0;
+    clientQty = Math.max(0, Math.min(clientQty, qty));
+    const makeQty = qty - clientQty;
+
+    const displayMakeQty = document.getElementById('prod-make-qty-display');
+    if (displayMakeQty) displayMakeQty.innerText = makeQty;
     
     if (qty <= 0) {
         reqBox.innerHTML = '<div style="color:var(--brand-red);">Укажите положительное количество к выпуску.</div>';
@@ -776,7 +784,7 @@ window.updateProductionRequirements = () => {
             return;
         }
         
-        const reqWeight = window.calcRequiredMetalWeight(blank, qty, batch);
+        const reqWeight = window.calcRequiredMetalWeight(blank, makeQty, batch);
         const avWeight = parseFloat((batch.qty || batch.available_weight || 0).toFixed(2));
         
         if (avWeight < reqWeight) enough = false;
@@ -803,7 +811,7 @@ window.updateProductionRequirements = () => {
         if (!blank && rod.blankId !== undefined) blank = window.db.rods_blanks[rod.blankId];
         const blankKey = blank ? 'blank_' + blank.article : 'blank';
         const avBlanks = parseInt(window.dbWarehouseInv[blankKey] || 0);
-        const reqBlanks = qty;
+        const reqBlanks = makeQty;
         
         if (avBlanks < reqBlanks) enough = false;
         
@@ -829,7 +837,7 @@ window.updateProductionRequirements = () => {
         if (!blank && rod.blankId !== undefined) blank = window.db.rods_blanks[rod.blankId];
         const blankKey = blank ? 'blank_' + blank.article : 'blank';
         const avBlanks = parseInt(window.dbWarehouseInv[blankKey] || 0);
-        const reqBlanks = qty * 2;
+        const reqBlanks = makeQty * 2;
         
         if (avBlanks < reqBlanks) enough = false;
         
@@ -855,7 +863,7 @@ window.updateProductionRequirements = () => {
         if (!base && rod.baseId !== undefined) base = window.db.rods_standard[rod.baseId];
         const baseKey = base ? getRodWarehouseKey(base, 'straight') : 'straight';
         const avStandard = parseInt(window.dbWarehouseInv[baseKey] || 0);
-        const reqStandard = qty;
+        const reqStandard = makeQty;
         
         if (avStandard < reqStandard) enough = false;
         
@@ -882,7 +890,7 @@ window.updateProductionRequirements = () => {
         let base = rod.baseId !== undefined ? allRods[rod.baseId] : allRods.find(rs => rod.name.includes(rs.name));
         const baseKey = base ? getRodWarehouseKey(base, baseType === 'straight' ? 'straight' : 'bent') : (baseType === 'straight' ? 'straight' : 'bent');
         const avBase = parseInt(window.dbWarehouseInv[baseKey] || 0);
-        const reqBase = qty;
+        const reqBase = makeQty;
         
         if (avBase < reqBase) enough = false;
         
@@ -994,13 +1002,18 @@ window.submitProductionRun = async () => {
     let detailsText = '';
     let changesPayload = {};
     
+    const isClientProvided = document.getElementById('prod-client-provided')?.checked || false;
+    let clientQty = isClientProvided ? (parseInt(document.getElementById('prod-client-qty').value) || 0) : 0;
+    clientQty = Math.max(0, Math.min(clientQty, qty));
+    const makeQty = qty - clientQty;
+
     if (type === 'blank') {
         const batchSel = document.getElementById('prod-metal-batch');
         const bIdx = parseInt(batchSel.value);
         const batch = window.dbWarehouseBatches[bIdx];
         const blank = window.db.rods_blanks[idx];
         
-        const reqWeight = window.calcRequiredMetalWeight(blank, qty, batch);
+        const reqWeight = window.calcRequiredMetalWeight(blank, makeQty, batch);
         
         batch.qty = parseFloat((parseFloat(batch.qty || 0) - reqWeight).toFixed(2));
         batch.available_weight = batch.qty;
@@ -1035,7 +1048,7 @@ window.submitProductionRun = async () => {
         const blankKey = 'blank_' + blank.article;
         window.dbWarehouseInv[blankKey] = parseInt(window.dbWarehouseInv[blankKey] || 0) + qty;
         
-        detailsText = `Нарезка заготовок L=${blank.length} мм: +${qty} шт [${blank.article}]. Списано сырья (${batch.name} Ø${batch.dia} мм): -${reqWeight} кг`;
+        detailsText = `Нарезка заготовок L=${blank.length} мм: +${qty} шт [${blank.article}] (Давальческие: ${clientQty} шт). Списано сырья (${batch.name} Ø${batch.dia} мм): -${reqWeight} кг`;
         changesPayload = {
             source: { item: metalKey || 'metal_raw', qty: -reqWeight },
             target: { item: blankKey, qty: qty }
@@ -1048,12 +1061,12 @@ window.submitProductionRun = async () => {
         const blankKey = blank ? 'blank_' + blank.article : 'blank';
         const rodKey = getRodWarehouseKey(rod, 'straight');
         
-        window.dbWarehouseInv[blankKey] = parseInt(window.dbWarehouseInv[blankKey] || 0) - qty;
+        window.dbWarehouseInv[blankKey] = parseInt(window.dbWarehouseInv[blankKey] || 0) - makeQty;
         window.dbWarehouseInv[rodKey] = parseInt(window.dbWarehouseInv[rodKey] || 0) + qty;
         
-        detailsText = `Сборка прямого прутка [${rod.article || rod.name}]: +${qty} шт. Списано заготовок [${blank ? blank.article : 'blank'}]: -${qty} шт.`;
+        detailsText = `Сборка прямого прутка [${rod.article || rod.name}]: +${qty} шт (Давальческие: ${clientQty} шт). Списано заготовок [${blank ? blank.article : 'blank'}]: -${makeQty} шт.`;
         changesPayload = {
-            source: { item: blankKey, qty: -qty },
+            source: { item: blankKey, qty: -makeQty },
             target: { item: rodKey, qty: qty }
         };
         
@@ -1063,12 +1076,12 @@ window.submitProductionRun = async () => {
         if (!blank && rod.blankId !== undefined) blank = window.db.rods_blanks[rod.blankId];
         const blankKey = blank ? 'blank_' + blank.article : 'blank';
         const rodKey = getRodWarehouseKey(rod, 'double');
-        const reqBlanks = qty * 2;
+        const reqBlanks = makeQty * 2;
         
         window.dbWarehouseInv[blankKey] = parseInt(window.dbWarehouseInv[blankKey] || 0) - reqBlanks;
         window.dbWarehouseInv[rodKey] = parseInt(window.dbWarehouseInv[rodKey] || 0) + qty;
         
-        detailsText = `Сборка сдвоенного прутка [${rod.article || rod.name}]: +${qty} шт. Списано заготовок (x2) [${blank ? blank.article : 'blank'}]: -${reqBlanks} шт.`;
+        detailsText = `Сборка сдвоенного прутка [${rod.article || rod.name}]: +${qty} шт (Давальческие: ${clientQty} шт). Списано заготовок (x2) [${blank ? blank.article : 'blank'}]: -${reqBlanks} шт.`;
         changesPayload = {
             source: { item: blankKey, qty: -reqBlanks },
             target: { item: rodKey, qty: qty }
@@ -1081,12 +1094,12 @@ window.submitProductionRun = async () => {
         const baseKey = base ? getRodWarehouseKey(base, 'straight') : 'straight';
         const rodKey = getRodWarehouseKey(rod, 'bent');
         
-        window.dbWarehouseInv[baseKey] = parseInt(window.dbWarehouseInv[baseKey] || 0) - qty;
+        window.dbWarehouseInv[baseKey] = parseInt(window.dbWarehouseInv[baseKey] || 0) - makeQty;
         window.dbWarehouseInv[rodKey] = parseInt(window.dbWarehouseInv[rodKey] || 0) + qty;
         
-        detailsText = `Гнутье прутка [${rod.article || rod.name}]: +${qty} шт. Списано прямых прутков [${base ? base.article : 'straight'}]: -${qty} шт.`;
+        detailsText = `Гибка прутка [${rod.article || rod.name}]: +${qty} шт (Давальческие: ${clientQty} шт). Списано прямых прутков [${base ? base.article : 'straight'}]: -${makeQty} шт.`;
         changesPayload = {
-            source: { item: baseKey, qty: -qty },
+            source: { item: baseKey, qty: -makeQty },
             target: { item: rodKey, qty: qty }
         };
         
@@ -1098,12 +1111,12 @@ window.submitProductionRun = async () => {
         const baseKey = base ? getRodWarehouseKey(base, baseType === 'straight' ? 'straight' : 'bent') : (baseType === 'straight' ? 'straight' : 'bent');
         const rodKey = getRodWarehouseKey(rod, 'rubberized');
         
-        window.dbWarehouseInv[baseKey] = parseInt(window.dbWarehouseInv[baseKey] || 0) - qty;
+        window.dbWarehouseInv[baseKey] = parseInt(window.dbWarehouseInv[baseKey] || 0) - makeQty;
         window.dbWarehouseInv[rodKey] = parseInt(window.dbWarehouseInv[rodKey] || 0) + qty;
         
-        detailsText = `Обрезинивание прутка [${rod.article || rod.name}]: +${qty} шт. Списано базовых прутков [${base ? base.article : 'base'}]: -${qty} шт.`;
+        detailsText = `Обрезинивание прутка [${rod.article || rod.name}]: +${qty} шт (Давальческие: ${clientQty} шт). Списано базовых прутков [${base ? base.article : 'base'}]: -${makeQty} шт.`;
         changesPayload = {
-            source: { item: baseKey, qty: -qty },
+            source: { item: baseKey, qty: -makeQty },
             target: { item: rodKey, qty: qty }
         };
     }
@@ -1120,10 +1133,34 @@ window.submitProductionRun = async () => {
     
     await window.saveWarehouseStateFromProduction(logEntry);
     notify(`Производство успешно проведено! ${detailsText}`, 'success');
+    
+    // Сброс формы
+    document.getElementById('prod-qty').value = '10';
+    document.getElementById('prod-item-select').value = '';
+    
+    // Reset client-provided inputs
+    const clientProvidedCheckbox = document.getElementById('prod-client-provided');
+    if (clientProvidedCheckbox) {
+        clientProvidedCheckbox.checked = false;
+        window.toggleProdClientProvided(false);
+    }
+
+    window.updateProductionRequirements();
+    if (typeof window.refreshWarehouseData === 'function') window.refreshWarehouseData();
+
     window.closeProductionModal();
     window.updateDropdowns();
-    
     window.dispatchEvent(new Event('db_updated'));
+};
+
+window.toggleProdClientProvided = (checked) => {
+    const group = document.getElementById('prod-client-qty-group');
+    if (group) group.style.display = checked ? 'block' : 'none';
+    if (!checked) {
+        const input = document.getElementById('prod-client-qty');
+        if (input) input.value = 0;
+    }
+    window.updateProductionRequirements();
 };
 
 window.openProductionModal = () => {

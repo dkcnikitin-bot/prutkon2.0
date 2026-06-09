@@ -259,19 +259,74 @@ window.renderPriceTable = function() {
         </thead>
         <tbody>`;
 
+    // Grouping & Sorting logic by key parameters
+    const isRodCat = ['sec_rods', 'rods_hedgehog', 'rods_finger', 'rods_rti', 'rods_bent_metal', 'rods_bent_rti', 'rods_double', 'blanks'].includes(window.activeCategory) || (activeCategoryObj && activeCategoryObj.parent === 'rods');
+    const isBeltCat = window.activeCategory === 'belts';
+
+    if (isRodCat) {
+        filtered.sort((a, b) => {
+            const diaA = parseFloat(a.dia || a.diameter) || 0;
+            const diaB = parseFloat(b.dia || b.diameter) || 0;
+            if (diaA !== diaB) return diaA - diaB;
+            return String(a.name).localeCompare(String(b.name));
+        });
+    } else if (isBeltCat) {
+        filtered.sort((a, b) => {
+            const thickA = parseFloat(a.thickness) || 0;
+            const thickB = parseFloat(b.thickness) || 0;
+            if (thickA !== thickB) return thickA - thickB;
+            const strA = parseFloat(a.strength) || 0;
+            const strB = parseFloat(b.strength) || 0;
+            if (strA !== strB) return strA - strB;
+            return String(a.name).localeCompare(String(b.name));
+        });
+    }
+
     if (filtered.length === 0) {
-        html += `<tr><td colspan="${7 + displayFields.length}" class="table-empty">
+        html += `<tr><td colspan="${8 + displayFields.length}" class="table-empty">
             ${activeFiltersCount > 0 ? 'По выбранным фильтрам записей не найдено. Попробуйте сбросить фильтры.' : 'Записей не найдено'}
         </td></tr>`;
     } else {
+        let lastGroup = null;
         filtered.forEach(p => {
+            if (isRodCat) {
+                const diaVal = parseFloat(p.dia || p.diameter) || 0;
+                const groupLabel = diaVal ? `Диаметр: Ø${diaVal} мм` : 'Диаметр: Не указан';
+                if (groupLabel !== lastGroup) {
+                    lastGroup = groupLabel;
+                    html += `
+                        <tr style="background: rgba(255,180,0,0.03); font-weight: bold; border-bottom: 1px solid rgba(255,180,0,0.08);">
+                            <td colspan="${8 + displayFields.length}" style="padding: 8px 15px; color: var(--brand-gold); font-size: 0.8rem; text-align: left;">
+                                <i class="fa-solid fa-circle-dot" style="font-size:0.6rem;"></i> ${groupLabel}
+                            </td>
+                        </tr>
+                    `;
+                }
+            } else if (isBeltCat) {
+                const thickVal = p.thickness || 'Не указана';
+                const strengthVal = p.strength || 'Не указана';
+                const groupLabel = `Толщина: ${thickVal} мм, Прочность: ${strengthVal}`;
+                if (groupLabel !== lastGroup) {
+                    lastGroup = groupLabel;
+                    html += `
+                        <tr style="background: rgba(0,199,190,0.03); font-weight: bold; border-bottom: 1px solid rgba(0,199,190,0.08);">
+                            <td colspan="${8 + displayFields.length}" style="padding: 8px 15px; color: #00c7be; font-size: 0.8rem; text-align: left;">
+                                <i class="fa-solid fa-tape" style="font-size:0.6rem;"></i> ${groupLabel}
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+
             const isSelected = window.selectedPriceIds.includes(String(p.id));
+            const cleanName = window.formatProductNameForList ? window.formatProductNameForList(p) : p.name;
+
             html += `
                 <tr class="${isSelected ? 'row-selected' : ''}" ondblclick="window.editProduct('${p.id}')">
                     <td><input type="checkbox" class="price-checkbox" data-id="${p.id}" ${isSelected ? 'checked' : ''} onchange="window.togglePriceSelection('${p.id}', this.checked)"></td>
                     <td><img src="${p.photo || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4='}" class="table-thumb"></td>
                     <td class="table-art" style="color:var(--brand-red);">${p.art || '---'}</td>
-                    <td><span>${p.name || 'Без названия'}</span></td>
+                    <td><span>${cleanName || 'Без названия'}</span></td>
                     ${displayFields.map(f => `<td>${p[f] || '-'}</td>`).join('')}
                     <td class="table-price" style="font-family:'JetBrains Mono';">
                         ${window.formatCurrency ? window.formatCurrency(p.price) : p.price.toLocaleString() + ' ₽'}

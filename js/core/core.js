@@ -491,9 +491,22 @@ window.dbDirectoryCategories = window.safeParse('prutkon_dir_categories', [
     { id: 'belt', name: 'Справочник лент', schema: ['width', 'strength', 'cords', 'cover_top', 'cover_bottom', 'rubber_class', 'tu', 'thickness', 'weight_per_m2', 'price_m2', 'price_mp', 'length', 'area', 'weight', 'vat_rate', 'invoice_num', 'delivery_date', 'supplier'] },
     { id: 'belt_blank', name: 'Ленты-заготовки', schema: ['width', 'strength', 'cords', 'cover_top', 'cover_bottom', 'rubber_class', 'tu', 'thickness', 'weight_per_m2', 'price_m2', 'price_mp', 'length', 'area', 'weight', 'vat_rate', 'invoice_num', 'delivery_date', 'supplier', 'source_belt_ref'] },
     { id: 'belt_strip', name: 'Ленты-полосы', schema: ['width', 'thickness', 'length', 'price_mp', 'weight', 'vat_rate', 'invoice_num', 'delivery_date', 'supplier', 'source_blank_ref'] },
+    { id: 'hardware', name: 'Скобяные изделия', schema: ['name', 'price', 'unit', 'supplier', 'invoice_num', 'delivery_date', 'description'] },
+    { id: 'fasteners', name: 'Метизы и крепеж', schema: ['name', 'price', 'unit', 'supplier', 'invoice_num', 'delivery_date', 'description'] },
     { id: 'brands', name: 'Бренды / Производители', schema: ['country', 'website', 'priority'] },
     { id: 'dealers', name: 'Поставщики / Дилеры', schema: ['address', 'manager', 'contact'] }
 ]);
+
+// Автоматический апгрейд категорий справочника для новых разделов
+if (Array.isArray(window.dbDirectoryCategories)) {
+    if (!window.dbDirectoryCategories.some(c => c.id === 'hardware')) {
+        window.dbDirectoryCategories.push({ id: 'hardware', name: 'Скобяные изделия', schema: ['name', 'price', 'unit', 'supplier', 'invoice_num', 'delivery_date', 'description'] });
+    }
+    if (!window.dbDirectoryCategories.some(c => c.id === 'fasteners')) {
+        window.dbDirectoryCategories.push({ id: 'fasteners', name: 'Метизы и крепеж', schema: ['name', 'price', 'unit', 'supplier', 'invoice_num', 'delivery_date', 'description'] });
+    }
+    localStorage.setItem('prutkon_dir_categories', JSON.stringify(window.dbDirectoryCategories));
+}
 
 window.dbDirectories = window.safeParse('prutkon_directories', []);
 if (!window.dbDirectories || window.dbDirectories.length === 0) {
@@ -997,6 +1010,44 @@ window.doLogout = () => {
     window.location.reload(); 
 };
 
+window.stripTU = (name) => {
+    if (!name) return '';
+    return name.replace(/\s*(?:ТУ|ГОСТ)\s*\S+/g, '').replace(/\s*(?:ТУ|ГОСТ)-\S+/g, '').trim();
+};
+
+window.formatProductNameForList = (p) => {
+    if (!p) return '';
+    let name = window.stripTU(p.name || '');
+    
+    // Check if it is a belt or blank or strip
+    const isBelt = p.category === 'belts' || String(p.art || '').startsWith('belt') || String(p.id || '').startsWith('belt');
+    if (isBelt) {
+        let parts = [];
+        if (p.thickness) parts.push(`${p.thickness} мм`);
+        if (p.strength) parts.push(`${p.strength}`);
+        if (parts.length > 0) {
+            const partsStr = parts.join(', ');
+            if (!name.includes(partsStr)) {
+                name += ` (${partsStr})`;
+            }
+        }
+    } else {
+        // For rods
+        let diaVal = p.dia || p.diameter;
+        if (!diaVal) {
+            const match = String(p.name || '').match(/Ø\s*(\d+(\.\d+)?)/i) || String(p.art || '').match(/(?:BL|DBL|PR)-(\d+(\.\d+)?)/i);
+            if (match) diaVal = match[1];
+        }
+        if (diaVal) {
+            const diaStr = `Ø${diaVal} мм`;
+            if (!name.includes(diaStr) && !name.includes(`Ø ${diaVal}`) && !name.includes(`Ø${diaVal}`)) {
+                name += ` (${diaStr})`;
+            }
+        }
+    }
+    return name;
+};
+
 window.syncWarehouseToPrices = () => {
     if (!window.dbWarehouseInv || !Array.isArray(window.dbProducts)) return;
     
@@ -1054,6 +1105,10 @@ window.syncWarehouseToPrices = () => {
         let category = '';
         let price = 0;
         let drawing = '';
+        let dia = 0;
+        let length = 0;
+        let thickness = '';
+        let strength = '';
         
         if (type === 'belt' || type === 'belt_blank' || type === 'belt_strip') {
             category = 'belts';
@@ -1064,6 +1119,10 @@ window.syncWarehouseToPrices = () => {
                 name = d.name || (type === 'belt_blank' ? 'Лента-Заготовка' : type === 'belt_strip' ? 'Лента-Полоса' : 'Лента');
                 drawing = d.drawing || d.photo || '';
                 price = parseFloat(String(d.price).replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+                thickness = d.thickness || '';
+                strength = d.strength || d.steel_type || '';
+                length = d.length || 0;
+                dia = d.diameter || d.width || 0;
             } else {
                 name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Лента';
             }
@@ -1074,6 +1133,8 @@ window.syncWarehouseToPrices = () => {
                 name = `Заготовка L=${found.length} мм, Ø${found.dia} мм`;
                 price = found.price || 0;
                 drawing = found.drawing || found.photo || '';
+                dia = found.dia || 0;
+                length = found.length || 0;
             } else {
                 name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Заготовка';
             }
@@ -1083,6 +1144,8 @@ window.syncWarehouseToPrices = () => {
                 name = found.name;
                 price = found.price || 0;
                 drawing = found.drawing || found.photo || '';
+                dia = found.dia || found.diameter || 0;
+                length = found.length || found.width || 0;
             } else {
                 name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Пруток прямой';
             }
@@ -1104,6 +1167,8 @@ window.syncWarehouseToPrices = () => {
                 name = found.name;
                 price = found.price || 0;
                 drawing = found.drawing || found.photo || '';
+                dia = found.dia || found.diameter || 0;
+                length = found.length || found.width || 0;
             } else {
                 name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Сдвоенный пруток';
             }
@@ -1113,6 +1178,8 @@ window.syncWarehouseToPrices = () => {
                 name = found.name;
                 price = found.price || 0;
                 drawing = found.drawing || found.photo || '';
+                dia = found.dia || found.diameter || 0;
+                length = found.length || found.width || 0;
             } else {
                 name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Гнутый пруток';
             }
@@ -1129,6 +1196,8 @@ window.syncWarehouseToPrices = () => {
                 name = found.name;
                 price = found.price || 0;
                 drawing = found.drawing || found.photo || '';
+                dia = found.dia || found.diameter || 0;
+                length = found.length || found.width || 0;
             } else {
                 name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Обрезиненный пруток';
             }
@@ -1148,21 +1217,40 @@ window.syncWarehouseToPrices = () => {
 
         if (!category) continue;
 
+        if (!dia) {
+            const matchDia = String(name || '').match(/Ø\s*(\d+(\.\d+)?)/i) || String(key).match(/(?:BL|DBL|PR)-(\d+(\.\d+)?)/i);
+            if (matchDia) dia = parseFloat(matchDia[1]);
+        }
+        if (!length) {
+            const matchLen = String(name || '').match(/(?:Ширина|L|L=)\s*(\d+)/i);
+            if (matchLen) length = parseFloat(matchLen[1]);
+        }
+
+        const nameCleaned = window.stripTU(name || art);
+
         if (existingProd) {
             existingProd.stock = qty;
-            if (name && !existingProd.name) existingProd.name = name;
-            if (price > 0 && !existingProd.price) existingProd.price = price;
-            if (drawing && !existingProd.drawing) existingProd.drawing = drawing;
+            if (nameCleaned) existingProd.name = nameCleaned;
+            if (price > 0) existingProd.price = price;
+            if (drawing) existingProd.drawing = drawing;
             if (category) existingProd.category = category;
+            if (dia) existingProd.dia = dia;
+            if (length) existingProd.length = length;
+            if (thickness) existingProd.thickness = thickness;
+            if (strength) existingProd.strength = strength;
         } else {
             window.dbProducts.push({
                 id: 'auto_prod_' + art + '_' + Date.now(),
                 art: art,
-                name: name || art,
+                name: nameCleaned,
                 category: category,
                 stock: qty,
                 price: price || 0,
                 drawing: drawing,
+                dia: dia,
+                length: length,
+                thickness: thickness,
+                strength: strength,
                 history: [{ time: new Date().toLocaleString(), user: 'Система', action: 'Автоматическое заведение из остатков склада' }]
             });
         }

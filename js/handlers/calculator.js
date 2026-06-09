@@ -169,7 +169,20 @@ function initCalculator() {
     
     const elQty = document.getElementById('calc-qty');
     if (elQty) elQty.addEventListener('input', calculateCP);
+
+    const elClientQty = document.getElementById('calc-client-qty');
+    if (elClientQty) elClientQty.addEventListener('input', calculateCP);
 }
+
+window.toggleCalcClientProvided = (checked) => {
+    const group = document.getElementById('calc-client-qty-group');
+    if (group) group.style.display = checked ? 'grid' : 'none';
+    if (!checked) {
+        const input = document.getElementById('calc-client-qty');
+        if (input) input.value = 0;
+    }
+    window.calculateCP();
+};
 
 function populateBrands() {
     const sel = document.getElementById('calc-brand-select');
@@ -250,22 +263,38 @@ function calculateCP() {
     const Q = parseFloat(document.getElementById('calc-qty')?.value) || 1;
     const priceDisplay = document.getElementById('calc-main-price');
 
+    const isClientProvided = document.getElementById('calc-client-provided')?.checked || false;
+    let clientQty = isClientProvided ? (parseFloat(document.getElementById('calc-client-qty')?.value) || 0) : 0;
+    clientQty = Math.max(0, Math.min(clientQty, Q));
+    const makeQty = Q - clientQty;
+
+    const displayMakeQty = document.getElementById('calc-make-qty-display');
+    if (displayMakeQty) displayMakeQty.innerText = makeQty;
+
     let total = 0;
 
     if (window.selectedBasePrice !== undefined && window.selectedBasePrice !== null) {
-        total = window.selectedBasePrice * Q;
+        if (isClientProvided && clientQty > 0) {
+            const laborVatMarkup = ((L / 1000) * 250) * 2.0 * 1.22;
+            const laborPrice = Math.min(laborVatMarkup, window.selectedBasePrice * 0.4);
+            total = (makeQty * window.selectedBasePrice) + (clientQty * laborPrice);
+        } else {
+            total = window.selectedBasePrice * Q;
+        }
     } else {
         if (L <= 0 || W <= 0 || P <= 0) {
             if (priceDisplay) priceDisplay.innerText = '0,00 ₽';
             return 0;
         }
 
-        // Временная формула для расчета
         const rods = Math.floor(L / P);
         const material = (rods * 350) + (L * 2 * 0.95);
         const labor = (L / 1000) * 250;
-        const baseTotal = (material + labor) * 1.4;
-        total = baseTotal * Q;
+        
+        const baseTotalMake = (material + labor) * 1.4;
+        const baseTotalClient = labor * 1.4;
+
+        total = (makeQty * baseTotalMake) + (clientQty * baseTotalClient);
     }
 
     if (priceDisplay) priceDisplay.innerText = window.formatCurrency(total);
@@ -300,11 +329,19 @@ window.addItemToBasket = () => {
     const q = parseInt(document.getElementById('calc-qty')?.value) || 1;
     const unitPrice = totalNum / q;
 
+    const clientQty = document.getElementById('calc-client-provided')?.checked ? (parseInt(document.getElementById('calc-client-qty')?.value) || 0) : 0;
+    const makeQty = q - clientQty;
+
+    let specs = `L=${document.getElementById('calc-length')?.value}, W=${document.getElementById('calc-width')?.value}, P=${document.getElementById('calc-pitch')?.value}`;
+    if (clientQty > 0) {
+        specs += `, От клиента: ${clientQty} шт., Изготовление: ${makeQty} шт.`;
+    }
+
     const item = {
         id: window.editingBasketItemIdx !== null ? window.calcBasket[window.editingBasketItemIdx].id : Date.now(),
         art: document.getElementById('calc-article-full')?.value || 'Б/А',
         name: document.getElementById('calc-name-full')?.value || 'Транспортер',
-        specs: `L=${document.getElementById('calc-length')?.value}, W=${document.getElementById('calc-width')?.value}, P=${document.getElementById('calc-pitch')?.value}`,
+        specs: specs,
         qty: q,
         price: unitPrice,
         total: totalNum,
@@ -568,12 +605,36 @@ window.loadProductsByType = function() {
     // Сортируем по артикулу
     filtered.sort((a, b) => (a.art || '').localeCompare(b.art || ''));
     
-    sel.innerHTML = '<option value="">-- Выберите товар --</option>' + 
-        filtered.slice(0, 100).map(p => { // Ограничиваем 100 товарами
+    // Группируем по параметрам
+    const groups = {};
+    filtered.forEach(p => {
+        let grpName = 'Прочие';
+        if (category === 'belts') {
+            grpName = p.thickness ? `Толщина: ${p.thickness} мм` : 'Толщина: Не указана';
+        } else {
+            let dia = p.dia || p.diameter;
+            if (!dia) {
+                const match = String(p.name || '').match(/Ø\s*(\d+(\.\d+)?)/i);
+                if (match) dia = match[1];
+            }
+            grpName = dia ? `Диаметр: Ø${dia} мм` : 'Диаметр: Не указан';
+        }
+        if (!groups[grpName]) groups[grpName] = [];
+        groups[grpName].push(p);
+    });
+
+    let opts = '<option value="">-- Выберите товар --</option>';
+    for (let grpName in groups) {
+        opts += `<optgroup label="${grpName}">`;
+        opts += groups[grpName].map(p => {
             const stockStatus = p.stock > 0 ? `✅ ${p.stock} шт.` : '❌ Нет';
-            return `<option value="${p.id}">${p.art || '---'} | ${p.name || 'Без названия'} | ${window.formatCurrency(p.price)} | ${stockStatus}</option>`;
+            const cleanName = window.formatProductNameForList ? window.formatProductNameForList(p) : p.name;
+            return `<option value="${p.id}">${p.art || '---'} | ${cleanName} | ${window.formatCurrency(p.price)} | ${stockStatus}</option>`;
         }).join('');
+        opts += `</optgroup>`;
+    }
     
+    sel.innerHTML = opts;
     console.log(`📦 Найдено товаров: ${filtered.length}`);
 };
 

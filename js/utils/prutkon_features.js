@@ -120,6 +120,13 @@ window.PrutkonFeatures = {
                     <div class="form-group"><label>Прайсовая цена (с НДС) [H]</label><input type="text" id="rc-price" class="form-control" readonly style="font-weight:bold; color:var(--brand-gold)"></div>
                     <div class="form-group"><label>Цена интернет евро [I]</label><input type="text" id="rc-price-euro" class="form-control" readonly style="font-weight:bold; color:#007aff"></div>
                 </div>
+
+                <!-- Блок истории и документов для прутка -->
+                <h4 class="mt-4 mb-3" style="color: var(--brand-gold)"><i class="fa-solid fa-clock-rotate-left"></i> История движения и сопроводительные документы</h4>
+                <div id="rc-history-block" style="background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); padding: 15px; max-height: 300px; overflow-y: auto; margin-bottom: 25px;">
+                    <div style="opacity: 0.5; text-align: center; padding: 20px;">Загрузка истории...</div>
+                </div>
+
                 <div class="mt-4 flex justify-end gap-2">
                     <button class="btn btn-primary" onclick="document.getElementById('modal-rod-card').classList.remove('active')"><i class="fa-solid fa-check"></i> Закрыть карточку</button>
                 </div>
@@ -316,11 +323,17 @@ window.PrutkonFeatures = {
         const shortId = metalId.startsWith('metal_') ? metalId.replace('metal_', '') : metalId;
         
         const logs = (window.dbWarehouseLog || []).filter(log => {
-            if (!log.changes) return false;
-            const targetItem = log.changes.target?.item;
-            const sourceItem = log.changes.source?.item;
+            if (!log.changes) {
+                const hasId = (log.details && log.details.includes(fullId)) || (log.comment && log.comment.includes(fullId)) ||
+                              (log.details && log.details.includes(shortId)) || (log.comment && log.comment.includes(shortId));
+                return hasId;
+            }
+            const targetItem = log.changes.target?.item || '';
+            const sourceItem = log.changes.source?.item || '';
             return targetItem === fullId || targetItem === shortId || 
-                   sourceItem === fullId || sourceItem === shortId;
+                   sourceItem === fullId || sourceItem === shortId ||
+                   (log.details && log.details.includes(fullId)) || (log.comment && log.comment.includes(fullId)) ||
+                   (log.details && log.details.includes(shortId)) || (log.comment && log.comment.includes(shortId));
         }).reverse();
 
         if (logs.length === 0) {
@@ -332,25 +345,162 @@ window.PrutkonFeatures = {
             <table style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">
                 <thead>
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); text-align: left;">
-                        <th style="padding: 8px;">Дата</th>
-                        <th style="padding: 8px;">Операция</th>
-                        <th style="padding: 8px; text-align: right;">Изменение</th>
+                        <th style="padding: 8px; width: 80px;">Дата</th>
+                        <th style="padding: 8px; width: 120px;">Операция</th>
+                        <th style="padding: 8px;">Детали / Комментарий</th>
+                        <th style="padding: 8px; width: 90px;">Оператор</th>
+                        <th style="padding: 8px; text-align: right; width: 90px;">Кол-во</th>
+                        <th style="padding: 8px; width: 120px;">Документы</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
 
         logs.forEach(log => {
-            const isTarget = log.changes.target && log.changes.target.item === metalId;
-            const qty = isTarget ? log.changes.target.qty : log.changes.source.qty;
-            const color = qty > 0 ? 'var(--emerald-neon)' : 'var(--brand-red)';
-            const sign = qty > 0 ? '+' : '';
+            let qtyStr = '---';
+            let color = '#fff';
+            let sign = '';
             
+            const isTarget = log.changes && log.changes.target && (log.changes.target.item === fullId || log.changes.target.item === shortId);
+            const isSource = log.changes && log.changes.source && (log.changes.source.item === fullId || log.changes.source.item === shortId);
+            
+            if (isTarget) {
+                const qty = log.changes.target.qty;
+                color = qty > 0 ? 'var(--emerald-neon)' : 'var(--brand-red)';
+                sign = qty > 0 ? '+' : '';
+                qtyStr = `${sign}${window.formatWhNumber ? window.formatWhNumber(qty, 2) : qty.toFixed(2)} кг`;
+            } else if (isSource) {
+                const qty = log.changes.source.qty;
+                color = qty > 0 ? 'var(--brand-red)' : 'var(--emerald-neon)';
+                sign = qty > 0 ? '-' : '+';
+                qtyStr = `${sign}${window.formatWhNumber ? window.formatWhNumber(Math.abs(qty), 2) : Math.abs(qty).toFixed(2)} кг`;
+            } else if (log.changes && log.changes.qty) {
+                const qty = log.changes.qty;
+                qtyStr = `${qty} кг`;
+            }
+
+            const operator = log.user || 'Система';
+            const details = log.details || '';
+            const comment = log.comment ? `<div style="font-size:0.75rem; color:var(--emerald-neon); opacity:0.8; margin-top:2px;">↳ ${log.comment}</div>` : '';
+            
+            let attachmentsHtml = '';
+            if (log.attachments && log.attachments.length > 0) {
+                attachmentsHtml = log.attachments.map(att => `
+                    <a href="${att.data}" download="${att.name}" class="badge" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:2px 4px; border-radius:3px; display:inline-flex; align-items:center; gap:3px; color:#fff; font-size:0.65rem; cursor:pointer;" onclick="event.stopPropagation();" title="${att.name}">
+                        <i class="fa-solid fa-download"></i> ${att.name.substring(0,8)}${att.name.length > 8 ? '..' : ''}
+                    </a>
+                `).join(' ');
+            }
+
             html += `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: top;">
                     <td style="padding: 8px; color: var(--text-muted);">${log.date.split(',')[0]}</td>
                     <td style="padding: 8px; color: #fff;">${log.type}</td>
-                    <td style="padding: 8px; text-align: right; font-weight: bold; color: ${color};">${sign}${window.formatWhNumber(qty, 2)} кг</td>
+                    <td style="padding: 8px; color: var(--text-secondary); max-width: 250px; overflow: hidden; text-overflow: ellipsis;">
+                        ${details}
+                        ${comment}
+                    </td>
+                    <td style="padding: 8px; color: var(--text-muted);">${operator}</td>
+                    <td style="padding: 8px; text-align: right; font-weight: bold; color: ${color};">${qtyStr}</td>
+                    <td style="padding: 8px;">${attachmentsHtml || '<span style="opacity:0.3;">---</span>'}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        historyBlock.innerHTML = html;
+    },
+
+    renderRodHistory: function(art) {
+        const historyBlock = document.getElementById('rc-history-block');
+        if (!historyBlock) return;
+        
+        if (!art) {
+            historyBlock.innerHTML = '<div style="opacity: 0.5; text-align: center; padding: 20px;">Нет данных для отображения истории</div>';
+            return;
+        }
+        
+        const logs = (window.dbWarehouseLog || []).filter(log => {
+            if (!log.changes) {
+                const hasArt = (log.details && log.details.includes(art)) || (log.comment && log.comment.includes(art));
+                return hasArt;
+            }
+            const targetItem = log.changes.target?.item || '';
+            const sourceItem = log.changes.source?.item || '';
+            
+            return targetItem.endsWith('_' + art) || targetItem === art ||
+                   sourceItem.endsWith('_' + art) || sourceItem === art ||
+                   (log.details && log.details.includes(art)) ||
+                   (log.comment && log.comment.includes(art));
+        }).reverse();
+
+        if (logs.length === 0) {
+            historyBlock.innerHTML = '<div style="opacity: 0.5; text-align: center; padding: 20px;">Нет записей о движении этого прутка</div>';
+            return;
+        }
+
+        let html = `
+            <table style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); text-align: left;">
+                        <th style="padding: 8px; width: 80px;">Дата</th>
+                        <th style="padding: 8px; width: 120px;">Операция</th>
+                        <th style="padding: 8px;">Детали / Комментарий</th>
+                        <th style="padding: 8px; width: 90px;">Оператор</th>
+                        <th style="padding: 8px; text-align: right; width: 90px;">Кол-во</th>
+                        <th style="padding: 8px; width: 120px;">Документы</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        logs.forEach(log => {
+            let qtyStr = '---';
+            let color = '#fff';
+            let sign = '';
+            
+            const isTarget = log.changes && log.changes.target && (log.changes.target.item === art || log.changes.target.item.endsWith('_' + art));
+            const isSource = log.changes && log.changes.source && (log.changes.source.item === art || log.changes.source.item.endsWith('_' + art));
+            
+            if (isTarget) {
+                const qty = log.changes.target.qty;
+                color = qty > 0 ? 'var(--emerald-neon)' : 'var(--brand-red)';
+                sign = qty > 0 ? '+' : '';
+                qtyStr = `${sign}${qty} шт`;
+            } else if (isSource) {
+                const qty = log.changes.source.qty;
+                color = qty > 0 ? 'var(--brand-red)' : 'var(--emerald-neon)';
+                sign = qty > 0 ? '-' : '+';
+                qtyStr = `${sign}${Math.abs(qty)} шт`;
+            } else if (log.changes && log.changes.qty) {
+                const qty = log.changes.qty;
+                qtyStr = `${qty} шт`;
+            }
+
+            const operator = log.user || 'Система';
+            const details = log.details || '';
+            const comment = log.comment ? `<div style="font-size:0.75rem; color:var(--emerald-neon); opacity:0.8; margin-top:2px;">↳ ${log.comment}</div>` : '';
+            
+            let attachmentsHtml = '';
+            if (log.attachments && log.attachments.length > 0) {
+                attachmentsHtml = log.attachments.map(att => `
+                    <a href="${att.data}" download="${att.name}" class="badge" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:2px 4px; border-radius:3px; display:inline-flex; align-items:center; gap:3px; color:#fff; font-size:0.65rem; cursor:pointer;" onclick="event.stopPropagation();" title="${att.name}">
+                        <i class="fa-solid fa-download"></i> ${att.name.substring(0,8)}${att.name.length > 8 ? '..' : ''}
+                    </a>
+                `).join(' ');
+            }
+
+            html += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03); vertical-align: top;">
+                    <td style="padding: 8px; color: var(--text-muted);">${log.date.split(',')[0]}</td>
+                    <td style="padding: 8px; color: #fff;">${log.type}</td>
+                    <td style="padding: 8px; color: var(--text-secondary); max-width: 250px; overflow: hidden; text-overflow: ellipsis;">
+                        ${details}
+                        ${comment}
+                    </td>
+                    <td style="padding: 8px; color: var(--text-muted);">${operator}</td>
+                    <td style="padding: 8px; text-align: right; font-weight: bold; color: ${color};">${qtyStr}</td>
+                    <td style="padding: 8px;">${attachmentsHtml || '<span style="opacity:0.3;">---</span>'}</td>
                 </tr>
             `;
         });
@@ -524,6 +674,9 @@ window.PrutkonFeatures = {
             `;
             actContainer.innerHTML = html;
         }
+        
+        // Рендерим историю и документы
+        this.renderRodHistory(found.article || found.name);
     },
 
     transferItemToStep: function(nextStep, safeObjStr) {

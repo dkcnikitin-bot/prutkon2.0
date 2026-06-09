@@ -95,6 +95,30 @@ window.initWarehouseCatalog = () => {
                 icon: 'fa-grip-lines-vertical'
             };
         });
+
+        const hardwares = window.dbDirectories.filter(d => d.category === 'hardware' || (d.data && d.data.category === 'hardware'));
+        hardwares.forEach(h => {
+            const d = h.data || h;
+            const key = String(h.id).startsWith('hardware_') ? h.id : `hardware_${h.id}`;
+            WAREHOUSE_CATALOG[key] = {
+                name: d.name || 'Скобяное изделие',
+                unit: d.unit || 'шт',
+                icon: 'fa-toolbox',
+                parentGroup: 'hardware'
+            };
+        });
+
+        const fasteners = window.dbDirectories.filter(d => d.category === 'fasteners' || (d.data && d.data.category === 'fasteners'));
+        fasteners.forEach(f => {
+            const d = f.data || f;
+            const key = String(f.id).startsWith('fasteners_') ? f.id : `fasteners_${f.id}`;
+            WAREHOUSE_CATALOG[key] = {
+                name: d.name || 'Крепеж',
+                unit: d.unit || 'шт',
+                icon: 'fa-screwdriver-wrench',
+                parentGroup: 'fasteners'
+            };
+        });
     }
 
     // Загружаем реестр прутков из localStorage / window.db
@@ -368,6 +392,8 @@ function renderInventory() {
     window.expandedGroups = window.expandedGroups || {
         metal: false,
         belt: false,
+        hardware: false,
+        fasteners: false,
         blank: false,
         straight: false,
         double: false,
@@ -382,6 +408,8 @@ function renderInventory() {
     const groupsConfig = {
         metal: { name: 'Материалы (в ассортименте)', unit: 'кг', icon: 'fa-cubes', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.05)', border: 'rgba(255,180,0,0.15)' },
         belt: { name: 'Ленты (рулоны, заготовки, полосы)', unit: 'м.п.', icon: 'fa-tape', color: 'var(--accent-blue)', bg: 'rgba(0,147,255,0.05)', border: 'rgba(0,147,255,0.15)' },
+        hardware: { name: 'Скобяные изделия', unit: 'шт', icon: 'fa-toolbox', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.03)', border: 'rgba(255,180,0,0.1)' },
+        fasteners: { name: 'Метизы и крепеж', unit: 'шт', icon: 'fa-screwdriver-wrench', color: '#af52de', bg: 'rgba(175,82,222,0.03)', border: 'rgba(175,82,222,0.1)' },
         blank: { name: 'Заготовки прутков', unit: 'шт', icon: 'fa-cube', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.03)', border: 'rgba(255,180,0,0.1)' },
         straight: { name: 'Прутки прямые (стандартные)', unit: 'шт', icon: 'fa-ruler-horizontal', color: 'var(--neon-emerald)', bg: 'rgba(0,255,157,0.03)', border: 'rgba(0,255,157,0.1)' },
         double: { name: 'Сдвоенные прутки', unit: 'шт', icon: 'fa-grip-lines', color: '#af52de', bg: 'rgba(175,82,222,0.03)', border: 'rgba(175,82,222,0.1)' },
@@ -389,6 +417,19 @@ function renderInventory() {
         rubberized: { name: 'Обрезиненные прутки', unit: 'шт', icon: 'fa-ring', color: '#00c7be', bg: 'rgba(0,199,190,0.03)', border: 'rgba(0,199,190,0.1)' },
         hedge: { name: 'Ёжные и пальцевые прутки', unit: 'шт', icon: 'fa-star-of-life', color: '#ff2d55', bg: 'rgba(255,45,85,0.03)', border: 'rgba(255,45,85,0.1)' },
         bent_rubberized: { name: 'Гнутые обрезиненные прутки', unit: 'шт', icon: 'fa-bacon', color: '#00c7be', bg: 'rgba(0,199,190,0.03)', border: 'rgba(0,199,190,0.1)' }
+    };
+
+    const stripTU = (name) => {
+        if (!name) return '';
+        return name.replace(/\s*(?:ТУ|ГОСТ)\s*\S+/g, '').replace(/\s*(?:ТУ|ГОСТ)-\S+/g, '').trim();
+    };
+
+    const getCatalogItemDia = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return 0;
+        if (item.dia) return parseFloat(item.dia);
+        const match = String(item.name || '').match(/Ø\s*(\d+(\.\d+)?)/i) || String(k).match(/(?:BL|DBL|PR)-(\d+(\.\d+)?)/i);
+        return match ? parseFloat(match[1]) : 0;
     };
 
     for (let groupKey in groupsConfig) {
@@ -444,26 +485,65 @@ function renderInventory() {
         if (isExpanded) {
             let hasChildren = false;
             
-            if (genericQty > 0 || childKeys.length === 0) {
+            if (genericQty > 0) {
                 const genericItem = WAREHOUSE_CATALOG[groupKey] || { name: 'Нераспределенный остаток', unit: conf.unit, icon: conf.icon };
-                const nameDisplay = genericQty > 0 ? 'Общий нераспределенный остаток' : genericItem.name;
+                const nameDisplay = 'Общий нераспределенный остаток';
                 html += renderInventoryChildRow(groupKey, { ...genericItem, name: nameDisplay }, genericQty, groupKey);
                 hasChildren = true;
             }
             
-            childKeys.forEach(key => {
-                const item = WAREHOUSE_CATALOG[key];
-                const qty = window.dbWarehouseInv[key] || 0;
-                html += renderInventoryChildRow(key, item, qty, groupKey);
-                hasChildren = true;
-            });
+            // Фильтруем childKeys по количеству > 0
+            const activeChildKeys = childKeys.filter(key => (window.dbWarehouseInv[key] || 0) > 0);
+
+            // Группируем по диаметрам если прутки/заготовки
+            const isRodGroup = ['blank', 'straight', 'double', 'bent', 'rubberized', 'hedge', 'bent_rubberized'].includes(groupKey);
+            if (isRodGroup) {
+                activeChildKeys.sort((a, b) => {
+                    const diaA = getCatalogItemDia(a);
+                    const diaB = getCatalogItemDia(b);
+                    if (diaA !== diaB) return diaA - diaB;
+                    return String(WAREHOUSE_CATALOG[a].name).localeCompare(String(WAREHOUSE_CATALOG[b].name));
+                });
+
+                let lastDia = null;
+                activeChildKeys.forEach(key => {
+                    const item = WAREHOUSE_CATALOG[key];
+                    const qty = window.dbWarehouseInv[key] || 0;
+                    
+                    const dia = getCatalogItemDia(key);
+                    if (dia !== lastDia) {
+                        lastDia = dia;
+                        html += `
+                            <tr style="background: rgba(255,255,255,0.02); font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td colspan="3" style="padding: 6px 15px; padding-left: 35px; color: var(--brand-gold); font-size: 0.75rem;">
+                                    <i class="fa-solid fa-circle-dot" style="font-size:0.6rem;"></i> Диаметр: Ø${dia ? dia + ' мм' : 'Не указан'}
+                                </td>
+                            </tr>
+                        `;
+                    }
+                    
+                    // Strip TU from displayed name
+                    const cleanItem = { ...item, name: stripTU(item.name) };
+                    html += renderInventoryChildRow(key, cleanItem, qty, groupKey);
+                    hasChildren = true;
+                });
+            } else {
+                activeChildKeys.forEach(key => {
+                    const item = WAREHOUSE_CATALOG[key];
+                    const qty = window.dbWarehouseInv[key] || 0;
+                    
+                    // Strip TU from displayed name
+                    const cleanItem = { ...item, name: stripTU(item.name) };
+                    html += renderInventoryChildRow(key, cleanItem, qty, groupKey);
+                    hasChildren = true;
+                });
+            }
             
             if (!hasChildren) {
                 html += `<tr><td colspan="3" style="text-align:center; opacity:0.5; font-size:0.8rem; padding:15px; padding-left:45px;">Нет остатков в этой группе</td></tr>`;
             }
         }
     }
-    
     tbody.innerHTML = html;
 }
 
@@ -599,6 +679,15 @@ function renderLog() {
                     <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:5px;">
                         ${log.details}
                     </div>
+                    ${log.attachments && log.attachments.length > 0 ? `
+                        <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px;">
+                            ${log.attachments.map(att => `
+                                <a href="${att.data}" download="${att.name}" class="badge" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:4px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px; color:#fff; font-size:0.7rem; cursor:pointer;" onclick="event.stopPropagation();">
+                                    <i class="fa-solid fa-file"></i> ${att.name.substring(0,15)}${att.name.length > 15 ? '...' : ''}
+                                </a>
+                            `).join('')}
+                        </div>
+                    ` : ''}
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
                         ${log.comment ? `<div style="font-size:0.75rem; color:var(--emerald-neon); background:rgba(0,255,157,0.05); padding:4px 8px; border-radius:4px;">${log.comment}</div>` : '<div></div>'}
                         ${log.changes ? `<button class="btn btn-danger btn-sm" style="padding:2px 8px; font-size:0.7rem;" onclick="window.deleteOperation(${log.id})" title="Отменить операцию"><i class="fa-solid fa-undo"></i> Отменить</button>` : ''}
@@ -783,6 +872,13 @@ window.showNewOperationModal = (prefillType) => {
 
     // Default tab
     window.switchWhTab('main');
+
+    // Reset attachments
+    window.opUploadedAttachments = [];
+    const attInput = document.getElementById('op-attachments');
+    if (attInput) attInput.value = '';
+    const attPrev = document.getElementById('op-attachments-preview');
+    if (attPrev) attPrev.innerHTML = '';
 
     document.getElementById('modal-new-operation').classList.add('active');
     window.updateOperationForm();
@@ -1854,12 +1950,21 @@ window.updateOperationForm = () => {
             document.getElementById('op-blank-source-type-wrapper').style.display = 'none';
             if (config.source === 'metal') {
                 sourceSelectWrapper.style.display = 'block';
-                let metalOpts = '<option value="metal">-- Выберите металл --</option>';
+                const groups = {};
                 for (let key in WAREHOUSE_CATALOG) {
                     if (key.startsWith('metal_')) {
                         const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
-                        metalOpts += `<option value="${key}">${WAREHOUSE_CATALOG[key].name} (Остаток: ${av} кг)</option>`;
+                        const dia = getCatalogItemDia(key);
+                        const label = dia ? `Диаметр: Ø${dia} мм` : 'Без диаметра';
+                        if (!groups[label]) groups[label] = [];
+                        groups[label].push({ key, name: WAREHOUSE_CATALOG[key].name, av });
                     }
+                }
+                let metalOpts = '<option value="">-- Выберите металл --</option>';
+                for (let label in groups) {
+                    metalOpts += `<optgroup label="${label}">`;
+                    metalOpts += groups[label].map(m => `<option value="${m.key}">${window.stripTU(m.name)} (Остаток: ${m.av} кг)</option>`).join('');
+                    metalOpts += `</optgroup>`;
                 }
                 const oldAv = window.parseRusFloat(window.dbWarehouseInv['metal'] || 0);
                 if (oldAv > 0) metalOpts += `<option value="metal">Металл (Прочее) (Остаток: ${oldAv} кг)</option>`;
@@ -1867,23 +1972,41 @@ window.updateOperationForm = () => {
                 sourceLabel.innerText = 'Металл (кг)';
             } else if (config.source === 'belt') {
                 sourceSelectWrapper.style.display = 'block';
-                let beltOpts = '<option value="">-- Выберите ленту --</option>';
+                const groups = {};
                 for (let key in WAREHOUSE_CATALOG) {
                     if (key.startsWith('belt_') && !key.startsWith('belt_blank') && !key.startsWith('belt_strip')) {
                         const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
-                        beltOpts += `<option value="${key}">${WAREHOUSE_CATALOG[key].name} (Остаток: ${av} м.п.)</option>`;
+                        const width = getCatalogItemWidth(key);
+                        const label = width ? `Ширина: ${width} мм` : 'Ленты';
+                        if (!groups[label]) groups[label] = [];
+                        groups[label].push({ key, name: WAREHOUSE_CATALOG[key].name, av });
                     }
+                }
+                let beltOpts = '<option value="">-- Выберите ленту --</option>';
+                for (let label in groups) {
+                    beltOpts += `<optgroup label="${label}">`;
+                    beltOpts += groups[label].map(b => `<option value="${b.key}">${window.stripTU(b.name)} (Остаток: ${b.av} м.п.)</option>`).join('');
+                    beltOpts += `</optgroup>`;
                 }
                 sourceItemSelect.innerHTML = beltOpts;
                 sourceLabel.innerText = 'Лента (м.п.)';
             } else if (config.source === 'belt_blank') {
                 sourceSelectWrapper.style.display = 'block';
-                let blankOpts = '<option value="">-- Выберите ленту-заготовку --</option>';
+                const groups = {};
                 for (let key in WAREHOUSE_CATALOG) {
                     if (key.startsWith('belt_blank_')) {
                         const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
-                        blankOpts += `<option value="${key}">${WAREHOUSE_CATALOG[key].name} (Остаток: ${av} м.п.)</option>`;
+                        const width = getCatalogItemWidth(key);
+                        const label = width ? `Ширина: ${width} мм` : 'Заготовки';
+                        if (!groups[label]) groups[label] = [];
+                        groups[label].push({ key, name: WAREHOUSE_CATALOG[key].name, av });
                     }
+                }
+                let blankOpts = '<option value="">-- Выберите ленту-заготовку --</option>';
+                for (let label in groups) {
+                    blankOpts += `<optgroup label="${label}">`;
+                    blankOpts += groups[label].map(b => `<option value="${b.key}">${window.stripTU(b.name)} (Остаток: ${b.av} м.п.)</option>`).join('');
+                    blankOpts += `</optgroup>`;
                 }
                 sourceItemSelect.innerHTML = blankOpts;
                 sourceLabel.innerText = 'Лента-Заготовка (м.п.)';
@@ -1955,6 +2078,17 @@ window.updateOperationForm = () => {
         } else {
             qtyInput.readOnly = false;
             qtyInput.placeholder = "Количество...";
+        }
+    }
+
+    const sourceQtyInput = document.getElementById('op-source-qty');
+    if (sourceQtyInput) {
+        if (type === 'prod_belt_blank') {
+            sourceQtyInput.readOnly = true;
+            sourceQtyInput.placeholder = "Весь рулон...";
+        } else {
+            sourceQtyInput.readOnly = false;
+            sourceQtyInput.placeholder = "Расход сырья...";
         }
     }
 
@@ -2585,7 +2719,11 @@ window.saveOperation = async () => {
         }
 
         // 1. Deduct source inventory
-        window.dbWarehouseInv[sourceItem] = currentAv - sourceQty;
+        if (type === 'prod_belt_blank') {
+            window.dbWarehouseInv[sourceItem] = 0; // Полное списание рулона
+        } else {
+            window.dbWarehouseInv[sourceItem] = currentAv - sourceQty;
+        }
 
         // 2. Add directory entry
         const dirObj = { id: targetId, category: cardData.category, name: targetName, data: cardData };
@@ -2615,7 +2753,8 @@ window.saveOperation = async () => {
             details: detailsStr,
             comment: `Склад: ${destination} | Отв: ${responsible} | Исходная партия: ${sourceD.invoice_num || '—'} | ${comment}`,
             changes: changesPayload,
-            user: responsible
+            user: responsible,
+            attachments: window.opUploadedAttachments || []
         });
 
         // 6. Cloud sync directory entry
@@ -2815,7 +2954,8 @@ window.saveOperation = async () => {
             details: detailsStr,
             comment: logComment,
             changes: changesPayload,
-            user: responsible
+            user: responsible,
+            attachments: window.opUploadedAttachments || []
         });
 
         if (window.supabase && (type === 'in_metal' || type === 'in_belt')) {
@@ -3306,24 +3446,42 @@ window.onBlankSourceTypeChange = () => {
     sourceSelectWrapper.style.display = 'block';
 
     if (sourceType === 'metal') {
-        let metalOpts = '<option value="metal">-- Выберите металл --</option>';
+        const groups = {};
         for (let key in WAREHOUSE_CATALOG) {
             if (key.startsWith('metal_')) {
                 const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
-                metalOpts += `<option value="${key}">${WAREHOUSE_CATALOG[key].name} (Остаток: ${av} кг)</option>`;
+                const dia = getCatalogItemDia(key);
+                const label = dia ? `Диаметр: Ø${dia} мм` : 'Без диаметра';
+                if (!groups[label]) groups[label] = [];
+                groups[label].push({ key, name: WAREHOUSE_CATALOG[key].name, av });
             }
+        }
+        let metalOpts = '<option value="">-- Выберите металл --</option>';
+        for (let label in groups) {
+            metalOpts += `<optgroup label="${label}">`;
+            metalOpts += groups[label].map(m => `<option value="${m.key}">${window.stripTU(m.name)} (Остаток: ${m.av} кг)</option>`).join('');
+            metalOpts += `</optgroup>`;
         }
         const oldAv = window.parseRusFloat(window.dbWarehouseInv['metal'] || 0);
         if (oldAv > 0) metalOpts += `<option value="metal">Металл (Прочее) (Остаток: ${oldAv} кг)</option>`;
         sourceItemSelect.innerHTML = metalOpts;
         sourceLabel.innerText = 'Металл (кг)';
     } else if (sourceType === 'belt_strip') {
-        let stripOpts = '<option value="">-- Выберите ленту-полосу --</option>';
+        const groups = {};
         for (let key in WAREHOUSE_CATALOG) {
             if (key.startsWith('belt_strip_')) {
                 const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
-                stripOpts += `<option value="${key}">${WAREHOUSE_CATALOG[key].name} (Остаток: ${av} м.п.)</option>`;
+                const width = getCatalogItemWidth(key);
+                const label = width ? `Ширина: ${width} мм` : 'Полосы';
+                if (!groups[label]) groups[label] = [];
+                groups[label].push({ key, name: WAREHOUSE_CATALOG[key].name, av });
             }
+        }
+        let stripOpts = '<option value="">-- Выберите ленту-полосу --</option>';
+        for (let label in groups) {
+            stripOpts += `<optgroup label="${label}">`;
+            stripOpts += groups[label].map(s => `<option value="${s.key}">${window.stripTU(s.name)} (Остаток: ${s.av} м.п.)</option>`).join('');
+            stripOpts += `</optgroup>`;
         }
         sourceItemSelect.innerHTML = stripOpts;
         sourceLabel.innerText = 'Лента-Полоса (м.п.)';
@@ -3343,6 +3501,11 @@ window.onSourceItemSelectChange = () => {
     const dObj = dirEntry.data || dirEntry;
 
     if (type === 'prod_belt_blank') {
+        const av = window.parseRusFloat(window.dbWarehouseInv[sourceItem] || 0);
+        const sourceQtyInput = document.getElementById('op-source-qty');
+        if (sourceQtyInput) {
+            sourceQtyInput.value = av;
+        }
         const width = parseFloat(dObj.diameter || dObj.width || dObj.width_plan || 940);
         document.getElementById('op-belt-trim-margin').value = 25;
         window.calculateBeltTrimming();
@@ -3434,4 +3597,41 @@ window.calculateBeltSlicing = () => {
     if (sumInput) {
         sumInput.value = (consumedLen * blankPriceMp).toFixed(2);
     }
+};
+
+const getCatalogItemWidth = (k) => {
+    const item = WAREHOUSE_CATALOG[k];
+    if (!item) return 0;
+    const match = String(item.name || '').match(/(?:Лента|Заготовка|Полоса)\s*(\d+)/i) || String(item.name || '').match(/^(\d+)/) || String(k).match(/(?:belt_blank_|belt_strip_|belt_)(\d+)/i);
+    return match ? parseFloat(match[1]) : 0;
+};
+
+window.handleOpAttachments = (input) => {
+    const preview = document.getElementById('op-attachments-preview');
+    if (!preview) return;
+    preview.innerHTML = '';
+    window.opUploadedAttachments = [];
+
+    if (!input.files || input.files.length === 0) return;
+
+    Array.from(input.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const fileData = {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                data: e.target.result // Base64 Data URL
+            };
+            window.opUploadedAttachments.push(fileData);
+
+            // Display a badge in the modal preview
+            const badge = document.createElement('div');
+            badge.className = 'badge';
+            badge.style.cssText = 'background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #fff;';
+            badge.innerHTML = `<i class="fa-solid fa-file-invoice"></i> ${file.name.substring(0, 12)}${file.name.length > 12 ? '...' : ''} <span style="opacity:0.5;">(${(file.size/1024).toFixed(1)} KB)</span>`;
+            preview.appendChild(badge);
+        };
+        reader.readAsDataURL(file);
+    });
 };

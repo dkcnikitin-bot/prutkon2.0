@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -337,6 +337,21 @@
             <div class="form-group mb-3">
                 <label style="color:#fff; font-weight:600;">Количество к выпуску (шт)</label>
                 <input type="number" id="prod-qty" class="form-control" value="10" min="1" oninput="window.updateProductionRequirements()" style="background:#111; color:#fff;">
+            </div>
+
+            <!-- Client-provided rods block -->
+            <div class="form-group mb-3 p-3 rounded" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05);">
+                <div class="form-check form-switch mb-2" style="display: flex; align-items: center; gap: 10px;">
+                    <input class="form-check-input" type="checkbox" id="prod-client-provided" onchange="window.toggleProdClientProvided(this.checked)" style="cursor:pointer; width: 36px; height: 18px;">
+                    <label class="form-check-label" for="prod-client-provided" style="color:var(--brand-gold); font-weight:600; cursor:pointer; font-size:0.85rem; margin-bottom: 0;">Прутки получены от клиента</label>
+                </div>
+                <div id="prod-client-qty-group" style="display:none; margin-top: 10px;">
+                    <label style="color:#fff; font-size:0.8rem; font-weight:600;">Количество полученных от клиента прутков (шт)</label>
+                    <input type="number" id="prod-client-qty" class="form-control mt-1" value="0" min="0" oninput="window.updateProductionRequirements()" style="background:#111; color:#fff;">
+                    <div class="text-muted mt-1" style="font-size: 0.75rem;">
+                        Осталось произвести (списать сырья): <strong id="prod-make-qty-display" style="color:var(--brand-gold);">10</strong> шт.
+                    </div>
+                </div>
             </div>
 
             <!-- Requirements analysis block -->

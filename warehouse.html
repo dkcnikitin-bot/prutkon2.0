@@ -712,9 +712,16 @@
                     </div>
 
                     <!-- Comment input (Common bottom input) -->
-                    <div class="form-group mb-0" style="margin-top: 15px;">
+                    <div class="form-group mb-3" style="margin-top: 15px;">
                         <label id="op-comment-label" class="text-xs text-muted" style="text-transform: uppercase;">Комментарий / Ответственный</label>
                         <input type="text" id="op-comment" class="form-control" placeholder="Партия №123 / Исполнитель...">
+                    </div>
+
+                    <!-- Multiple Files Upload -->
+                    <div class="form-group mb-0" style="margin-top: 10px;">
+                        <label class="text-xs text-muted" style="text-transform: uppercase;"><i class="fa-solid fa-paperclip"></i> Сопроводительные документы (УПД, накладные, чертежи и т.д.)</label>
+                        <input type="file" id="op-attachments" class="form-control" multiple onchange="window.handleOpAttachments(this)" style="background: #111; color: #fff; padding: 6px 12px; font-size: 0.8rem; border-color: rgba(255,255,255,0.08);">
+                        <div id="op-attachments-preview" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px;"></div>
                     </div>
                 </div>
 
