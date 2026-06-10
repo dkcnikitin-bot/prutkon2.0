@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-window.saveWarehouseData = async () => {
+window.saveWarehouseData = async (specificLogEntry = null) => {
     // Локальное сохранение (бэкап)
     localStorage.setItem('prutkon_warehouse_inv', JSON.stringify(window.dbWarehouseInv));
     localStorage.setItem('prutkon_warehouse_log', JSON.stringify(window.dbWarehouseLog));
@@ -328,11 +328,11 @@ window.saveWarehouseData = async () => {
             }
 
             // Сохраняем лог
-            if (window.dbWarehouseLog.length > 0) {
-                const lastOp = window.dbWarehouseLog[window.dbWarehouseLog.length - 1];
+            const logToUpsert = specificLogEntry || (window.dbWarehouseLog.length > 0 ? window.dbWarehouseLog[window.dbWarehouseLog.length - 1] : null);
+            if (logToUpsert) {
                 const { error: logErr } = await window.supabase.from('warehouse_log').upsert({
-                    id: String(lastOp.id),
-                    data: lastOp
+                    id: String(logToUpsert.id),
+                    data: logToUpsert
                 });
                 if (logErr) {
                     console.error('❌ Ошибка Supabase при сохранении лога (warehouse_log):', logErr.message, '| Детали:', logErr.details, '| Подсказка:', logErr.hint);
@@ -725,7 +725,13 @@ function renderLog() {
                             ${log.comment ? `<div style="font-size:0.75rem; color:var(--emerald-neon); background:rgba(0,255,157,0.05); padding:4px 8px; border-radius:4px;">${log.comment}</div>` : ''}
                             ${log.from_client ? `<div style="font-size:0.75rem; color:var(--brand-gold); background:rgba(255,180,0,0.08); padding:4px 8px; border-radius:4px; font-weight:bold;"><i class="fa-solid fa-handshake"></i> Давальческое сырье</div>` : ''}
                         </div>
-                        ${log.changes ? `<button class="btn btn-danger btn-sm" style="padding:2px 8px; font-size:0.7rem;" onclick="window.deleteOperation(${log.id})" title="Отменить операцию"><i class="fa-solid fa-undo"></i> Отменить</button>` : ''}
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            ${log.is_receipt ? `
+                                <button class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.7rem; background:rgba(0,147,255,0.15); border-color:rgba(0,147,255,0.3); color:#fff;" onclick="window.printOperationReceipt(${log.id})" title="Печать приходного ордера"><i class="fa-solid fa-print"></i> Печать</button>
+                                <button class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.7rem; background:rgba(255,180,0,0.15); border-color:rgba(255,180,0,0.3); color:#fff;" onclick="window.editOperationReceipt(${log.id})" title="Редактировать приходный ордер"><i class="fa-solid fa-pen"></i> Изменить</button>
+                            ` : ''}
+                            ${log.changes ? `<button class="btn btn-danger btn-sm" style="padding:2px 8px; font-size:0.7rem;" onclick="window.deleteOperation(${log.id})" title="Отменить операцию"><i class="fa-solid fa-undo"></i> Отменить</button>` : ''}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -767,7 +773,43 @@ window.deleteOperation = async (id) => {
     const op = window.dbWarehouseLog[opIndex];
 
     // 1. Возвращаем остатки (инвертируем операцию)
-    if (op.changes) {
+    if (op.is_receipt && op.items) {
+        for (const item of op.items) {
+            let fullId = item.id;
+            let itemCategory = item.isBelt ? 'belt' : 'metal';
+            if (op.op_type === 'in_hardware') itemCategory = 'hardware';
+            if (op.op_type === 'in_fasteners') itemCategory = 'fasteners';
+            
+            if (itemCategory === 'metal') {
+                fullId = String(fullId).startsWith('metal_') ? fullId : `metal_${fullId}`;
+            } else if (itemCategory === 'belt') {
+                fullId = String(fullId).startsWith('belt_') ? fullId : `belt_${fullId}`;
+            } else if (itemCategory === 'hardware') {
+                fullId = String(fullId).startsWith('hardware_') ? fullId : `hardware_${fullId}`;
+            } else if (itemCategory === 'fasteners') {
+                fullId = String(fullId).startsWith('fasteners_') ? fullId : `fasteners_${fullId}`;
+            }
+            
+            window.dbWarehouseInv[fullId] = (window.dbWarehouseInv[fullId] || 0) - item.qty;
+            if (window.dbWarehouseInv[fullId] < 0) window.dbWarehouseInv[fullId] = 0;
+        }
+        
+        if (window.dbMetalBatches) {
+            const batchesToDelete = window.dbMetalBatches.filter(b => b.doc_number === op.doc_number);
+            window.dbMetalBatches = window.dbMetalBatches.filter(b => b.doc_number !== op.doc_number);
+            localStorage.setItem('prutkon_warehouse_batches', JSON.stringify(window.dbMetalBatches));
+            
+            if (window.supabase && batchesToDelete.length > 0) {
+                for (const batch of batchesToDelete) {
+                    try {
+                        await window.supabase.from('metal_batches').delete().eq('id', batch.id);
+                    } catch (e) {
+                        console.error('Ошибка при удалении партии:', e);
+                    }
+                }
+            }
+        }
+    } else if (op.changes) {
         if (op.changes.source) {
             const sItem = op.changes.source.item;
             window.dbWarehouseInv[sItem] = (window.dbWarehouseInv[sItem] || 0) + Math.abs(op.changes.source.qty);
@@ -1415,6 +1457,16 @@ window.onOperationFinancialCalc = (trigger) => {
 
 window.closeOperationModal = () => {
     document.getElementById('modal-new-operation').classList.remove('active');
+    window.editingLogId = null;
+    
+    // Reset modal title and button text back to creation defaults
+    const titleEl = document.querySelector('#modal-new-operation h3');
+    if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-file-invoice"></i> Регистрация складской операции`;
+    
+    const submitBtn = document.getElementById('op-submit-btn') || document.querySelector('#modal-new-operation button[onclick="window.saveOperation()"]');
+    if (submitBtn) {
+        submitBtn.innerHTML = `<i class="fa-solid fa-check-double"></i> ПРОВЕСТИ ОПЕРАЦИЮ`;
+    }
 };
 
 window.switchWhTab = (tabName) => {
@@ -2948,6 +3000,50 @@ window.saveOperation = async () => {
 
     let itemsToProcess = [];
 
+    // ROLLBACK OLD LOG IF EDITING
+    if (window.editingLogId) {
+        const oldLog = window.dbWarehouseLog.find(o => String(o.id) === String(window.editingLogId));
+        if (oldLog && oldLog.items) {
+            // Deduct old quantities from inventory
+            for (const item of oldLog.items) {
+                let fullId = item.id;
+                let itemCategory = item.isBelt ? 'belt' : 'metal';
+                if (oldLog.op_type === 'in_hardware') itemCategory = 'hardware';
+                if (oldLog.op_type === 'in_fasteners') itemCategory = 'fasteners';
+                
+                if (itemCategory === 'metal') {
+                    fullId = String(fullId).startsWith('metal_') ? fullId : `metal_${fullId}`;
+                } else if (itemCategory === 'belt') {
+                    fullId = String(fullId).startsWith('belt_') ? fullId : `belt_${fullId}`;
+                } else if (itemCategory === 'hardware') {
+                    fullId = String(fullId).startsWith('hardware_') ? fullId : `hardware_${fullId}`;
+                } else if (itemCategory === 'fasteners') {
+                    fullId = String(fullId).startsWith('fasteners_') ? fullId : `fasteners_${fullId}`;
+                }
+                
+                window.dbWarehouseInv[fullId] = (window.dbWarehouseInv[fullId] || 0) - item.qty;
+                if (window.dbWarehouseInv[fullId] < 0) window.dbWarehouseInv[fullId] = 0;
+            }
+
+            // Clean up old batches
+            if (window.dbMetalBatches) {
+                const batchesToDelete = window.dbMetalBatches.filter(b => b.doc_number === oldLog.doc_number);
+                window.dbMetalBatches = window.dbMetalBatches.filter(b => b.doc_number !== oldLog.doc_number);
+                localStorage.setItem('prutkon_warehouse_batches', JSON.stringify(window.dbMetalBatches));
+                
+                if (window.supabase && batchesToDelete.length > 0) {
+                    for (const batch of batchesToDelete) {
+                        try {
+                            await window.supabase.from('metal_batches').delete().eq('id', batch.id);
+                        } catch (e) {
+                            console.error('Ошибка удаления старой партии из Supabase:', e);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Dedicated custom production handler for Edge Trimming and Slicing operations
     if (type === 'prod_belt_blank' || type === 'prod_belt_strip') {
         const sourceItem = document.getElementById('op-source-item-select').value;
@@ -3351,17 +3447,19 @@ window.saveOperation = async () => {
             changesPayload = { target: { item: fullId, qty: item.qty } };
         }
 
-        window.dbWarehouseLog.push({
-            id: Date.now() + Math.random(),
-            date: new Date(docDate).toLocaleString(),
-            type: config.type,
-            details: detailsStr,
-            comment: logComment,
-            changes: changesPayload,
-            user: responsible,
-            attachments: window.opUploadedAttachments || [],
-            from_client: fromClient
-        });
+        if (!config.isIncoming) {
+            window.dbWarehouseLog.push({
+                id: Date.now() + Math.random(),
+                date: new Date(docDate).toLocaleString(),
+                type: config.type,
+                details: detailsStr,
+                comment: logComment,
+                changes: changesPayload,
+                user: responsible,
+                attachments: window.opUploadedAttachments || [],
+                from_client: fromClient
+            });
+        }
 
         if (window.supabase && (type === 'in_metal' || type === 'in_belt')) {
             const { error: dirErr } = await window.supabase.from('directories').upsert({ id: fullId, data: cardData });
@@ -3501,8 +3599,79 @@ window.saveOperation = async () => {
         }
     }
 
+    let finalLogEntry = null;
+    if (config.isIncoming) {
+        let detailsStr = '';
+        if (itemsToProcess.length === 1) {
+            const item = itemsToProcess[0];
+            let fullId = item.id;
+            let itemCategory = item.isBelt ? 'belt' : 'metal';
+            if (type === 'in_hardware') itemCategory = 'hardware';
+            if (type === 'in_fasteners') itemCategory = 'fasteners';
+            if (itemCategory === 'metal' && !String(fullId).startsWith('metal_')) fullId = `metal_${fullId}`;
+            if (itemCategory === 'belt' && !String(fullId).startsWith('belt_')) fullId = `belt_${fullId}`;
+            if (itemCategory === 'hardware' && !String(fullId).startsWith('hardware_')) fullId = `hardware_${fullId}`;
+            if (itemCategory === 'fasteners' && !String(fullId).startsWith('fasteners_')) fullId = `fasteners_${fullId}`;
+            detailsStr = `Приход на [${destination}]: +${window.formatWhNumber(item.qty, 1)} ${WAREHOUSE_CATALOG[fullId]?.unit || 'ед'} (${item.name || WAREHOUSE_CATALOG[fullId]?.name || fullId})`;
+        } else {
+            const beltCount = itemsToProcess.filter(i => i.isBelt).length;
+            const metalCount = itemsToProcess.filter(i => !i.isBelt).length;
+            let parts = [];
+            if (beltCount > 0) parts.push(`${beltCount} рул.`);
+            if (metalCount > 0) parts.push(`${metalCount} парт.`);
+            detailsStr = `Приход на [${destination}]: +${window.formatWhNumber(totalWeight, 1)} кг/м.п. (${parts.join(', ') || (itemsToProcess.length + ' поз.')})`;
+        }
+
+        let logComment = `Склад: ${destination} | Отв: ${responsible}`;
+        if (contract) logComment += ` | Дог: ${contract}`;
+        if (invoiceNum) logComment += ` | Накл: ${invoiceNum}`;
+        if (comment) logComment += ` | Комм: ${comment}`;
+
+        finalLogEntry = {
+            id: window.editingLogId ? window.editingLogId : (Date.now() + Math.random()),
+            date: new Date(docDate).toLocaleString(),
+            type: config.type,
+            details: detailsStr,
+            comment: logComment,
+            changes: { target: { items_count: itemsToProcess.length } },
+            user: responsible,
+            attachments: window.opUploadedAttachments || [],
+            from_client: fromClient,
+            
+            // Receipt Document Metadata
+            is_receipt: true,
+            op_type: type,
+            doc_number: docNumber,
+            doc_date: docDate,
+            supplier: supplier,
+            contract: contract,
+            invoice_num: invoiceNum,
+            invoice_date: invoiceDate,
+            destination: destination,
+            responsible: responsible,
+            delivery_cost: deliveryTotal,
+            delivery_vat_type: delVatType,
+            delivery_dist_method: distMethod,
+            vat_rate: vatRate,
+            items: itemsToProcess
+        };
+
+        if (window.editingLogId) {
+            const opIndex = window.dbWarehouseLog.findIndex(o => String(o.id) === String(window.editingLogId));
+            if (opIndex !== -1) {
+                finalLogEntry.date = window.dbWarehouseLog[opIndex].date;
+                window.dbWarehouseLog[opIndex] = finalLogEntry;
+            } else {
+                window.dbWarehouseLog.push(finalLogEntry);
+            }
+            window.editingLogId = null;
+        } else {
+            window.dbWarehouseLog.push(finalLogEntry);
+        }
+    }
+
     window.currentBatch = [];
-    window.saveWarehouseData();
+    window.saveWarehouseData(finalLogEntry);
     window.refreshWarehouseData();
     window.closeOperationModal();
     window.showToast(`Операция ${docNumber} успешно проведена в системе!`, 'success');
@@ -3714,28 +3883,54 @@ document.addEventListener('DOMContentLoaded', () => {
         window.renderLog();
     }
 });
-window.printOperationReceipt = () => {
-    const hasBelt = window.currentBatch.some(item => item.isBelt);
-    if (window.currentBatch.length === 0) { window.showToast('Список пуст!', 'error'); return; }
+window.editingLogId = null;
 
-    const docNumber = document.getElementById('op-doc-num')?.value || 'ПМ-00000';
-    const docDate = document.getElementById('op-doc-date')?.value ? new Date(document.getElementById('op-doc-date').value).toLocaleDateString('ru-RU') : new Date().toLocaleDateString('ru-RU');
-    const sup = document.getElementById('op-supplier')?.value || 'Не указан';
-    const contract = document.getElementById('op-contract')?.value || 'б/д';
-    const invoiceNum = document.getElementById('op-invoice-num')?.value || 'б/н';
-    const invoiceDate = document.getElementById('op-invoice-date')?.value ? new Date(document.getElementById('op-invoice-date').value).toLocaleDateString('ru-RU') : '';
-    const dest = document.getElementById('op-destination')?.value || 'Основной склад';
-    const responsible = document.getElementById('op-responsible')?.value || 'Не указан';
-    const deliveryTotal = window.parseRusFloat(document.getElementById('op-delivery-cost')?.value || '0');
-    const delVatType = document.getElementById('op-delivery-vat-type')?.value || 'no-vat';
-    const distMethod = document.getElementById('op-delivery-dist-method')?.value || 'weight';
-    const vatRate = window.parseRusFloat(document.getElementById('op-vat-rate')?.value || '1.22');
+window.printOperationReceipt = (logId = null) => {
+    let docNumber, docDate, sup, contract, invoiceNum, invoiceDate, dest, responsible, deliveryTotal, delVatType, distMethod, vatRate;
+    let batch = [];
+    
+    if (logId) {
+        const log = window.dbWarehouseLog.find(l => String(l.id) === String(logId));
+        if (!log) { window.showToast('Операция не найдена!', 'error'); return; }
+        
+        docNumber = log.doc_number || 'ПМ-00000';
+        docDate = log.doc_date ? new Date(log.doc_date).toLocaleDateString('ru-RU') : new Date(log.date).toLocaleDateString('ru-RU');
+        sup = log.supplier || 'Не указан';
+        contract = log.contract || 'б/д';
+        invoiceNum = log.invoice_num || 'б/н';
+        invoiceDate = log.invoice_date ? new Date(log.invoice_date).toLocaleDateString('ru-RU') : '';
+        dest = log.destination || 'Основной склад';
+        responsible = log.responsible || 'Не указан';
+        deliveryTotal = parseFloat(log.delivery_cost || 0);
+        delVatType = log.delivery_vat_type || 'no-vat';
+        distMethod = log.delivery_dist_method || 'weight';
+        vatRate = parseFloat(log.vat_rate || 1.22);
+        batch = log.items || [];
+    } else {
+        batch = window.currentBatch;
+        if (batch.length === 0) { window.showToast('Список пуст!', 'error'); return; }
+        
+        docNumber = document.getElementById('op-doc-num')?.value || 'ПМ-00000';
+        docDate = document.getElementById('op-doc-date')?.value ? new Date(document.getElementById('op-doc-date').value).toLocaleDateString('ru-RU') : new Date().toLocaleDateString('ru-RU');
+        sup = document.getElementById('op-supplier')?.value || 'Не указан';
+        contract = document.getElementById('op-contract')?.value || 'б/д';
+        invoiceNum = document.getElementById('op-invoice-num')?.value || 'б/н';
+        invoiceDate = document.getElementById('op-invoice-date')?.value ? new Date(document.getElementById('op-invoice-date').value).toLocaleDateString('ru-RU') : '';
+        dest = document.getElementById('op-destination')?.value || 'Основной склад';
+        responsible = document.getElementById('op-responsible')?.value || 'Не указан';
+        deliveryTotal = window.parseRusFloat(document.getElementById('op-delivery-cost')?.value || '0');
+        delVatType = document.getElementById('op-delivery-vat-type')?.value || 'no-vat';
+        distMethod = document.getElementById('op-delivery-dist-method')?.value || 'weight';
+        vatRate = window.parseRusFloat(document.getElementById('op-vat-rate')?.value || '1.22');
+    }
 
+    const hasBelt = batch.some(item => item.isBelt);
+    
     // Sum document totals exactly using rounded values
-    const totalWeight = Math.round(window.currentBatch.reduce((sum, item) => sum + item.qty, 0) * 100) / 100;
-    const totalBars = window.currentBatch.reduce((sum, item) => sum + item.bars_count, 0);
-    const totalSumNoVat = Math.round(window.currentBatch.reduce((sum, item) => sum + item.sumNoVat, 0) * 100) / 100;
-    const totalSumVat = Math.round(window.currentBatch.reduce((sum, item) => sum + item.sumWithVat, 0) * 100) / 100;
+    const totalWeight = Math.round(batch.reduce((sum, item) => sum + item.qty, 0) * 100) / 100;
+    const totalBars = batch.reduce((sum, item) => sum + (item.bars_count || 0), 0);
+    const totalSumNoVat = Math.round(batch.reduce((sum, item) => sum + (item.sumNoVat || (item.qty * item.priceKg)), 0) * 100) / 100;
+    const totalSumVat = Math.round(batch.reduce((sum, item) => sum + (item.sumWithVat || ((item.qty * item.priceKg) * (item.vatRate || vatRate))), 0) * 100) / 100;
     
     let printHtml = `
         <html>
@@ -3817,12 +4012,15 @@ window.printOperationReceipt = () => {
                 <tbody>
     `;
 
-    window.currentBatch.forEach((item, idx) => {
+    batch.forEach((item, idx) => {
         const Q = item.vatRate || vatRate;
+        const itemSumNoVat = item.sumNoVat || (item.qty * item.priceKg);
+        const itemSumWithVat = item.sumWithVat || (itemSumNoVat * Q);
+        const C = item.weight_per_m || 1.5;
 
         let share = 0;
         if (distMethod === 'sum') {
-            share = totalSumNoVat > 0 ? item.sumNoVat / totalSumNoVat : 0;
+            share = totalSumNoVat > 0 ? itemSumNoVat / totalSumNoVat : 0;
         } else {
             share = totalWeight > 0 ? item.qty / totalWeight : 0;
         }
@@ -3831,9 +4029,9 @@ window.printOperationReceipt = () => {
         const itemDeliveryTotalBase = Math.round(((delVatType === 'with-vat') ? (itemDeliveryTotal / Q) : itemDeliveryTotal) * 100) / 100;
         
         const deliveryPerKg = item.qty > 0 ? itemDeliveryTotalBase / item.qty : 0;
-        const deliveryPercentOfCost = item.sumNoVat > 0 ? (itemDeliveryTotalBase / item.sumNoVat) * 100 : 0;
+        const deliveryPercentOfCost = itemSumNoVat > 0 ? (itemDeliveryTotalBase / itemSumNoVat) * 100 : 0;
 
-        const totalItemCostWithVat = Math.round((item.sumWithVat + (itemDeliveryTotalBase * Q)) * 100) / 100;
+        const totalItemCostWithVat = Math.round((itemSumWithVat + (itemDeliveryTotalBase * Q)) * 100) / 100;
 
         printHtml += `
             <tr>
@@ -3841,14 +4039,14 @@ window.printOperationReceipt = () => {
                 <td>
                     <b>${item.name}</b>
                     <div style="font-size:8px; color:#555; margin-top:2px;">
-                        Сталь: ${item.steel_type} | Диаметр: ${item.diameter} мм
+                        Сталь: ${item.steel_type || '—'} | Диаметр/Ширина: ${item.diameter || '—'} мм
                     </div>
                 </td>
                 <td class="text-center">${item.cert || 'б/с'}</td>
-                <td class="text-right">${item.bars_count}</td>
+                <td class="text-right">${item.bars_count || '—'}</td>
                 <td class="text-right bold">${window.formatWhNumber(item.qty, 1)}</td>
                 <td class="text-right">${window.formatWhNumber(item.priceKg, 2)}</td>
-                <td class="text-right">${window.formatWhNumber(item.sumNoVat, 2)}</td>
+                <td class="text-right">${window.formatWhNumber(itemSumNoVat, 2)}</td>
                 <td class="text-right">${deliveryPercentOfCost.toFixed(2)}%</td>
                 <td class="text-right">${window.formatWhNumber(itemDeliveryTotalBase, 2)}</td>
                 <td class="text-right">${window.formatWhNumber(deliveryPerKg, 2)}</td>
@@ -3913,6 +4111,65 @@ window.printOperationReceipt = () => {
     const printWindow = window.open('', '_blank');
     printWindow.document.write(printHtml);
     printWindow.document.close();
+};
+
+window.editOperationReceipt = (logId) => {
+    const log = window.dbWarehouseLog.find(l => String(l.id) === String(logId));
+    if (!log) { window.showToast('Операция не найдена!', 'error'); return; }
+    
+    window.editingLogId = log.id;
+    
+    // Set type
+    const opTypeInput = document.getElementById('op-type');
+    if (opTypeInput) {
+        opTypeInput.value = log.op_type;
+        window.onOpTypeChange(); // trigger layout fields updates
+    }
+    
+    // Set headers
+    if (document.getElementById('op-doc-num')) document.getElementById('op-doc-num').value = log.doc_number || '';
+    if (document.getElementById('op-doc-date')) document.getElementById('op-doc-date').value = log.doc_date || '';
+    if (document.getElementById('op-supplier')) document.getElementById('op-supplier').value = log.supplier || '';
+    if (document.getElementById('op-contract')) document.getElementById('op-contract').value = log.contract || '';
+    if (document.getElementById('op-invoice-num')) document.getElementById('op-invoice-num').value = log.invoice_num || '';
+    if (document.getElementById('op-invoice-date')) document.getElementById('op-invoice-date').value = log.invoice_date || '';
+    if (document.getElementById('op-destination')) document.getElementById('op-destination').value = log.destination || 'Основной склад';
+    if (document.getElementById('op-responsible')) document.getElementById('op-responsible').value = log.responsible || '';
+    if (document.getElementById('op-delivery-cost')) document.getElementById('op-delivery-cost').value = log.delivery_cost || '0';
+    if (document.getElementById('op-delivery-vat-type')) document.getElementById('op-delivery-vat-type').value = log.delivery_vat_type || 'no-vat';
+    if (document.getElementById('op-delivery-dist-method')) document.getElementById('op-delivery-dist-method').value = log.delivery_dist_method || 'weight';
+    if (document.getElementById('op-vat-rate')) document.getElementById('op-vat-rate').value = log.vat_rate || '1.22';
+    if (document.getElementById('op-comment')) document.getElementById('op-comment').value = log.comment || '';
+    
+    // Populate items
+    if (log.op_type === 'in_metal' || log.op_type === 'in_belt') {
+        window.currentBatch = JSON.parse(JSON.stringify(log.items || []));
+        window.renderBatchTable();
+        window.switchWhTab('items'); // switch to items tab to show the list of products
+    } else {
+        const item = log.items ? log.items[0] : null;
+        if (item) {
+            if (document.getElementById('op-target-item-select')) document.getElementById('op-target-item-select').value = item.id;
+            if (document.getElementById('op-qty')) document.getElementById('op-qty').value = item.qty;
+            if (document.getElementById('op-unit-price')) document.getElementById('op-unit-price').value = item.priceKg;
+            if (document.getElementById('op-cert-num')) document.getElementById('op-cert-num').value = item.cert || '';
+        }
+    }
+    
+    // Update live summary
+    window.updateLiveSummary();
+    
+    // Update Title and Save button text
+    const titleEl = document.querySelector('#modal-new-operation h3');
+    if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-file-pen text-brand-gold"></i> Редактирование приходного ордера № ${log.doc_number || ''}`;
+    
+    const submitBtn = document.getElementById('op-submit-btn') || document.querySelector('#modal-new-operation button[onclick="window.saveOperation()"]');
+    if (submitBtn) {
+        submitBtn.innerHTML = `<i class="fa-solid fa-save"></i> СОХРАНИТЬ ИЗМЕНЕНИЯ`;
+    }
+    
+    // Open modal
+    document.getElementById('modal-new-operation').classList.add('active');
 };
 
 window.onSourceQtyInput = () => {
