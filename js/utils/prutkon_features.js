@@ -17,19 +17,20 @@ window.PrutkonFeatures = {
         <div id="modal-metal-card" class="modal">
             <div class="glass-panel" style="width: 800px; padding: 35px; max-height: 90vh; overflow-y: auto;">
                 <button onclick="document.getElementById('modal-metal-card').classList.remove('active')" style="float: right; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer;">&times;</button>
-                <h3 class="mb-4 text-white"><i class="fa-solid fa-cube text-brand-red"></i> Карточка Металла (Supabase Sync)</h3>
+                <h3 class="mb-4 text-white"><i class="fa-solid fa-cube text-brand-red"></i> <span id="mc-title-text">Карточка Металла (Supabase Sync)</span></h3>
                 <div class="grid grid-2 gap-4">
                     <div class="form-group"><label>Код / ID материала</label><input type="text" id="mc-id" class="form-control" readonly></div>
-                    <div class="form-group"><label>Диаметр (мм)</label><select id="mc-dia" class="form-control" onchange="PrutkonFeatures.recalcMetalFinance()"></select></div>
-                    <div class="form-group"><label>Вес 1 м.п. (кг)</label><input type="number" id="mc-weight-m" class="form-control" step="0.001" oninput="PrutkonFeatures.recalcMetalFinance()"></div>
-                    <div class="form-group"><label>Длина хлыста (мм)</label><input type="number" id="mc-length" class="form-control" value="6000" oninput="PrutkonFeatures.recalcMetalFinance()"></div>
-                    <div class="form-group"><label>Марка стали</label><input type="text" id="mc-steel" class="form-control" list="mc-steels-list"></div>
+                    <div class="form-group" id="mc-name-group" style="display:none;"><label>Наименование</label><input type="text" id="mc-name" class="form-control"></div>
+                    <div class="form-group" id="mc-dia-group"><label>Диаметр (мм)</label><select id="mc-dia" class="form-control" onchange="PrutkonFeatures.recalcMetalFinance()"></select></div>
+                    <div class="form-group" id="mc-weight-m-group"><label>Вес 1 м.п. (кг)</label><input type="number" id="mc-weight-m" class="form-control" step="0.001" oninput="PrutkonFeatures.recalcMetalFinance()"></div>
+                    <div class="form-group" id="mc-length-group"><label>Длина хлыста (мм)</label><input type="number" id="mc-length" class="form-control" value="6000" oninput="PrutkonFeatures.recalcMetalFinance()"></div>
+                    <div class="form-group" id="mc-steel-group"><label>Марка стали</label><input type="text" id="mc-steel" class="form-control" list="mc-steels-list"></div>
                     <div class="form-group"><label>Поставщик</label><input type="text" id="mc-supplier" class="form-control" list="mc-suppliers-list"></div>
                     <div class="form-group"><label>Дата поставки</label><input type="date" id="mc-date" class="form-control"></div>
                     <div class="form-group"><label>Текущий остаток (т)</label><input type="number" id="mc-stock-t" class="form-control" readonly style="color:var(--emerald-neon); font-weight:bold;"></div>
                     <div class="form-group"><label>Текущий остаток (кг)</label><input type="number" id="mc-stock-kg" class="form-control" readonly style="color:var(--emerald-neon); font-weight:bold;"></div>
-                    <div class="form-group"><label>Твердость (спецификация)</label><input type="text" id="mc-hard-spec" class="form-control"></div>
-                    <div class="form-group"><label>Твердость (факт)</label><input type="text" id="mc-hard-fact" class="form-control"></div>
+                    <div class="form-group" id="mc-hard-spec-group"><label>Твердость (спецификация)</label><input type="text" id="mc-hard-spec" class="form-control"></div>
+                    <div class="form-group" id="mc-hard-fact-group"><label>Твердость (факт)</label><input type="text" id="mc-hard-fact" class="form-control"></div>
                 </div>
                 <h4 class="mt-4 mb-3" style="color: var(--brand-gold)">Финансы и Налоги</h4>
                 <div class="form-group mb-3">
@@ -42,10 +43,10 @@ window.PrutkonFeatures = {
                 <div class="grid grid-2 gap-4">
                     <div class="form-group"><label>Цена за 1 тонну (без НДС)</label><input type="number" id="mc-price-ton-no-vat" class="form-control" oninput="PrutkonFeatures.recalcMetalFinance()"></div>
                     <div class="form-group"><label>Цена за 1 тонну (с НДС)</label><input type="number" id="mc-price-ton-vat" class="form-control" readonly></div>
-                    <div class="form-group"><label>Цена за 1 м.п. (без НДС)</label><input type="number" id="mc-price-m-no-vat" class="form-control" readonly></div>
-                    <div class="form-group"><label>Цена за 1 м.п. (с НДС)</label><input type="number" id="mc-price-m-vat" class="form-control" readonly></div>
-                    <div class="form-group"><label>Стоимость доставки (общая)</label><input type="number" id="mc-delivery-total" class="form-control" oninput="PrutkonFeatures.recalcMetalFinance()"></div>
-                    <div class="form-group"><label>Стоимость доставки (1 м.п.)</label><input type="number" id="mc-delivery-m" class="form-control" readonly></div>
+                    <div class="form-group" id="mc-price-m-no-vat-group"><label>Цена за 1 м.п. (без НДС)</label><input type="number" id="mc-price-m-no-vat" class="form-control" readonly></div>
+                    <div class="form-group" id="mc-price-m-vat-group"><label>Цена за 1 м.п. (с НДС)</label><input type="number" id="mc-price-m-vat" class="form-control" readonly></div>
+                    <div class="form-group" id="mc-delivery-total-group"><label>Стоимость доставки (общая)</label><input type="number" id="mc-delivery-total" class="form-control" oninput="PrutkonFeatures.recalcMetalFinance()"></div>
+                    <div class="form-group" id="mc-delivery-m-group"><label>Стоимость доставки (1 м.п.)</label><input type="number" id="mc-delivery-m" class="form-control" readonly></div>
                 </div>
 
                 <!-- Блок истории -->
@@ -137,21 +138,45 @@ window.PrutkonFeatures = {
     },
 
     systemDirectories: {
-        belt_widths: [20, 30, 40, 45, 50, 55, 60, 65, 70, 75],
-        belt_pitches: [20, 23, 28, 30, 32, 33, 34, 35, 36, 40, 44, 50],
-        rod_diameters: [8, 9, 10, 11, 12, 13, 16],
-        conn_types: ['Механический замок', 'Подготовлен к вулканизации', 'Вулканизация', 'Открытый тип', 'Винтовая скрутка'],
-        rod_types: ['Обрезиненный', 'Стальной гнутый', 'Игольчатый (V/H/I)', 'Пальчиковый', 'Трехременный', 'Четырехременный'],
-        crops: [
-            'Транспортер основного просеивания (шаг 30)',
-            'Транспортер ботвы',
-            'Выгрузной транспортер',
-            'Транспортер №30',
-            'Транспортер №40',
-            'Боковой элеватор',
-            'Приемный транспортер',
-            'Сортировочный транспортер'
-        ]
+        get belt_widths() {
+            const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'belt_widths') : [];
+            if (dbItems.length > 0) return dbItems.map(d => parseFloat(d.name) || d.name);
+            return [20, 30, 40, 45, 50, 55, 60, 65, 70, 75, '60-75'];
+        },
+        get belt_pitches() {
+            const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'belt_pitches') : [];
+            if (dbItems.length > 0) return dbItems.map(d => parseFloat(d.name) || d.name);
+            return [20, 23, 28, 30, 32, 33, 34, 35, 36, 37, 38, 40, 42, 43, 44, 45, 48, 50, 55, 56, 60, 64, 65, 70, 75, 80, 175, 185];
+        },
+        get rod_diameters() {
+            const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'rod_diameters') : [];
+            if (dbItems.length > 0) return dbItems.map(d => parseFloat(d.name) || d.name);
+            return [8, 9, 10, 11, 12, 13, 16];
+        },
+        get conn_types() {
+            const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'connection_types') : [];
+            if (dbItems.length > 0) return dbItems.map(d => d.name);
+            return ['Механический замок', 'Подготовлен к вулканизации', 'Вулканизация холодная', 'Вулканизация горячая', 'Открытый тип', 'Винтовая скрутка'];
+        },
+        get rod_types() {
+            const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'rod_types') : [];
+            if (dbItems.length > 0) return dbItems.map(d => d.name);
+            return ['Обрезиненный прямой', 'Обрезиненный гнутый', 'Стальной гнутый', 'Игольчатый V', 'Игольчатый H', 'Игольчатый I', 'Пальчиковый прямой', 'Пальчиковый с боковыми', 'Стальной трехременный', 'Стальной 4х ременный', 'Обрезиненный гнутый трехременный'];
+        },
+        get crops() {
+            const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'crops') : [];
+            if (dbItems.length > 0) return dbItems.map(d => d.name);
+            return [
+                'Транспортер основного просеивания (шаг 30)',
+                'Транспортер ботвы',
+                'Выгрузной транспортер',
+                'Транспортер №30',
+                'Транспортер №40',
+                'Боковой элеватор',
+                'Приемный транспортер',
+                'Сортировочный транспортер'
+            ];
+        }
     },
 
     loadDirectories: async function() {
@@ -185,7 +210,8 @@ window.PrutkonFeatures = {
         fill('rc-pitch', this.systemDirectories.belt_pitches);
         fill('rc-rod-type', this.systemDirectories.rod_types);
         
-        const brands = ['ROPA', 'Grimme', 'Holmer', 'Dewulf', 'AVR'];
+        const brandRecords = (window.dbDirectories || []).filter(d => d.category === 'brands');
+        const brands = brandRecords.length > 0 ? [...new Set(brandRecords.map(b => b.name))].sort() : ['ROPA', 'Grimme', 'Holmer', 'Dewulf', 'AVR'];
         fill('rc-brand', brands);
     },
 
@@ -205,6 +231,11 @@ window.PrutkonFeatures = {
     },
 
     recalcMetalFinance: function() {
+        const id = document.getElementById('mc-id').value;
+        const dirs = window.dbDirectories || [];
+        const item = dirs.find(d => String(d.id) === String(id));
+        const isMetal = !item || !item.category || item.category === 'metal';
+
         const hasVat = document.getElementById('mc-tax-toggle').checked;
         const vatRate = 1.22;
         
@@ -216,14 +247,16 @@ window.PrutkonFeatures = {
         const priceTonVat = hasVat ? priceTonNoVat * vatRate : priceTonNoVat;
         document.getElementById('mc-price-ton-vat').value = priceTonVat.toFixed(2);
 
-        const priceMNoVat = (priceTonNoVat / 1000) * weightM;
-        const priceMVat = hasVat ? priceMNoVat * vatRate : priceMNoVat;
-        document.getElementById('mc-price-m-no-vat').value = priceMNoVat.toFixed(2);
-        document.getElementById('mc-price-m-vat').value = priceMVat.toFixed(2);
+        if (isMetal) {
+            const priceMNoVat = (priceTonNoVat / 1000) * weightM;
+            const priceMVat = hasVat ? priceMNoVat * vatRate : priceMNoVat;
+            document.getElementById('mc-price-m-no-vat').value = priceMNoVat.toFixed(2);
+            document.getElementById('mc-price-m-vat').value = priceMVat.toFixed(2);
 
-        let deliveryM = 0;
-        if (stockKg > 0) deliveryM = (totalDelivery / stockKg) * weightM;
-        document.getElementById('mc-delivery-m').value = deliveryM.toFixed(2);
+            let deliveryM = 0;
+            if (stockKg > 0) deliveryM = (totalDelivery / stockKg) * weightM;
+            document.getElementById('mc-delivery-m').value = deliveryM.toFixed(2);
+        }
     },
 
     generateSKU: function() {
@@ -264,26 +297,99 @@ window.PrutkonFeatures = {
             document.getElementById('mc-tax-toggle').checked = true;
             document.getElementById('mc-stock-kg').value = '0';
             document.getElementById('mc-stock-t').value = '0.000';
+            if (document.getElementById('mc-name')) document.getElementById('mc-name').value = '';
+            
+            const titleEl = document.getElementById('mc-title-text') || document.querySelector('#modal-metal-card h3');
+            if (titleEl) titleEl.innerHTML = `<i class="fa-solid fa-cube text-brand-red"></i> Карточка Металла (Supabase Sync)`;
+            
+            const nameGrp = document.getElementById('mc-name-group');
+            if (nameGrp) nameGrp.style.display = 'none';
+
+            ['mc-dia-group', 'mc-weight-m-group', 'mc-length-group', 'mc-steel-group', 'mc-hard-spec-group', 'mc-hard-fact-group', 'mc-price-m-no-vat-group', 'mc-price-m-vat-group', 'mc-delivery-total-group', 'mc-delivery-m-group'].forEach(grpId => {
+                const el = document.getElementById(grpId) || document.getElementById(grpId.replace('-group',''))?.closest('.form-group');
+                if (el) el.style.display = '';
+            });
+            const stockTGrp = document.getElementById('mc-stock-t')?.closest('.form-group');
+            if (stockTGrp) stockTGrp.style.display = '';
+
+            const priceTonLabel = document.getElementById('mc-price-ton-no-vat')?.previousElementSibling;
+            if (priceTonLabel) priceTonLabel.innerText = 'Цена за 1 тонну (без НДС)';
+            const priceTonVatLabel = document.getElementById('mc-price-ton-vat')?.previousElementSibling;
+            if (priceTonVatLabel) priceTonVatLabel.innerText = 'Цена за 1 тонну (с НДС)';
+            const stockKgLabel = document.getElementById('mc-stock-kg')?.previousElementSibling;
+            if (stockKgLabel) stockKgLabel.innerText = 'Текущий остаток (кг)';
+
             if (document.getElementById('mc-history-block')) {
                 document.getElementById('mc-history-block').innerHTML = '<div style="opacity: 0.5; text-align: center; padding: 20px;">Нет движения для новой карточки</div>';
             }
             return;
         }
 
-        // Гарантируем формат ID: metal_XXX
-        const fullId = id.startsWith('metal_') ? id : `metal_${id}`;
+        // Поиск данных по exact ID или с префиксами
+        const dirs = window.dbDirectories || [];
+        let metal = dirs.find(d => String(d.id) === String(id));
+        let fullId = id;
+
+        if (!metal) {
+            if (id.startsWith('metal_')) {
+                const baseId = id.replace('metal_', '');
+                metal = dirs.find(d => String(d.id) === String(baseId));
+            } else if (id.startsWith('hardware_')) {
+                const baseId = id.replace('hardware_', '');
+                metal = dirs.find(d => String(d.id) === String(baseId));
+            } else if (id.startsWith('fasteners_')) {
+                const baseId = id.replace('fasteners_', '');
+                metal = dirs.find(d => String(d.id) === String(baseId));
+            } else {
+                fullId = `metal_${id}`;
+                metal = dirs.find(d => String(d.id) === fullId);
+            }
+        }
+        if (!metal) fullId = id;
+
         document.getElementById('mc-id').value = fullId;
         
         // Заполнение подсказок
-        const dirs = window.dbDirectories || [];
         const suppliers = dirs.filter(d => d.category === 'dealers' || (d.data && d.data.supplier)).map(d => d.name || d.data?.supplier);
         document.getElementById('mc-suppliers-list').innerHTML = [...new Set(suppliers)].filter(Boolean).map(s => `<option value="${s.replace(/"/g, '&quot;')}">`).join('');
         
         const steels = dirs.filter(d => d.steel_type || (d.data && d.data.steel_type)).map(d => d.steel_type || d.data?.steel_type);
         document.getElementById('mc-steels-list').innerHTML = [...new Set(steels)].filter(Boolean).map(s => `<option value="${s.replace(/"/g, '&quot;')}">`).join('');
 
-        // Поиск данных
-        const metal = dirs.find(d => String(d.id) === fullId);
+        const category = metal ? (metal.category || metal.data?.category || 'metal') : 'metal';
+        const isMetal = category === 'metal';
+
+        const titleEl = document.getElementById('mc-title-text') || document.querySelector('#modal-metal-card h3');
+        if (titleEl) {
+            if (category === 'hardware') {
+                titleEl.innerHTML = `<i class="fa-solid fa-toolbox text-brand-red"></i> Карточка: Скобяное изделие`;
+            } else if (category === 'fasteners') {
+                titleEl.innerHTML = `<i class="fa-solid fa-screwdriver-wrench text-brand-red"></i> Карточка: Метизы и крепеж`;
+            } else {
+                titleEl.innerHTML = `<i class="fa-solid fa-cube text-brand-red"></i> Карточка Металла (Supabase Sync)`;
+            }
+        }
+
+        const nameGrp = document.getElementById('mc-name-group');
+        if (nameGrp) nameGrp.style.display = isMetal ? 'none' : '';
+        if (document.getElementById('mc-name')) {
+            document.getElementById('mc-name').value = metal ? (metal.name || metal.data?.name || '') : '';
+        }
+
+        ['mc-dia-group', 'mc-weight-m-group', 'mc-length-group', 'mc-steel-group', 'mc-hard-spec-group', 'mc-hard-fact-group', 'mc-price-m-no-vat-group', 'mc-price-m-vat-group', 'mc-delivery-total-group', 'mc-delivery-m-group'].forEach(grpId => {
+            const el = document.getElementById(grpId) || document.getElementById(grpId.replace('-group',''))?.closest('.form-group');
+            if (el) el.style.display = isMetal ? '' : 'none';
+        });
+        const stockTGrp = document.getElementById('mc-stock-t')?.closest('.form-group');
+        if (stockTGrp) stockTGrp.style.display = isMetal ? '' : 'none';
+
+        const priceTonLabel = document.getElementById('mc-price-ton-no-vat')?.previousElementSibling;
+        if (priceTonLabel) priceTonLabel.innerText = isMetal ? 'Цена за 1 тонну (без НДС)' : 'Цена за 1 шт (без НДС)';
+        const priceTonVatLabel = document.getElementById('mc-price-ton-vat')?.previousElementSibling;
+        if (priceTonVatLabel) priceTonVatLabel.innerText = isMetal ? 'Цена за 1 тонну (с НДС)' : 'Цена за 1 шт (с НДС)';
+        const stockKgLabel = document.getElementById('mc-stock-kg')?.previousElementSibling;
+        if (stockKgLabel) stockKgLabel.innerText = isMetal ? 'Текущий остаток (кг)' : 'Текущий остаток (шт)';
+
         if (metal) {
             const d = metal.data || metal;
             document.getElementById('mc-dia').value = d.diameter || '';
@@ -298,20 +404,17 @@ window.PrutkonFeatures = {
             document.getElementById('mc-delivery-total').value = d.delivery_total || '';
             document.getElementById('mc-tax-toggle').checked = !!d.use_vat;
             
-            // Остатки из реального склада
             const stockKg = window.dbWarehouseInv ? (window.dbWarehouseInv[fullId] || 0) : 0;
             document.getElementById('mc-stock-kg').value = stockKg;
             document.getElementById('mc-stock-t').value = (stockKg / 1000).toFixed(3);
 
             this.recalcMetalFinance();
         } else {
-            // Если карточки нет, но есть остаток на складе
             const stockKg = window.dbWarehouseInv ? (window.dbWarehouseInv[fullId] || 0) : 0;
             document.getElementById('mc-stock-kg').value = stockKg;
             document.getElementById('mc-stock-t').value = (stockKg / 1000).toFixed(3);
         }
 
-        // Рендерим историю
         this.renderMetalHistory(fullId);
     },
 
@@ -511,39 +614,67 @@ window.PrutkonFeatures = {
 
     saveMetalCard: async function() {
         const id = document.getElementById('mc-id').value;
+        const dirs = window.dbDirectories || [];
+        const metal = dirs.find(d => String(d.id) === String(id));
+        const category = metal ? (metal.category || metal.data?.category || 'metal') : 'metal';
+        const isMetal = category === 'metal';
+
         const payload = {
             id: id,
-            diameter: parseFloat(document.getElementById('mc-dia').value),
-            weight_per_m: parseFloat(document.getElementById('mc-weight-m').value),
-            length: parseFloat(document.getElementById('mc-length').value),
-            steel_type: document.getElementById('mc-steel').value,
+            category: category,
+            name: isMetal ? undefined : document.getElementById('mc-name').value,
+            diameter: isMetal ? parseFloat(document.getElementById('mc-dia').value) : undefined,
+            weight_per_m: isMetal ? parseFloat(document.getElementById('mc-weight-m').value) : undefined,
+            length: isMetal ? parseFloat(document.getElementById('mc-length').value) : undefined,
+            steel_type: isMetal ? document.getElementById('mc-steel').value : undefined,
             supplier: document.getElementById('mc-supplier').value,
             date_arrival: document.getElementById('mc-date').value,
-            hardness_spec: document.getElementById('mc-hard-spec').value,
-            hardness_fact: document.getElementById('mc-hard-fact').value,
+            hardness_spec: isMetal ? document.getElementById('mc-hard-spec').value : undefined,
+            hardness_fact: isMetal ? document.getElementById('mc-hard-fact').value : undefined,
             price: parseFloat(document.getElementById('mc-price-ton-no-vat').value),
-            delivery_total: parseFloat(document.getElementById('mc-delivery-total').value),
+            delivery_total: isMetal ? parseFloat(document.getElementById('mc-delivery-total').value) : undefined,
             use_vat: document.getElementById('mc-tax-toggle').checked
         };
+
+        // Remove undefined fields
+        Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
         
+        const record = {
+            id: id,
+            name: isMetal ? (metal?.name || '') : payload.name,
+            category: category,
+            data: payload
+        };
+
         if (window.supabase) {
-            // Сохраняем в формате {id, data}
             const { error } = await window.supabase.from('directories').upsert({
                 id: id,
                 data: payload
             });
             
             if (!error) {
-                window.showToast('Карточка металла синхронизирована с облаком', 'success');
-                // Обновляем локальную память
+                window.showToast('Карточка успешно обновлена в Supabase', 'success');
+                
                 const idx = window.dbDirectories.findIndex(d => d.id === id);
-                if (idx !== -1) window.dbDirectories[idx] = { id, data: payload };
-                else window.dbDirectories.push({ id, data: payload });
+                if (idx !== -1) window.dbDirectories[idx] = record;
+                else window.dbDirectories.push(record);
                 
                 if (window.saveAllToLocal) window.saveAllToLocal();
+                if (typeof window.initWarehouseCatalog === 'function') window.initWarehouseCatalog();
+                if (typeof window.renderInventory === 'function') window.renderInventory();
+                
+                document.getElementById('modal-metal-card').classList.remove('active');
             } else {
                 window.showToast('Ошибка Supabase: ' + error.message, 'error');
             }
+        } else {
+            const idx = window.dbDirectories.findIndex(d => d.id === id);
+            if (idx !== -1) window.dbDirectories[idx] = record;
+            else window.dbDirectories.push(record);
+            if (window.saveAllToLocal) window.saveAllToLocal();
+            if (typeof window.initWarehouseCatalog === 'function') window.initWarehouseCatalog();
+            if (typeof window.renderInventory === 'function') window.renderInventory();
+            document.getElementById('modal-metal-card').classList.remove('active');
         }
     },
 
@@ -576,10 +707,19 @@ window.PrutkonFeatures = {
         let stepNum = 0;
         let listName = "";
 
+        let cleanKey = artOrName || '';
+        const prefixes = ['blank_', 'straight_', 'double_', 'bent_', 'rubberized_', 'hedge_', 'bent_rubberized_'];
+        for (const pref of prefixes) {
+            if (cleanKey.startsWith(pref)) {
+                cleanKey = cleanKey.substring(pref.length);
+                break;
+            }
+        }
+
         if (window.db) {
             const look = (list, sName, sNum, lName) => {
                 if (!list || !Array.isArray(list)) return;
-                const match = list.find(x => String(x.article) === String(artOrName) || String(x.name) === String(artOrName));
+                const match = list.find(x => String(x.article) === String(cleanKey) || String(x.name) === String(cleanKey) || String(x.article) === String(artOrName) || String(x.name) === String(artOrName));
                 if (match) { found = match; stepName = sName; stepNum = sNum; listName = lName; }
             };
             look(window.db.rods_blanks, "Шаг 2 (Заготовка)", 2, "rods_blanks");

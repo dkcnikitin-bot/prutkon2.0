@@ -16,11 +16,25 @@ window.catSearchQuery = "";
 window.selectedCatIds = [];
 
 // === ИНИЦИАЛИЗАЦИЯ ===
+window.populateCatalogBrandsDatalist = () => {
+    const datalist = document.getElementById('brands-datalist');
+    if (!datalist) return;
+    const brandRecords = (window.dbDirectories || []).filter(d => d.category === 'brands');
+    const brands = [...new Set(brandRecords.map(b => b.name))].sort();
+    datalist.innerHTML = brands.map(b => `<option value="${b.replace(/"/g, '&quot;')}">`).join('');
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Catalog DOM Content Loaded");
     window.renderCatalogTabs();
     window.renderCatalogTable();
     window.updateCatExcelCatSelect();
+    window.populateCatalogBrandsDatalist();
+    
+    // Refresh brand list when database updates (e.g. syncs from cloud)
+    window.addEventListener('db_updated', () => {
+        window.populateCatalogBrandsDatalist();
+    });
     
     // Перехват параметров из системного верхнего меню
     const params = new URLSearchParams(window.location.search);

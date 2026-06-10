@@ -70,7 +70,12 @@ window.dirSchemaLabels = {
     'weight_per_m2': 'Вес 1 м2 (кг)',
     'price_m2': 'Цена за 1 м2 (без НДС)',
     'price_mp': 'Цена за 1 м.п. (без НДС)',
-    'area': 'Площадь (м2)'
+    'area': 'Площадь (м2)',
+    'consolidation': 'Консолидация',
+    'folder': 'Папка в Битрикс',
+    'crops': 'Культуры',
+    'note': 'Примечание',
+    'note2': 'Примечание 2'
 };
 
 // --- 1. ИНИЦИАЛИЗАЦИЯ И ТАБЫ ---
@@ -325,12 +330,33 @@ window.renderDirSchemaFields = (data) => {
         cont.innerHTML = html;
         window.autoCalculateBelt();
     } else {
-        cont.innerHTML = schema.map(f => `
-            <div class="form-group">
-                <label>${window.dirSchemaLabels[f] || f}</label>
-                <input type="text" name="${f}" class="form-control dir-schema-input" value="${String(data[f] || '').replace(/"/g, '&quot;')}">
-            </div>
-        `).join('');
+        cont.innerHTML = schema.map(f => {
+            let listAttr = '';
+            let datalistHtml = '';
+            if (f === 'crops') {
+                const listId = `dl-dir-${f}`;
+                const defaultCrops = ['свекла', 'картофель', 'лук', 'морковь', 'капуста', 'свекла столовая', 'помидоры', 'специальный', 'тыква', 'огурцы', 'салат'];
+                datalistHtml = `<datalist id="${listId}">${defaultCrops.map(v => `<option value="${v}">`).join('')}</datalist>`;
+                listAttr = `list="${listId}"`;
+            } else if (f === 'country') {
+                const listId = `dl-dir-${f}`;
+                const defaultCountries = ['Италия', 'Беларусь', 'Россия', 'Украина', 'США', 'Австрия', 'Польша', 'Нидерланды', 'Франция', 'Германия', 'Китай', 'Бельгия', 'Великобритания', 'Канада'];
+                datalistHtml = `<datalist id="${listId}">${defaultCountries.map(v => `<option value="${v}">`).join('')}</datalist>`;
+                listAttr = `list="${listId}"`;
+            } else if (f === 'consolidation') {
+                const listId = `dl-dir-${f}`;
+                const defaultConsolidations = ['Grimme', 'Ricon (Grimme)', 'Spudnik (Grimme)', 'Miedema', 'Dewulf', 'PLOEGER-OXBO', 'PMC', 'Hesels', 'Durabelt Inc', 'Noffsinger Manufacturing'];
+                datalistHtml = `<datalist id="${listId}">${defaultConsolidations.map(v => `<option value="${v}">`).join('')}</datalist>`;
+                listAttr = `list="${listId}"`;
+            }
+            return `
+                <div class="form-group">
+                    <label>${window.dirSchemaLabels[f] || f}</label>
+                    ${datalistHtml}
+                    <input type="text" name="${f}" class="form-control dir-schema-input" value="${String(data[f] || '').replace(/"/g, '&quot;')}" ${listAttr}>
+                </div>
+            `;
+        }).join('');
     }
 };
 

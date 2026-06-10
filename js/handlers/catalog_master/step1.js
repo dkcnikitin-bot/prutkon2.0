@@ -39,7 +39,7 @@ window.CatalogStep1 = {
                         </div>
                         <div class="form-group">
                             <label style="font-size:0.6rem; color:#555; text-transform:uppercase; font-weight:900; margin-bottom:5px; display:block;">Бренд:</label>
-                            <input type="text" value="${s.brand || ''}" class="form-control" style="height:32px; font-weight:700; font-size:0.8rem; background:#000; border:1px solid #222;" oninput="window.CatalogStep1.set('brand', this.value)">
+                            <input type="text" value="${s.brand || ''}" class="form-control" style="height:32px; font-weight:700; font-size:0.8rem; background:#000; border:1px solid #222;" oninput="window.CatalogStep1.set('brand', this.value)" list="brands-datalist">
                         </div>
                         <div class="form-group">
                             <label style="font-size:0.6rem; color:#555; text-transform:uppercase; font-weight:900; margin-bottom:5px; display:block;">Модель техники:</label>

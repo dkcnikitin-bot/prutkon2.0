@@ -86,14 +86,22 @@ window.saveAllToLocal = async () => {
                     if (error) console.error("❌ Synced warehouse_inventory error:", error);
                 }
 
-                if (localStorage.getItem('prutkon_rods_registry')) {
-                    const rodsObj = JSON.parse(localStorage.getItem('prutkon_rods_registry') || '{}');
+                const syncKeys = [
+                    { key: 'rods_registry', value: JSON.parse(localStorage.getItem('prutkon_rods_registry') || '{}') },
+                    { key: 'db_products', value: window.dbProducts || [] },
+                    { key: 'db_categories', value: window.dbCategories || [] },
+                    { key: 'catalog_data', value: window.catalogData || [] },
+                    { key: 'catalog_categories', value: window.catalogCategories || [] },
+                    { key: 'trans_products', value: window.dbTransProducts || [] },
+                    { key: 'trans_categories', value: window.dbTransCategories || [] }
+                ];
+                for (const item of syncKeys) {
                     const { error } = await window.supabase.from('system_settings').upsert([{ 
-                        key: 'rods_registry', 
-                        value: rodsObj,
+                        key: item.key, 
+                        value: item.value,
                         updated_at: new Date().toISOString()
                     }]);
-                    if (error) console.error("❌ Synced system_settings (rods_registry) error:", error);
+                    if (error) console.error(`❌ Synced system_settings (${item.key}) error:`, error);
                 }
 
                 console.log("✅ Supabase: Облако синхронизировано (JSONB)");
@@ -143,14 +151,22 @@ window.saveAllToCloud = async () => {
         await window.supabase.from('orders').upsert(pack(results.orders));
         await window.supabase.from('employees').upsert(pack(results.employees));
         
-        if (localStorage.getItem('prutkon_rods_registry')) {
-            const rodsObj = JSON.parse(localStorage.getItem('prutkon_rods_registry') || '{}');
+        const syncKeys = [
+            { key: 'rods_registry', value: JSON.parse(localStorage.getItem('prutkon_rods_registry') || '{}') },
+            { key: 'db_products', value: window.dbProducts || [] },
+            { key: 'db_categories', value: window.dbCategories || [] },
+            { key: 'catalog_data', value: window.catalogData || [] },
+            { key: 'catalog_categories', value: window.catalogCategories || [] },
+            { key: 'trans_products', value: window.dbTransProducts || [] },
+            { key: 'trans_categories', value: window.dbTransCategories || [] }
+        ];
+        for (const item of syncKeys) {
             const { error } = await window.supabase.from('system_settings').upsert([{ 
-                key: 'rods_registry', 
-                value: rodsObj,
+                key: item.key, 
+                value: item.value,
                 updated_at: new Date().toISOString()
             }]);
-            if (error) console.error("❌ Synced system_settings (rods_registry) saveAllToCloud error:", error);
+            if (error) console.error(`❌ Synced system_settings (${item.key}) saveAllToCloud error:`, error);
         }
         
         console.log("✅ Все данные синхронизированы с Supabase");
@@ -301,6 +317,131 @@ window.loadFromCloud = async (force = false) => {
                 else localDirs[idx] = cd;
             });
             window.dbDirectories = localDirs;
+        }
+
+        // Автоматический импорт брендов, если их нет в справочнике
+        if (Array.isArray(window.dbDirectories)) {
+            const defaultBrands = [
+                { id: 'brand_imac', category: 'brands', name: 'IMAC', consolidation: '', country: 'Италия', website: 'https://imac-rondelli.it/en/', folder: 'папка в битрикс', crops: 'лук, картофель', note: '', note2: '', data: { id: 'brand_imac', category: 'brands', name: 'IMAC', consolidation: '', country: 'Италия', website: 'https://imac-rondelli.it/en/', folder: 'папка в битрикс', crops: 'лук, картофель', note: '', note2: '' } },
+                { id: 'brand_agroprodselmash', category: 'brands', name: 'Агропродсельмаш', consolidation: '', country: 'Беларусь', website: 'apsm.by', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_agroprodselmash', category: 'brands', name: 'Агропродсельмаш', consolidation: '', country: 'Беларусь', website: 'apsm.by', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_agrospecgrupp', category: 'brands', name: 'АгроСпецГрупп', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_agrospecgrupp', category: 'brands', name: 'АгроСпецГрупп', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_gomselmash', category: 'brands', name: 'Гомсельмаш', consolidation: '', country: 'Беларусь', website: 'https://gomselmash.by/', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_gomselmash', category: 'brands', name: 'Гомсельмаш', consolidation: '', country: 'Беларусь', website: 'https://gomselmash.by/', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_lidatehmash', category: 'brands', name: 'Лидатехмаш', consolidation: '', country: 'Беларусь', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_lidatehmash', category: 'brands', name: 'Лидатехмаш', consolidation: '', country: 'Беларусь', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_plotichnaagro', category: 'brands', name: 'Плотична Агро (Тирнополь)', consolidation: '', country: 'Украина', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_plotichnaagro', category: 'brands', name: 'Плотична Агро (Тирнополь)', consolidation: '', country: 'Украина', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_ritm', category: 'brands', name: 'Ритм', consolidation: '', country: 'Россия', website: 'https://zavodritm.nt-rt.ru/', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_ritm', category: 'brands', name: 'Ритм', consolidation: '', country: 'Россия', website: 'https://zavodritm.nt-rt.ru/', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_ruf2', category: 'brands', name: 'РУФ2', consolidation: '', country: 'Россия', website: 'https://ruf-2.ru', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_ruf2', category: 'brands', name: 'РУФ2', consolidation: '', country: 'Россия', website: 'https://ruf-2.ru', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_ryazselmash', category: 'brands', name: 'Рязсельмаш', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_ryazselmash', category: 'brands', name: 'Рязсельмаш', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_tehmash', category: 'brands', name: 'Техмаш', consolidation: '', country: 'Россия', website: 'https://tehmash-ug.ru/', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_tehmash', category: 'brands', name: 'Техмаш', consolidation: '', country: 'Россия', website: 'https://tehmash-ug.ru/', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_yurmashtrio', category: 'brands', name: 'ЮРМАШТРИО', consolidation: '', country: 'Россия', website: 'https://www.yurmashtrio.ru/contacts', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '', data: { id: 'brand_yurmashtrio', category: 'brands', name: 'ЮРМАШТРИО', consolidation: '', country: 'Россия', website: 'https://www.yurmashtrio.ru/contacts', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '' } },
+                { id: 'brand_agrifac', category: 'brands', name: 'Agrifac', consolidation: '', country: '', website: 'https://www.agrifac.com/', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_agrifac', category: 'brands', name: 'Agrifac', consolidation: '', country: '', website: 'https://www.agrifac.com/', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_agroparts', category: 'brands', name: 'Agroparts', consolidation: 'Grimme', country: '', website: 'www.agroparts.com', folder: '', crops: '', note: 'сайт по подбору запчастей', note2: '', data: { id: 'brand_agroparts', category: 'brands', name: 'Agroparts', consolidation: 'Grimme', country: '', website: 'www.agroparts.com', folder: '', crops: '', note: 'сайт по подбору запчастей', note2: '' } },
+                { id: 'brand_amac', category: 'brands', name: 'Amac', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: 'лук, картофель', note: '', note2: '', data: { id: 'brand_amac', category: 'brands', name: 'Amac', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: 'лук, картофель', note: '', note2: '' } },
+                { id: 'brand_amity', category: 'brands', name: 'Amity', consolidation: '', country: '', website: 'http://www.amitytech.com/', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_amity', category: 'brands', name: 'Amity', consolidation: '', country: '', website: 'http://www.amitytech.com/', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_asalift', category: 'brands', name: 'ASA-LIFT (Grimme)', consolidation: 'Grimme, Ricon (Grimme), Spudnik (Grimme)', country: '', website: 'https://group.grimme.com/ru/asa-lift', folder: 'папка в битрикс', crops: '', note: 'https://agronix.group/brendy/asa-lift/', note2: '', data: { id: 'brand_asalift', category: 'brands', name: 'ASA-LIFT (Grimme)', consolidation: 'Grimme, Ricon (Grimme), Spudnik (Grimme)', country: '', website: 'https://group.grimme.com/ru/asa-lift', folder: 'папка в битрикс', crops: '', note: 'https://agronix.group/brendy/asa-lift/', note2: '' } },
+                { id: 'brand_avr', category: 'brands', name: 'AVR (Колнаг)', consolidation: '', country: '', website: 'AVR Machinery | Welcome', folder: 'папка в битрикс', crops: '', note: 'https://interagrosnab.ru/zapchasti-dlya-kartofeleuborochnyh-kombaynov-avr.html', note2: '', data: { id: 'brand_avr', category: 'brands', name: 'AVR (Колнаг)', consolidation: '', country: '', website: 'AVR Machinery | Welcome', folder: 'папка в битрикс', crops: '', note: 'https://interagrosnab.ru/zapchasti-dlya-kartofeleuborochnyh-kombaynov-avr.html', note2: '' } },
+                { id: 'brand_bergmann', category: 'brands', name: 'Bergmann', consolidation: '', country: '', website: 'https://www.l-bergmann.de', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_bergmann', category: 'brands', name: 'Bergmann', consolidation: '', country: '', website: 'https://www.l-bergmann.de', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_broekema', category: 'brands', name: 'Broekema', consolidation: '', country: '', website: 'broekema.nl', folder: 'папка в битрикс', crops: '', note: 'https://grenar.ru/brands/broekema/', note2: '', data: { id: 'brand_broekema', category: 'brands', name: 'Broekema', consolidation: '', country: '', website: 'broekema.nl', folder: 'папка в битрикс', crops: '', note: 'https://grenar.ru/brands/broekema/', note2: '' } },
+                { id: 'brand_dewulf', category: 'brands', name: 'Dewulf', consolidation: 'Miedema', country: '', website: 'Начало – Dewulf', folder: 'папка в битрикс', crops: 'свекла, картофель', note: '', note2: '', data: { id: 'brand_dewulf', category: 'brands', name: 'Dewulf', consolidation: 'Miedema', country: '', website: 'Начало – Dewulf', folder: 'папка в битрикс', crops: 'свекла, картофель', note: '', note2: '' } },
+                { id: 'brand_doublel', category: 'brands', name: 'Double L', consolidation: '', country: 'США', website: 'www.doublelglobal.comm', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '', data: { id: 'brand_doublel', category: 'brands', name: 'Double L', consolidation: '', country: 'США', website: 'www.doublelglobal.comm', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '' } },
+                { id: 'brand_eznan', category: 'brands', name: 'EZNAN Эксперементальный завод', consolidation: '', country: 'Беларусь', website: 'https://eznan.by', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_eznan', category: 'brands', name: 'EZNAN Эксперементальный завод', consolidation: '', country: 'Беларусь', website: 'https://eznan.by', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_franzkleine', category: 'brands', name: 'Franz Kleine', consolidation: '', country: '', website: 'https://franz-kleine.ru/company/', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_franzkleine', category: 'brands', name: 'Franz Kleine', consolidation: '', country: '', website: 'https://franz-kleine.ru/company/', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_grimme', category: 'brands', name: 'Grimme', consolidation: 'ASA-LIFT (Grimme), Ricon (Grimme), Spudnik (Grimme)', country: '', website: '', folder: 'папка в битрикс', crops: '', note: 'https://agronix.group/brendy/grimme/', note2: 'https://products.grimme.com/ru', data: { id: 'brand_grimme', category: 'brands', name: 'Grimme', consolidation: 'ASA-LIFT (Grimme), Ricon (Grimme), Spudnik (Grimme)', country: '', website: '', folder: 'папка в битрикс', crops: '', note: 'https://agronix.group/brendy/grimme/', note2: 'https://products.grimme.com/ru' } },
+                { id: 'brand_gritan', category: 'brands', name: 'Gritan', consolidation: '', country: 'Россия', website: 'Гритан - Российский завод сельскохозяйственной техники', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_gritan', category: 'brands', name: 'Gritan', consolidation: '', country: 'Россия', website: 'Гритан - Российский завод сельскохозяйственной техники', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_guaresi', category: 'brands', name: 'Guaresi', consolidation: '', country: 'Италия', website: 'https://www.guaresi.com', folder: 'папка в битрикс', crops: 'помидоры', note: '', note2: '', data: { id: 'brand_guaresi', category: 'brands', name: 'Guaresi', consolidation: '', country: 'Италия', website: 'https://www.guaresi.com', folder: 'папка в битрикс', crops: 'помидоры', note: '', note2: '' } },
+                { id: 'brand_hesels', category: 'brands', name: 'Hesels', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_hesels', category: 'brands', name: 'Hesels', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_holmer', category: 'brands', name: 'Holmer', consolidation: '', country: '', website: 'https://www.holmer-maschinenbau.com/', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_holmer', category: 'brands', name: 'Holmer', consolidation: '', country: '', website: 'https://www.holmer-maschinenbau.com/', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_kleine', category: 'brands', name: 'Kleine', consolidation: '', country: '', website: 'Компания', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_kleine', category: 'brands', name: 'Kleine', consolidation: '', country: '', website: 'Компания', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_krukowiak', category: 'brands', name: 'Krukowiak', consolidation: '', country: 'Польша', website: 'https://www.krukowiak.com.pl/', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_krukowiak', category: 'brands', name: 'Krukowiak', consolidation: '', country: 'Польша', website: 'https://www.krukowiak.com.pl/', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_kverneland', category: 'brands', name: 'Kverneland', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_kverneland', category: 'brands', name: 'Kverneland', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_lockwood', category: 'brands', name: 'Lockwood', consolidation: '', country: 'США', website: 'https://lockwoodmfg.com/', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '', data: { id: 'brand_lockwood', category: 'brands', name: 'Lockwood', consolidation: '', country: 'США', website: 'https://lockwoodmfg.com/', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '' } },
+                { id: 'brand_logan', category: 'brands', name: 'Logan', consolidation: '', country: 'США', website: 'www.loganpotato.com', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '', data: { id: 'brand_logan', category: 'brands', name: 'Logan', consolidation: '', country: 'США', website: 'www.loganpotato.com', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '' } },
+                { id: 'brand_matrot', category: 'brands', name: 'Matrot', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_matrot', category: 'brands', name: 'Matrot', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_miedema', category: 'brands', name: 'Miedema', consolidation: 'Dewulf', country: '', website: 'www.miedema.com', folder: '', crops: 'картофель', note: '', note2: '', data: { id: 'brand_miedema', category: 'brands', name: 'Miedema', consolidation: 'Dewulf', country: '', website: 'www.miedema.com', folder: '', crops: 'картофель', note: '', note2: '' } },
+                { id: 'brand_milestone', category: 'brands', name: 'Milestone', consolidation: '', country: 'США', website: 'https://milestone-equipment.com/', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '', data: { id: 'brand_milestone', category: 'brands', name: 'Milestone', consolidation: '', country: 'США', website: 'https://milestone-equipment.com/', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '' } },
+                { id: 'brand_moty', category: 'brands', name: 'Moty', consolidation: '', country: 'Австрия', website: 'https://moty.at/ru', folder: 'папка в битрикс', crops: 'тыква', note: '', note2: '', data: { id: 'brand_moty', category: 'brands', name: 'Moty', consolidation: '', country: 'Австрия', website: 'https://moty.at/ru', folder: 'папка в битрикс', crops: 'тыква', note: '', note2: '' } },
+                { id: 'brand_moureau', category: 'brands', name: 'Moureau', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_moureau', category: 'brands', name: 'Moureau', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_mtssandei', category: 'brands', name: 'MTS S.R.L.  SANDEI', consolidation: '', country: 'Италия', website: 'www.mts-sandei.com', folder: 'папка в битрикс', crops: 'помидоры', note: '', note2: '', data: { id: 'brand_mtssandei', category: 'brands', name: 'MTS S.R.L.  SANDEI', consolidation: '', country: 'Италия', website: 'www.mts-sandei.com', folder: 'папка в битрикс', crops: 'помидоры', note: '', note2: '' } },
+                { id: 'brand_oxbo', category: 'brands', name: 'oxbo', consolidation: 'PLOEGER-OXBO, PMC', country: 'США', website: 'www.oxbo.com', folder: '', crops: 'картофель, помидоры', note: '', note2: '', data: { id: 'brand_oxbo', category: 'brands', name: 'oxbo', consolidation: 'PLOEGER-OXBO, PMC', country: 'США', website: 'www.oxbo.com', folder: '', crops: 'картофель, помидоры', note: '', note2: '' } },
+                { id: 'brand_ploegeroxbo', category: 'brands', name: 'PLOEGER-OXBO', consolidation: 'PMC, oxbo', country: '', website: '', folder: '', crops: 'помидоры, картофель', note: '', note2: '', data: { id: 'brand_ploegeroxbo', category: 'brands', name: 'PLOEGER-OXBO', consolidation: 'PMC, oxbo', country: '', website: '', folder: '', crops: 'помидоры, картофель', note: '', note2: '' } },
+                { id: 'brand_pmc', category: 'brands', name: 'PMC', consolidation: 'PLOEGER-OXBO, oxbo', country: '', website: '', folder: '', crops: 'помидоры, картофель', note: '', note2: '', data: { id: 'brand_pmc', category: 'brands', name: 'PMC', consolidation: 'PLOEGER-OXBO, oxbo', country: '', website: '', folder: '', crops: 'помидоры, картофель', note: '', note2: '' } },
+                { id: 'brand_pomac', category: 'brands', name: 'Pomac', consolidation: '', country: 'Италия', website: 'https://www.pomac.it', folder: 'папка в битрикс', crops: 'помидоры', note: '', note2: '', data: { id: 'brand_pomac', category: 'brands', name: 'Pomac', consolidation: '', country: 'Италия', website: 'https://www.pomac.it', folder: 'папка в битрикс', crops: 'помидоры', note: '', note2: '' } },
+                { id: 'brand_pyraunia', category: 'brands', name: 'Pyra Unia Group', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_pyraunia', category: 'brands', name: 'Pyra Unia Group', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_reekie', category: 'brands', name: 'Reekie', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_reekie', category: 'brands', name: 'Reekie', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_ricon', category: 'brands', name: 'Ricon (Grimme)', consolidation: 'Grimme, ASA-LIFT (Grimme), Spudnik (Grimme)', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_ricon', category: 'brands', name: 'Ricon (Grimme)', consolidation: 'Grimme, ASA-LIFT (Grimme), Spudnik (Grimme)', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_ropa', category: 'brands', name: 'Ropa', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: 'https://customer-portal.ropa-maschinenbau.de/catalog/', note2: '', data: { id: 'brand_ropa', category: 'brands', name: 'Ropa', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: 'https://customer-portal.ropa-maschinenbau.de/catalog/', note2: '' } },
+                { id: 'brand_samon', category: 'brands', name: 'Samon', consolidation: '', country: 'Нидерланды', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_samon', category: 'brands', name: 'Samon', consolidation: '', country: 'Нидерланды', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_simon', category: 'brands', name: 'SIMON', consolidation: '', country: 'Франция', website: '', folder: 'папка в битрикс', crops: 'морковь', note: 'https://newagri.online/product/navesnoj-kombajn-dlja-uborki-morkovi-simon-s3c/', note2: '', data: { id: 'brand_simon', category: 'brands', name: 'SIMON', consolidation: '', country: 'Франция', website: '', folder: 'папка в битрикс', crops: 'морковь', note: 'https://newagri.online/product/navesnoj-kombajn-dlja-uborki-morkovi-simon-s3c/', note2: '' } },
+                { id: 'brand_spudnik', category: 'brands', name: 'Spudnik (Grimme)', consolidation: 'Grimme, ASA-LIFT (Grimme), Ricon (Grimme)', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_spudnik', category: 'brands', name: 'Spudnik (Grimme)', consolidation: 'Grimme, ASA-LIFT (Grimme), Ricon (Grimme)', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_stoll', category: 'brands', name: 'Stoll', consolidation: '', country: 'Германия', website: '', folder: 'папка в битрикс', crops: 'свекла', note: '', note2: '', data: { id: 'brand_stoll', category: 'brands', name: 'Stoll', consolidation: '', country: 'Германия', website: '', folder: 'папка в битрикс', crops: 'свекла', note: '', note2: '' } },
+                { id: 'brand_swan', category: 'brands', name: 'Swan', consolidation: '', country: 'Китай', website: 'https://www.swancottonmachinery.ru/combine-harvester/tomato-harvester.html', folder: 'папка в битрикс', crops: 'помидоры', note: '', note2: '', data: { id: 'brand_swan', category: 'brands', name: 'Swan', consolidation: '', country: 'Китай', website: 'https://www.swancottonmachinery.ru/combine-harvester/tomato-harvester.html', folder: 'папка в битрикс', crops: 'помидоры', note: '', note2: '' } },
+                { id: 'brand_unia', category: 'brands', name: 'UNIA', consolidation: '', country: 'Польша', website: 'https://unia-vostok.ru/', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_unia', category: 'brands', name: 'UNIA', consolidation: '', country: 'Польша', website: 'https://unia-vostok.ru/', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_vanhoucke', category: 'brands', name: 'VANHOUCKE', consolidation: '', country: 'Бельгия', website: 'https://vanhoucke.engineering/en/', folder: 'папка в битрикс', crops: 'капуста, специальный', note: '', note2: '', data: { id: 'brand_vanhoucke', category: 'brands', name: 'VANHOUCKE', consolidation: '', country: 'Бельгия', website: 'https://vanhoucke.engineering/en/', folder: 'папка в битрикс', crops: 'капуста, специальный', note: '', note2: '' } },
+                { id: 'brand_vervaert', category: 'brands', name: 'Vervaert', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_vervaert', category: 'brands', name: 'Vervaert', consolidation: '', country: '', website: '', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_vogel', category: 'brands', name: 'Vogel', consolidation: '', country: 'США', website: 'https://vogel-engineering.com', folder: 'папка в битрикс', crops: 'морковь, огурцы', note: '', note2: '', data: { id: 'brand_vogel', category: 'brands', name: 'Vogel', consolidation: '', country: 'США', website: 'https://vogel-engineering.com', folder: 'папка в битрикс', crops: 'морковь, огурцы', note: '', note2: '' } },
+                { id: 'brand_wmkartoffeltechnik', category: 'brands', name: 'WM Kartoffeltechnik', consolidation: '', country: 'Германия', website: 'http://www.wm-kartoffeltechnik.com/', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '', data: { id: 'brand_wmkartoffeltechnik', category: 'brands', name: 'WM Kartoffeltechnik', consolidation: '', country: 'Германия', website: 'http://www.wm-kartoffeltechnik.com/', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '' } },
+                { id: 'brand_wuhlmaus', category: 'brands', name: 'Wuhlmaus', consolidation: '', country: '', website: 'https://agronetto.uz/mk/wuhlmaus.html', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_wuhlmaus', category: 'brands', name: 'Wuhlmaus', consolidation: '', country: '', website: 'https://agronetto.uz/mk/wuhlmaus.html', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_prutkovyetransportery', category: 'brands', name: 'Прутковые транспортёры', consolidation: '', country: 'Россия', website: 'https://proprutki.ru', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_prutkovyetransportery', category: 'brands', name: 'Прутковые транспортёры', consolidation: '', country: 'Россия', website: 'https://proprutki.ru', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_kdgrupp', category: 'brands', name: 'КД Групп', consolidation: '', country: 'Россия', website: 'https://kd-grupp.com', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_kdgrupp', category: 'brands', name: 'КД Групп', consolidation: '', country: 'Россия', website: 'https://kd-grupp.com', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_standen', category: 'brands', name: 'Standen', consolidation: 'Hesels', country: 'Великобритания', website: 'https://standen.co.uk', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '', data: { id: 'brand_standen', category: 'brands', name: 'Standen', consolidation: 'Hesels', country: 'Великобритания', website: 'https://standen.co.uk', folder: 'папка в битрикс', crops: 'картофель', note: '', note2: '' } },
+                { id: 'brand_durabelt', category: 'brands', name: 'Durabelt Inc', consolidation: 'Noffsinger Manufacturing', country: 'Канада', website: 'https://durabeltinc.com', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_durabelt', category: 'brands', name: 'Durabelt Inc', consolidation: 'Noffsinger Manufacturing', country: 'Канада', website: 'https://durabeltinc.com', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_noffsinger', category: 'brands', name: 'Noffsinger Manufacturing', consolidation: 'Durabelt Inc', country: 'Канада', website: 'https://noffsingermfg.com', folder: 'папка в битрикс', crops: '', note: '', note2: '', data: { id: 'brand_noffsinger', category: 'brands', name: 'Noffsinger Manufacturing', consolidation: 'Durabelt Inc', country: 'Канада', website: 'https://noffsingermfg.com', folder: 'папка в битрикс', crops: '', note: '', note2: '' } },
+                { id: 'brand_hebeihuichao', category: 'brands', name: 'Hebei Huichao Machinery Parts Co', consolidation: '', country: 'Китай', website: 'www.huichaoagparts.com', folder: 'папка в битрикс', crops: '', note: 'www.hbhuichao.com', note2: '', data: { id: 'brand_hebeihuichao', category: 'brands', name: 'Hebei Huichao Machinery Parts Co', consolidation: '', country: 'Китай', website: 'www.huichaoagparts.com', folder: 'папка в битрикс', crops: '', note: 'www.hbhuichao.com', note2: '' } },
+                { id: 'brand_weremczuk', category: 'brands', name: 'Weremczuk FMR', consolidation: '', country: 'Польша', website: 'https://weremczukagro.com', folder: 'папка в битрикс', crops: 'морковь', note: '', note2: '', data: { id: 'brand_weremczuk', category: 'brands', name: 'Weremczuk FMR', consolidation: '', country: 'Польша', website: 'https://weremczukagro.com', folder: 'папка в битрикс', crops: 'морковь', note: '', note2: '' } },
+                { id: 'brand_corima', category: 'brands', name: 'Corima', consolidation: '', country: 'Италия', website: '', folder: 'папка в битрикс', crops: 'помидоры', note: '', note2: '', data: { id: 'brand_corima', category: 'brands', name: 'Corima', consolidation: '', country: 'Италия', website: '', folder: 'папка в битрикс', crops: 'помидоры', note: '', note2: '' } },
+                { id: 'brand_agrooborudovanie', category: 'brands', name: 'Агрооборудование ООО', consolidation: '', country: 'Беларусь', website: 'https://aeq.by', folder: 'папка в битрикс', crops: 'свекла', note: '', note2: '', data: { id: 'brand_agrooborudovanie', category: 'brands', name: 'Агрооборудование ООО', consolidation: '', country: 'Беларусь', website: 'https://aeq.by', folder: 'папка в битрикс', crops: 'свекла', note: '', note2: '' } }
+            ];
+            let changed = false;
+            defaultBrands.forEach(b => {
+                if (!window.dbDirectories.some(d => d.category === 'brands' && String(d.name).toLowerCase() === String(b.name).toLowerCase())) {
+                    window.dbDirectories.push(b);
+                    changed = true;
+                    if (window.supabase) {
+                        window.supabase.from('directories').upsert([{ id: b.id, data: b.data }]).then(({error}) => {
+                            if (error) console.error("Error populating brand:", b.name, error.message);
+                        });
+                    }
+                }
+            });
+            if (changed) {
+                localStorage.setItem('prutkon_directories', JSON.stringify(window.dbDirectories));
+            }
+        }
+
+        // 3.8. Первоначальная загрузка системных настроек из system_settings
+        const { data: settingsData } = await window.supabase.from('system_settings').select('*');
+        if (settingsData) {
+            settingsData.forEach(row => {
+                if (row.key === 'rods_registry' && row.value) {
+                    localStorage.setItem('prutkon_rods_registry', JSON.stringify(row.value));
+                    if (window.db) {
+                        Object.assign(window.db, row.value);
+                    }
+                }
+                if (row.key === 'db_products' && row.value) {
+                    window.dbProducts = row.value;
+                    localStorage.setItem('prutkon_products', JSON.stringify(row.value));
+                }
+                if (row.key === 'db_categories' && row.value) {
+                    window.dbCategories = row.value;
+                    localStorage.setItem('prutkon_categories', JSON.stringify(row.value));
+                }
+                if (row.key === 'catalog_data' && row.value) {
+                    window.catalogData = row.value;
+                    localStorage.setItem('prutkon_catalog_data', JSON.stringify(row.value));
+                }
+                if (row.key === 'catalog_categories' && row.value) {
+                    window.catalogCategories = row.value;
+                    localStorage.setItem('prutkon_catalog_categories', JSON.stringify(row.value));
+                }
+                if (row.key === 'trans_products' && row.value) {
+                    window.dbTransProducts = row.value;
+                    localStorage.setItem('prutkon_trans_products', JSON.stringify(row.value));
+                }
+                if (row.key === 'trans_categories' && row.value) {
+                    window.dbTransCategories = row.value;
+                    localStorage.setItem('prutkon_trans_categories', JSON.stringify(row.value));
+                }
+            });
         }
 
         // 4. Первоначальная загрузка логов склада
@@ -493,7 +634,7 @@ window.dbDirectoryCategories = window.safeParse('prutkon_dir_categories', [
     { id: 'belt_strip', name: 'Ленты-полосы', schema: ['width', 'thickness', 'length', 'price_mp', 'weight', 'vat_rate', 'invoice_num', 'delivery_date', 'supplier', 'source_blank_ref'] },
     { id: 'hardware', name: 'Скобяные изделия', schema: ['name', 'price', 'unit', 'supplier', 'invoice_num', 'delivery_date', 'description'] },
     { id: 'fasteners', name: 'Метизы и крепеж', schema: ['name', 'price', 'unit', 'supplier', 'invoice_num', 'delivery_date', 'description'] },
-    { id: 'brands', name: 'Бренды / Производители', schema: ['country', 'website', 'priority'] },
+    { id: 'brands', name: 'Бренды / Производители', schema: ['consolidation', 'country', 'website', 'folder', 'crops', 'note', 'note2'] },
     { id: 'dealers', name: 'Поставщики / Дилеры', schema: ['address', 'manager', 'contact'] }
 ]);
 
@@ -505,10 +646,65 @@ if (Array.isArray(window.dbDirectoryCategories)) {
     if (!window.dbDirectoryCategories.some(c => c.id === 'fasteners')) {
         window.dbDirectoryCategories.push({ id: 'fasteners', name: 'Метизы и крепеж', schema: ['name', 'price', 'unit', 'supplier', 'invoice_num', 'delivery_date', 'description'] });
     }
-    localStorage.setItem('prutkon_dir_categories', JSON.stringify(window.dbDirectoryCategories));
+    const brandsCat = window.dbDirectoryCategories.find(c => c.id === 'brands');
+    if (brandsCat) {
+        brandsCat.schema = ['consolidation', 'country', 'website', 'folder', 'crops', 'note', 'note2'];
+    } else {
+        window.dbDirectoryCategories.push({ id: 'brands', name: 'Бренды / Производители', schema: ['consolidation', 'country', 'website', 'folder', 'crops', 'note', 'note2'] });
+    }
+
+    const newCats = [
+        { id: 'belt_widths', name: 'Ширины ремней', schema: [] },
+        { id: 'belt_pitches', name: 'Шаги ремней', schema: [] },
+        { id: 'belt_hole_distances', name: 'Межосевые расстояния', schema: [] },
+        { id: 'rod_diameters', name: 'Диаметры прутков', schema: [] },
+        { id: 'belt_strengths', name: 'Прочность ремней', schema: [] },
+        { id: 'belt_thicknesses', name: 'Толщины ремней', schema: [] },
+        { id: 'brackets', name: 'Кронштейны', schema: [] },
+        { id: 'thread_types', name: 'Типы резьбы', schema: [] },
+        { id: 'crops', name: 'Культуры / транспортеры', schema: [] },
+        { id: 'vat_rates', name: 'Ставки НДС', schema: [] },
+        { id: 'connection_types', name: 'Типы соединения', schema: [] },
+        { id: 'machinery_types', name: 'Типы техники', schema: [] },
+        { id: 'rod_types', name: 'Типы прутков', schema: [] }
+    ];
+    let catsChanged = false;
+    newCats.forEach(nc => {
+        if (!window.dbDirectoryCategories.some(c => c.id === nc.id)) {
+            window.dbDirectoryCategories.push(nc);
+            catsChanged = true;
+        }
+    });
+    if (catsChanged) {
+        localStorage.setItem('prutkon_dir_categories', JSON.stringify(window.dbDirectoryCategories));
+    }
 }
 
 window.dbDirectories = window.safeParse('prutkon_directories', []);
+
+window.findDirectoryEntry = (id) => {
+    if (!id) return null;
+    if (!window.dbDirectories) return null;
+    
+    const idStr = String(id);
+    // 1. Try exact match
+    let entry = window.dbDirectories.find(d => String(d.id) === idStr);
+    if (entry) return entry;
+    
+    // 2. Try stripping prefixes from id
+    const cleanId = idStr.replace('belt_blank_', '').replace('belt_strip_', '').replace('belt_', '').replace('metal_', '').replace('hardware_', '').replace('fasteners_', '');
+    entry = window.dbDirectories.find(d => String(d.id) === cleanId);
+    if (entry) return entry;
+    
+    // 3. Try stripping prefixes from both target and database entry id
+    entry = window.dbDirectories.find(d => {
+        const dbIdStr = String(d.id);
+        const dbCleanId = dbIdStr.replace('belt_blank_', '').replace('belt_strip_', '').replace('belt_', '').replace('metal_', '').replace('hardware_', '').replace('fasteners_', '');
+        return dbCleanId === cleanId;
+    });
+    return entry || null;
+};
+
 if (!window.dbDirectories || window.dbDirectories.length === 0) {
     window.dbDirectories = [
         { id: 101, category: 'metal', name: '10-ОМZ', diameter: '10', weight_per_m: '0,616', length: '6000', bars_count: '850', total_len: '5100', steel_type: '60С2ХА', available: 'Нет', weight: '3,135', price: '112 167,00 ₽', sum_no_vat: '351 755,71 ₽', sum_vat: '422 141,87 ₽', price_m_no_vat: '69,09 ₽', price_m_vat: '84,30 ₽', delivery_m_no_vat: '5,73 ₽', delivery_m_vat: '6,99 ₽', total_price_m_no_vat: '74,82 ₽', total_price_m_vat: '91,29 ₽', vat_rate: '1,2', invoice_num: 'НК-00123', delivery_date: '08.02.2026', supplier: 'АО ОМЗ' },
@@ -520,6 +716,55 @@ if (!window.dbDirectories || window.dbDirectories.length === 0) {
         { id: 107, category: 'metal', name: '12-МЕТ', diameter: '12', weight_per_m: '0,888', length: '6000', steel_type: '60С2ХА', available: 'Нет', weight: '0,4', price: '161 120,00 ₽', sum_no_vat: '64 448,00 ₽', sum_vat: '77 337,60 ₽', price_m_no_vat: '143,07 ₽', price_m_vat: '171,69 ₽', delivery_m_no_vat: '16,55 ₽', delivery_m_vat: '19,86 ₽', total_price_m_no_vat: '159,62 ₽', total_price_m_vat: '191,55 ₽', vat_rate: '1,2', invoice_num: 'М-909', delivery_date: '17.02.2023', supplier: 'ПАО Ижсталь (Мечел)' },
         { id: 108, category: 'metal', name: '13-МЕТ', diameter: '13', weight_per_m: '1,04', length: '6000', steel_type: '60С2ХА', available: 'Нет', weight: '0,42', price: '161 120,00 ₽', sum_no_vat: '67 670,40 ₽', sum_vat: '81 204,48 ₽', price_m_no_vat: '167,56 ₽', price_m_vat: '201,08 ₽', delivery_m_no_vat: '19,38 ₽', delivery_m_vat: '23,25 ₽', total_price_m_no_vat: '186,94 ₽', total_price_m_vat: '224,33 ₽', vat_rate: '1,2', invoice_num: 'М-909', delivery_date: '17.02.2023', supplier: 'ПАО Ижсталь (Мечел)' }
     ];
+}
+
+// Инициализация дефолтных значений для 13 новых справочников
+const defaultCategoryValues = {
+    belt_widths: ['20', '30', '40', '45', '50', '55', '60', '65', '70', '75', '60-75'],
+    belt_pitches: ['20', '23', '28', '30', '32', '33', '34', '35', '36', '37', '38', '40', '42', '43', '44', '45', '48', '50', '55', '56', '60', '64', '65', '70', '75', '80', '175', '185'],
+    belt_hole_distances: ['20', '23', '28', '30', '32'],
+    rod_diameters: ['8', '9', '10', '11', '12', '13', '16'],
+    belt_strengths: ['800', '1000', '1200', '1600', '2000'],
+    belt_thicknesses: ['12', '17', '20', '25', '28-30'],
+    brackets: ['Штамп (плоский)', 'Литая скоба', 'Штамп. скоба', 'Штамп. петля'],
+    thread_types: ['М5', 'М6', 'М8', 'М10', 'М12'],
+    crops: [
+        'Транспортер основного просеивания (шаг 30)',
+        'Транспортер ботвы',
+        'Выгрузной транспортер',
+        'Транспортер №30',
+        'Транспортер №40',
+        'Боковой элеватор',
+        'Приемный транспортер',
+        'Сортировочный транспортер'
+    ],
+    vat_rates: ['0%', '10%', '20%', 'Без НДС'],
+    connection_types: ['Механический замок', 'Подготовлен к вулканизации', 'Вулканизация холодная', 'Вулканизация горячая', 'Открытый', 'Винтовая скрутка'],
+    machinery_types: ['ROPA', 'Grimme', 'Holmer', 'Dewulf', 'AVR'],
+    rod_types: ['Обрезиненный прямой', 'Обрезиненный гнутый', 'Стальной гнутый', 'Игольчатый V', 'Игольчатый H', 'Игольчатый I', 'Пальчиковый прямой', 'Пальчиковый с боковыми', 'Стальной трехременный', 'Стальной 4х ременный', 'Обрезиненный гнутый трехременный']
+};
+
+let directoriesChanged = false;
+for (const catId in defaultCategoryValues) {
+    const hasCategory = window.dbDirectories.some(d => d.category === catId);
+    if (!hasCategory) {
+        defaultCategoryValues[catId].forEach((val, idx) => {
+            window.dbDirectories.push({
+                id: `${catId}_default_${idx}_${Date.now()}`,
+                category: catId,
+                name: val,
+                data: {
+                    id: `${catId}_default_${idx}_${Date.now()}`,
+                    category: catId,
+                    name: val
+                }
+            });
+        });
+        directoriesChanged = true;
+    }
+}
+if (directoriesChanged) {
+    localStorage.setItem('prutkon_directories', JSON.stringify(window.dbDirectories));
 }
 
 window.orders = window.safeParse('prutkon_orders', []);
@@ -1064,8 +1309,7 @@ window.syncWarehouseToPrices = () => {
     }
 
     const findDirectoryItem = (id) => {
-        if (!window.dbDirectories) return null;
-        return window.dbDirectories.find(d => String(d.id) === String(id));
+        return window.findDirectoryEntry(id);
     };
 
     const WAREHOUSE_CATALOG_FALLBACK = {

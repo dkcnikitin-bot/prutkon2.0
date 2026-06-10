@@ -53,11 +53,12 @@ window.initWarehouseCatalog = () => {
             const d = b.data || b;
             let nameVal = d.name;
             if (!nameVal && d.strength && d.width) {
-                nameVal = `Лента ${d.width}-EP-${d.strength}/${d.cords || '3'} ${d.cover_top || '6'}/${d.cover_bottom || '2'} ${d.rubber_class || 'W'} ${d.tu || ''}`;
+                nameVal = `Лента ${d.width}-EP-${d.strength}/${d.cords || '3'} ${d.cover_top || '6'}/${d.cover_bottom || '2'} ${d.rubber_class || 'W'}`;
             }
             if (!nameVal) {
                 nameVal = `Лента ${d.width || 940}-EP-${d.strength || 1200}/${d.cords || 3}`;
             }
+            nameVal = window.stripTU(nameVal);
             const key = String(b.id).startsWith('belt_') ? b.id : `belt_${b.id}`;
             WAREHOUSE_CATALOG[key] = {
                 name: nameVal,
@@ -73,6 +74,7 @@ window.initWarehouseCatalog = () => {
             if (!nameVal) {
                 nameVal = `Лента-Заготовка ${d.width || 890}-EP-${d.strength || d.steel_type || '1200'}/${d.cords || 3}`;
             }
+            nameVal = window.stripTU(nameVal);
             const key = String(b.id).startsWith('belt_blank_') ? b.id : `belt_blank_${b.id}`;
             WAREHOUSE_CATALOG[key] = {
                 name: nameVal,
@@ -88,6 +90,7 @@ window.initWarehouseCatalog = () => {
             if (!nameVal) {
                 nameVal = `Лента-Полоса ${d.width || 22} мм (Дл ${d.length || 0} м)`;
             }
+            nameVal = window.stripTU(nameVal);
             const key = String(b.id).startsWith('belt_strip_') ? b.id : `belt_strip_${b.id}`;
             WAREHOUSE_CATALOG[key] = {
                 name: nameVal,
@@ -214,6 +217,8 @@ window.initWarehouseCatalog = () => {
 const OPERATIONS_CONFIG = {
     'in_metal': { type: 'Приход: Металл', target: 'metal', source: null, isIncoming: true },
     'in_belt': { type: 'Приход: Лента', target: 'belt', source: null, isIncoming: true },
+    'in_hardware': { type: 'Приход: Скобяные изделия', target: 'hardware', source: null, isIncoming: true },
+    'in_fasteners': { type: 'Приход: Метизы и крепеж', target: 'fasteners', source: null, isIncoming: true },
     'prod_belt_blank': { type: 'Обрезка бортов (Лента -> Лента-Заготовка)', target: 'belt_blank', source: 'belt' },
     'prod_belt_strip': { type: 'Нарезка полос (Лента-Заготовка -> Лента-Полоса)', target: 'belt_strip', source: 'belt_blank' },
     'prod_blank': { type: 'Изготовление: Заготовка', target: 'blank', source: 'metal' },
@@ -279,6 +284,16 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(checkData);
         if (!window.dbWarehouseInv) window.initWarehouse();
     }, 2000);
+
+    document.getElementById('op-target-item-select')?.addEventListener('change', () => {
+        const val = document.getElementById('op-target-item-select').value;
+        const targetLabel = document.getElementById('op-target-label');
+        if (targetLabel && val && WAREHOUSE_CATALOG[val]) {
+            let currentAv = window.parseRusFloat(window.dbWarehouseInv[val] || 0);
+            if (WAREHOUSE_CATALOG[val].unit === 'шт') currentAv = parseInt(currentAv);
+            targetLabel.innerHTML = `${WAREHOUSE_CATALOG[val].name} <span style="font-size:0.75rem; color:var(--brand-gold);">[Остаток: ${currentAv} ${WAREHOUSE_CATALOG[val].unit}]</span>`;
+        }
+    });
 });
 
 window.saveWarehouseData = async () => {
@@ -556,7 +571,16 @@ window.toggleGroup = (groupName) => {
 function renderInventoryChildRow(key, item, qty, type) {
     if (!item) return '';
     let qtyStr = window.formatWhNumber(qty, item.unit === 'шт' ? 0 : 2);
-    let clickHandler = (key.startsWith('metal_') || key === 'metal') ? `onclick="if(window.PrutkonFeatures) window.PrutkonFeatures.openMetalCard('${key}')" style="cursor:pointer;"` : '';
+    
+    let clickHandler = '';
+    if (key.startsWith('metal_') || key === 'metal' || key.startsWith('hardware_') || key.startsWith('fasteners_')) {
+        clickHandler = `onclick="if(window.PrutkonFeatures) window.PrutkonFeatures.openMetalCard('${key}')" style="cursor:pointer;"`;
+    } else if (key.startsWith('belt_') || key.startsWith('belt_blank_') || key.startsWith('belt_strip_')) {
+        clickHandler = `onclick="if(window.editBeltById) window.editBeltById('${key}')" style="cursor:pointer;"`;
+    } else if (key.startsWith('blank_') || key.startsWith('straight_') || key.startsWith('double_') || key.startsWith('bent_') || key.startsWith('rubberized_') || key.startsWith('hedge_') || key.startsWith('bent_rubberized_')) {
+        clickHandler = `onclick="if(window.PrutkonFeatures) window.PrutkonFeatures.openRodCard('${key}')" style="cursor:pointer;"`;
+    }
+
     let indentStyle = 'padding-left: 35px;';
     return `
         <tr ${clickHandler} style="background: rgba(255,255,255,0.015);">
@@ -581,7 +605,16 @@ function renderInventoryChildRow(key, item, qty, type) {
 
 function renderInventoryRow(key, item, qty) {
     let qtyStr = window.formatWhNumber(qty, item.unit === 'шт' ? 0 : 2);
-    let clickHandler = (key.startsWith('metal_') || key === 'metal') ? `onclick="if(window.PrutkonFeatures) window.PrutkonFeatures.openMetalCard('${key}')" style="cursor:pointer;"` : '';
+    
+    let clickHandler = '';
+    if (key.startsWith('metal_') || key === 'metal' || key.startsWith('hardware_') || key.startsWith('fasteners_')) {
+        clickHandler = `onclick="if(window.PrutkonFeatures) window.PrutkonFeatures.openMetalCard('${key}')" style="cursor:pointer;"`;
+    } else if (key.startsWith('belt_') || key.startsWith('belt_blank_') || key.startsWith('belt_strip_')) {
+        clickHandler = `onclick="if(window.editBeltById) window.editBeltById('${key}')" style="cursor:pointer;"`;
+    } else if (key.startsWith('blank_') || key.startsWith('straight_') || key.startsWith('double_') || key.startsWith('bent_') || key.startsWith('rubberized_') || key.startsWith('hedge_') || key.startsWith('bent_rubberized_')) {
+        clickHandler = `onclick="if(window.PrutkonFeatures) window.PrutkonFeatures.openRodCard('${key}')" style="cursor:pointer;"`;
+    }
+
     return `
         <tr ${clickHandler}>
             <td>
@@ -616,8 +649,7 @@ function renderMetrics() {
             totalMetalWeight += qty;
 
             if (key.startsWith('metal_')) {
-                const id = key.replace('metal_', '');
-                const metal = window.dbDirectories.find(d => String(d.id) === id);
+                const metal = window.findDirectoryEntry(key);
                 if (metal && metal.price) {
                     const pricePerTon = parseFloat(metal.price.replace(/[^\d,]/g, '').replace(',', '.'));
                     if (!isNaN(pricePerTon)) {
@@ -689,7 +721,10 @@ function renderLog() {
                         </div>
                     ` : ''}
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
-                        ${log.comment ? `<div style="font-size:0.75rem; color:var(--emerald-neon); background:rgba(0,255,157,0.05); padding:4px 8px; border-radius:4px;">${log.comment}</div>` : '<div></div>'}
+                        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                            ${log.comment ? `<div style="font-size:0.75rem; color:var(--emerald-neon); background:rgba(0,255,157,0.05); padding:4px 8px; border-radius:4px;">${log.comment}</div>` : ''}
+                            ${log.from_client ? `<div style="font-size:0.75rem; color:var(--brand-gold); background:rgba(255,180,0,0.08); padding:4px 8px; border-radius:4px; font-weight:bold;"><i class="fa-solid fa-handshake"></i> Давальческое сырье</div>` : ''}
+                        </div>
                         ${log.changes ? `<button class="btn btn-danger btn-sm" style="padding:2px 8px; font-size:0.7rem;" onclick="window.deleteOperation(${log.id})" title="Отменить операцию"><i class="fa-solid fa-undo"></i> Отменить</button>` : ''}
                     </div>
                 </div>
@@ -955,8 +990,7 @@ window.doBlankCalc = () => {
         return;
     }
 
-    const dirId = sourceItem.replace('belt_strip_', '').replace('metal_', '');
-    const dirEntry = window.dbDirectories.find(d => String(d.id) === String(dirId));
+    const dirEntry = window.findDirectoryEntry(sourceItem);
 
     if (sourceItem.startsWith('belt_strip_')) {
         // Belt strip cutting: unit is meters. Each rod needs (len / 1000) meters.
@@ -983,7 +1017,33 @@ window.doBlankCalc = () => {
         resultDiv.innerHTML = `Вес 1 заготовки: <strong>${blankWeight.toFixed(3)} кг</strong>. Расчетный выход: <strong>${blanksCount} шт</strong>`;
         if (qtyInput) qtyInput.value = blanksCount;
     }
+    
+    // Scrap Weight Helper update
+    const saveScrap = document.getElementById('op-save-scrap')?.checked;
+    if (saveScrap) {
+        const scrapLen = window.parseRusFloat(document.getElementById('op-scrap-len')?.value || '0');
+        const scrapQty = window.parseRusFloat(document.getElementById('op-scrap-qty')?.value || '0');
+        if (dirEntry) {
+            const weightPerM = window.parseRusFloat(dirEntry.weight_per_m || (dirEntry.data && dirEntry.data.weight_per_m) || 0);
+            if (weightPerM > 0 && scrapLen > 0 && scrapQty > 0) {
+                const calculatedScrapWeight = weightPerM * (scrapLen / 1000) * scrapQty;
+                document.getElementById('op-scrap-weight').value = calculatedScrapWeight.toFixed(2);
+            } else {
+                document.getElementById('op-scrap-weight').value = '0.00';
+            }
+        } else {
+            document.getElementById('op-scrap-weight').value = '0.00';
+        }
+    }
+
     window.updateLiveSummary();
+};
+
+window.toggleScrapFields = () => {
+    const isChecked = document.getElementById('op-save-scrap')?.checked;
+    const group = document.getElementById('scrap-inputs-group');
+    if (group) group.style.display = isChecked ? 'grid' : 'none';
+    window.doBlankCalc();
 };
 
 window.onMetalSelectChange = () => {
@@ -1001,7 +1061,7 @@ window.onMetalSelectChange = () => {
         if (document.getElementById('op-hardness-spec')) document.getElementById('op-hardness-spec').value = '';
         return;
     }
-    const metal = (window.dbDirectories || []).find(d => String(d.id) === sel.value);
+    const metal = window.findDirectoryEntry(sel.value);
     if (metal) {
         const d = metal.data || metal;
 
@@ -1371,6 +1431,101 @@ window.switchWhTab = (tabName) => {
     if (activeBtn) activeBtn.classList.add('active');
 };
 
+window.quickAddHardware = async () => {
+    const name = prompt("Введите наименование нового скобяного изделия:");
+    if (!name) return;
+    const cleanName = name.trim();
+    if (!cleanName) return;
+
+    const exists = window.dbDirectories.some(d => d.name === cleanName && d.category === 'hardware');
+    if (exists) {
+        window.showToast("Такое изделие уже существует!", "warning");
+        const found = window.dbDirectories.find(d => d.name === cleanName && d.category === 'hardware');
+        document.getElementById('op-target-item-select').value = String(found.id).startsWith('hardware_') ? found.id : `hardware_${found.id}`;
+        return;
+    }
+
+    const id = 'hardware_' + Date.now();
+    const newItem = {
+        id,
+        name: cleanName,
+        category: 'hardware',
+        data: {
+            id,
+            name: cleanName,
+            category: 'hardware',
+            created_at: new Date().toISOString()
+        }
+    };
+
+    window.dbDirectories.push(newItem);
+    if (window.supabase) {
+        try {
+            await window.supabase.from('directories').insert([{ id, data: newItem.data }]);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    localStorage.setItem('prutkon_directories', JSON.stringify(window.dbDirectories));
+    if (window.saveAllToLocalQuiet) window.saveAllToLocalQuiet();
+
+    window.updateOperationForm();
+    document.getElementById('op-target-item-select').value = id;
+    window.showToast("Изделие успешно добавлено!", "success");
+};
+
+window.quickAddFasteners = async () => {
+    const name = prompt("Введите наименование нового метиза / крепежа:");
+    if (!name) return;
+    const cleanName = name.trim();
+    if (!cleanName) return;
+
+    const exists = window.dbDirectories.some(d => d.name === cleanName && d.category === 'fasteners');
+    if (exists) {
+        window.showToast("Такой метиз уже существует!", "warning");
+        const found = window.dbDirectories.find(d => d.name === cleanName && d.category === 'fasteners');
+        document.getElementById('op-target-item-select').value = String(found.id).startsWith('fasteners_') ? found.id : `fasteners_${found.id}`;
+        return;
+    }
+
+    const id = 'fasteners_' + Date.now();
+    const newItem = {
+        id,
+        name: cleanName,
+        category: 'fasteners',
+        data: {
+            id,
+            name: cleanName,
+            category: 'fasteners',
+            created_at: new Date().toISOString()
+        }
+    };
+
+    window.dbDirectories.push(newItem);
+    if (window.supabase) {
+        try {
+            await window.supabase.from('directories').insert([{ id, data: newItem.data }]);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    localStorage.setItem('prutkon_directories', JSON.stringify(window.dbDirectories));
+    if (window.saveAllToLocalQuiet) window.saveAllToLocalQuiet();
+
+    window.updateOperationForm();
+    document.getElementById('op-target-item-select').value = id;
+    window.showToast("Метиз успешно добавлен!", "success");
+};
+
+window.quickAddTargetItem = () => {
+    const type = document.getElementById('op-type').value;
+    if (type === 'in_hardware') {
+        window.quickAddHardware();
+    } else if (type === 'in_fasteners') {
+        window.quickAddFasteners();
+    }
+};
+
 window.quickAddSupplier = async () => {
     const name = prompt("Введите имя нового контрагента / поставщика:");
     if (!name) return;
@@ -1473,7 +1628,7 @@ window.editSelectedMetal = () => {
     const sel = document.getElementById('op-metal-select');
     if (!sel || !sel.value) return;
     
-    const metal = (window.dbDirectories || []).find(d => String(d.id) === String(sel.value));
+    const metal = window.findDirectoryEntry(sel.value);
     if (!metal) return;
     
     const d = metal.data || metal;
@@ -1510,7 +1665,7 @@ window.deleteSelectedMetal = async () => {
     const sel = document.getElementById('op-metal-select');
     if (!sel || !sel.value) return;
     
-    const metal = (window.dbDirectories || []).find(d => String(d.id) === String(sel.value));
+    const metal = window.findDirectoryEntry(sel.value);
     if (!metal) return;
     
     const name = metal.name || metal.id;
@@ -1589,7 +1744,7 @@ window.onBeltSelectChange = () => {
         return;
     }
 
-    const belt = (window.dbDirectories || []).find(d => String(d.id) === sel.value);
+    const belt = window.findDirectoryEntry(sel.value);
     if (belt) {
         const d = belt.data || belt;
 
@@ -1642,7 +1797,31 @@ window.editSelectedBelt = () => {
     const sel = document.getElementById('op-belt-select');
     if (!sel || !sel.value) return;
 
-    const belt = (window.dbDirectories || []).find(d => String(d.id) === String(sel.value));
+    const belt = window.findDirectoryEntry(sel.value);
+    if (!belt) return;
+
+    const d = belt.data || belt;
+
+    document.getElementById('qab-belt-id').value = belt.id;
+    document.getElementById('qab-title').innerHTML = `<i class="fa-solid fa-pen-to-square text-brand-gold"></i> Редактирование ленты в справочнике`;
+    document.getElementById('qab-submit-btn').innerText = 'Сохранить изменения';
+
+    document.getElementById('qab-width').value = d.width || '';
+    document.getElementById('qab-strength').value = d.strength || '';
+    document.getElementById('qab-cords').value = d.cords || '';
+    document.getElementById('qab-cover-top').value = d.cover_top || '';
+    document.getElementById('qab-cover-bottom').value = d.cover_bottom || '';
+    document.getElementById('qab-class').value = d.rubber_class || d.class || '';
+    document.getElementById('qab-tu').value = d.tu || '';
+    document.getElementById('qab-thickness').value = d.thickness || '';
+    document.getElementById('qab-supplier').value = d.supplier || '';
+    document.getElementById('qab-price-m2').value = d.price_m2 || d.price || '';
+
+    document.getElementById('modal-quick-add-belt').classList.add('active');
+};
+
+window.editBeltById = (id) => {
+    const belt = window.findDirectoryEntry(id);
     if (!belt) return;
 
     const d = belt.data || belt;
@@ -1669,7 +1848,7 @@ window.deleteSelectedBelt = async () => {
     const sel = document.getElementById('op-belt-select');
     if (!sel || !sel.value) return;
 
-    const belt = (window.dbDirectories || []).find(d => String(d.id) === String(sel.value));
+    const belt = window.findDirectoryEntry(sel.value);
     if (!belt) return;
 
     const name = belt.name || belt.id;
@@ -1710,7 +1889,7 @@ window.submitQuickAddBelt = async (e) => {
     if (!width) { window.showToast("Укажите ширину ленты!", "error"); return; }
     if (!strength) { window.showToast("Укажите прочность ленты!", "error"); return; }
 
-    const formattedName = `Лента ${width}-EP-${strength}/${cords} ${coverTop}/${coverBottom} ${classVal} ${tuVal}`;
+    const formattedName = `Лента ${width}-EP-${strength}/${cords} ${coverTop}/${coverBottom} ${classVal}`;
 
     const isEdit = beltId !== "";
     const activeId = isEdit ? beltId : 'belt_' + Date.now();
@@ -1769,6 +1948,10 @@ window.submitQuickAddBelt = async (e) => {
     const selBox = document.getElementById('op-belt-select');
     if (selBox) selBox.value = activeId;
     window.onBeltSelectChange();
+    
+    if (typeof window.initWarehouseCatalog === 'function') window.initWarehouseCatalog();
+    if (typeof renderInventory === 'function') renderInventory();
+    
     window.closeQuickAddBeltModal();
     window.showToast("Запись успешно сохранена в справочнике!", "success");
 };
@@ -1882,6 +2065,9 @@ window.submitQuickAddMetal = async (e) => {
         window.onMetalSelectChange();
     }
     
+    if (typeof window.initWarehouseCatalog === 'function') window.initWarehouseCatalog();
+    if (typeof renderInventory === 'function') renderInventory();
+    
     window.closeQuickAddMetalModal();
     window.showToast(isEdit ? "Запись в справочнике успешно обновлена!" : "Новый металл успешно добавлен в справочник!", "success");
 };
@@ -1930,10 +2116,12 @@ window.updateOperationForm = () => {
     const targetLabel = document.getElementById('op-target-label');
 
     const targetItem = config.isWriteoff ? document.getElementById('op-writeoff-item').value : config.target;
-    if (targetItem && targetItem !== 'metal') {
+    if (type === 'in_hardware' || type === 'in_fasteners') {
+        if (targetLabel) targetLabel.innerHTML = type === 'in_hardware' ? 'Скобяные изделия' : 'Метизы и крепеж';
+    } else if (targetItem && targetItem !== 'metal') {
         let currentAv = window.parseRusFloat(window.dbWarehouseInv[targetItem] || 0);
-        if (WAREHOUSE_CATALOG[targetItem].unit === 'шт') currentAv = parseInt(currentAv);
-        if (targetLabel) targetLabel.innerHTML = `${WAREHOUSE_CATALOG[targetItem].name} <span style="font-size:0.75rem; color:var(--brand-gold);">[Остаток: ${currentAv} ${WAREHOUSE_CATALOG[targetItem].unit}]</span>`;
+        if (WAREHOUSE_CATALOG[targetItem] && WAREHOUSE_CATALOG[targetItem].unit === 'шт') currentAv = parseInt(currentAv);
+        if (targetLabel && WAREHOUSE_CATALOG[targetItem]) targetLabel.innerHTML = `${WAREHOUSE_CATALOG[targetItem].name} <span style="font-size:0.75rem; color:var(--brand-gold);">[Остаток: ${currentAv} ${WAREHOUSE_CATALOG[targetItem].unit}]</span>`;
     } else {
         if (targetLabel) targetLabel.innerHTML = `Металл`;
     }
@@ -1954,6 +2142,7 @@ window.updateOperationForm = () => {
                 for (let key in WAREHOUSE_CATALOG) {
                     if (key.startsWith('metal_')) {
                         const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
+                        if (av <= 0) continue; // Filter out zero/negative balance!
                         const dia = getCatalogItemDia(key);
                         const label = dia ? `Диаметр: Ø${dia} мм` : 'Без диаметра';
                         if (!groups[label]) groups[label] = [];
@@ -1976,16 +2165,32 @@ window.updateOperationForm = () => {
                 for (let key in WAREHOUSE_CATALOG) {
                     if (key.startsWith('belt_') && !key.startsWith('belt_blank') && !key.startsWith('belt_strip')) {
                         const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
+                        if (av <= 0) continue; // Filter out zero/negative balance!
                         const width = getCatalogItemWidth(key);
                         const label = width ? `Ширина: ${width} мм` : 'Ленты';
                         if (!groups[label]) groups[label] = [];
-                        groups[label].push({ key, name: WAREHOUSE_CATALOG[key].name, av });
+                        
+                        // Look up extra parameters (thickness, strength)
+                        const dirEntry = window.findDirectoryEntry(key);
+                        const d = dirEntry?.data || dirEntry || {};
+                        const thickness = d.thickness || '';
+                        const strength = d.strength || d.steel_type || '';
+                        
+                        groups[label].push({ key, name: WAREHOUSE_CATALOG[key].name, av, thickness, strength, width });
                     }
                 }
                 let beltOpts = '<option value="">-- Выберите ленту --</option>';
                 for (let label in groups) {
                     beltOpts += `<optgroup label="${label}">`;
-                    beltOpts += groups[label].map(b => `<option value="${b.key}">${window.stripTU(b.name)} (Остаток: ${b.av} м.п.)</option>`).join('');
+                    beltOpts += groups[label].map(b => {
+                        let paramParts = [];
+                        if (b.width) paramParts.push(`${b.width} мм`);
+                        if (b.thickness) paramParts.push(`${b.thickness} мм`);
+                        if (b.strength) paramParts.push(`${b.strength} EP`);
+                        const paramsStr = paramParts.join(' | ');
+                        const displayParams = paramsStr ? ` [${paramsStr}]` : '';
+                        return `<option value="${b.key}">${window.stripTU(b.name)}${displayParams} (Остаток: ${b.av} м.п.)</option>`;
+                    }).join('');
                     beltOpts += `</optgroup>`;
                 }
                 sourceItemSelect.innerHTML = beltOpts;
@@ -1996,29 +2201,75 @@ window.updateOperationForm = () => {
                 for (let key in WAREHOUSE_CATALOG) {
                     if (key.startsWith('belt_blank_')) {
                         const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
+                        if (av <= 0) continue; // Filter out zero/negative balance!
                         const width = getCatalogItemWidth(key);
                         const label = width ? `Ширина: ${width} мм` : 'Заготовки';
                         if (!groups[label]) groups[label] = [];
-                        groups[label].push({ key, name: WAREHOUSE_CATALOG[key].name, av });
+                        
+                        // Look up extra parameters (thickness, strength)
+                        const dirEntry = window.findDirectoryEntry(key);
+                        const d = dirEntry?.data || dirEntry || {};
+                        const thickness = d.thickness || '';
+                        const strength = d.strength || d.steel_type || '';
+                        
+                        groups[label].push({ key, name: WAREHOUSE_CATALOG[key].name, av, thickness, strength, width });
                     }
                 }
                 let blankOpts = '<option value="">-- Выберите ленту-заготовку --</option>';
                 for (let label in groups) {
                     blankOpts += `<optgroup label="${label}">`;
-                    blankOpts += groups[label].map(b => `<option value="${b.key}">${window.stripTU(b.name)} (Остаток: ${b.av} м.п.)</option>`).join('');
+                    blankOpts += groups[label].map(b => {
+                        let paramParts = [];
+                        if (b.width) paramParts.push(`${b.width} мм`);
+                        if (b.thickness) paramParts.push(`${b.thickness} мм`);
+                        if (b.strength) paramParts.push(`${b.strength} EP`);
+                        const paramsStr = paramParts.join(' | ');
+                        const displayParams = paramsStr ? ` [${paramsStr}]` : '';
+                        return `<option value="${b.key}">${window.stripTU(b.name)}${displayParams} (Остаток: ${b.av} м.п.)</option>`;
+                    }).join('');
                     blankOpts += `</optgroup>`;
                 }
                 sourceItemSelect.innerHTML = blankOpts;
                 sourceLabel.innerText = 'Лента-Заготовка (м.п.)';
             } else {
                 sourceSelectWrapper.style.display = 'none';
-                sourceLabel.innerText = WAREHOUSE_CATALOG[config.source].name + ' (' + WAREHOUSE_CATALOG[config.source].unit + ')';
+                sourceLabel.innerText = WAREHOUSE_CATALOG[config.source] ? WAREHOUSE_CATALOG[config.source].name + ' (' + WAREHOUSE_CATALOG[config.source].unit + ')' : config.source;
             }
         }
         window.updateSourceHint();
     } else {
         sourceGroup.style.display = 'none';
         document.getElementById('op-blank-source-type-wrapper').style.display = 'none';
+    }
+
+    // Target selector for hardware/fasteners receipt
+    const targetSelectWrapper = document.getElementById('op-target-select-wrapper');
+    const targetItemSelect = document.getElementById('op-target-item-select');
+    
+    if (targetSelectWrapper) {
+        if (type === 'in_hardware' || type === 'in_fasteners') {
+            targetSelectWrapper.style.display = 'block';
+            const cat = type === 'in_hardware' ? 'hardware' : 'fasteners';
+            const items = window.dbDirectories.filter(d => d.category === cat || (d.data && d.data.category === cat));
+            
+            let opts = `<option value="">-- Выберите ${cat === 'hardware' ? 'изделие' : 'метиз'} --</option>`;
+            opts += items.map(item => {
+                const d = item.data || item;
+                const key = String(item.id).startsWith(cat + '_') ? item.id : `${cat}_${item.id}`;
+                return `<option value="${key}">${d.name || 'Без названия'}</option>`;
+            }).join('');
+            
+            targetItemSelect.innerHTML = opts;
+            
+            if (document.getElementById('op-qty-group')) {
+                document.getElementById('op-qty-group').querySelector('label').innerText = 'Количество (шт)';
+            }
+        } else {
+            targetSelectWrapper.style.display = 'none';
+            if (document.getElementById('op-qty-group')) {
+                document.getElementById('op-qty-group').querySelector('label').innerText = config.target === 'metal' ? 'Количество / Вес (кг)' : (WAREHOUSE_CATALOG[config.target]?.unit === 'м' || WAREHOUSE_CATALOG[config.target]?.unit === 'м.п.' ? 'Количество (м.п.)' : 'Количество (шт)');
+            }
+        }
     }
 
     // Dynamic tabs setup (1C vs standard)
@@ -2065,7 +2316,7 @@ window.updateOperationForm = () => {
     if (document.getElementById('prod-belt-strip-fields')) document.getElementById('prod-belt-strip-fields').style.display = (type === 'prod_belt_strip') ? 'block' : 'none';
 
     const qtyGroup = document.getElementById('op-qty-group');
-    if (qtyGroup) qtyGroup.style.display = (type === 'in_belt' || config.isWriteoff) ? 'none' : 'block';
+    if (qtyGroup) qtyGroup.style.display = (type === 'in_belt') ? 'none' : 'block';
 
     const qtyInput = document.getElementById('op-qty');
     if (qtyInput) {
@@ -2166,13 +2417,85 @@ window.updateSourceHint = () => {
     }
 };
 
-window.updateWriteoffHint = () => {
-    const wItem = document.getElementById('op-writeoff-item').value;
+window.updateWriteoffSpecificList = () => {
+    const category = document.getElementById('op-writeoff-item').value;
+    const specWrapper = document.getElementById('op-writeoff-specific-wrapper');
+    const specSelect = document.getElementById('op-writeoff-specific-item');
+    if (!category || !specWrapper || !specSelect) return;
+
+    const matchingItems = [];
+    for (let key in WAREHOUSE_CATALOG) {
+        const item = WAREHOUSE_CATALOG[key];
+        let matches = false;
+        
+        if (category === 'metal') {
+            matches = key.startsWith('metal_');
+        } else if (category === 'belt') {
+            matches = key.startsWith('belt_') && !key.startsWith('belt_blank_') && !key.startsWith('belt_strip_');
+        } else if (category === 'hardware') {
+            matches = key.startsWith('hardware_') || item.parentGroup === 'hardware';
+        } else if (category === 'fasteners') {
+            matches = key.startsWith('fasteners_') || item.parentGroup === 'fasteners';
+        } else if (category === 'blank') {
+            matches = key.startsWith('blank_') || item.parentGroup === 'blank';
+        } else if (category === 'straight') {
+            matches = key.startsWith('straight_') || item.parentGroup === 'straight';
+        } else if (category === 'double') {
+            matches = key.startsWith('double_') || item.parentGroup === 'double';
+        } else if (category === 'bent') {
+            matches = key.startsWith('bent_') || item.parentGroup === 'bent';
+        } else if (category === 'rubberized') {
+            matches = key.startsWith('rubberized_') || item.parentGroup === 'rubberized' || key.startsWith('rubber_');
+        } else if (category === 'hedge') {
+            matches = key.startsWith('hedge_') || item.parentGroup === 'hedge';
+        }
+        
+        if (matches) {
+            const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
+            if (av > 0) {
+                matchingItems.push({ key, name: item.name, av, unit: item.unit });
+            }
+        }
+    }
+
+    if (matchingItems.length > 0) {
+        specWrapper.style.display = 'block';
+        let opts = '<option value="">-- Выберите конкретную позицию --</option>';
+        opts += matchingItems.map(item => `<option value="${item.key}">${window.stripTU(item.name)} (Доступно: ${item.unit === 'шт' ? parseInt(item.av) : parseFloat(item.av).toFixed(2)} ${item.unit})</option>`).join('');
+        specSelect.innerHTML = opts;
+    } else {
+        specWrapper.style.display = 'none';
+        specSelect.innerHTML = '<option value="">-- Нет доступных позиций с остатком --</option>';
+    }
+    
+    window.updateWriteoffSpecificHint();
+};
+
+window.updateWriteoffSpecificHint = () => {
+    const category = document.getElementById('op-writeoff-item').value;
+    const specSelect = document.getElementById('op-writeoff-specific-item');
     const wHint = document.getElementById('op-writeoff-hint');
-    if (!wHint || !wItem) return;
-    let av = window.dbWarehouseInv[wItem] || 0;
-    wHint.innerText = `Доступно для списания: ${WAREHOUSE_CATALOG[wItem].unit === 'шт' ? parseInt(av) : parseFloat(av).toFixed(2)} ${WAREHOUSE_CATALOG[wItem].unit}`;
-    if (document.getElementById('op-target-label')) document.getElementById('op-target-label').innerText = WAREHOUSE_CATALOG[wItem].name;
+    if (!wHint) return;
+
+    let selectedKey = category;
+    if (specSelect && specSelect.value) {
+        selectedKey = specSelect.value;
+    }
+
+    const item = WAREHOUSE_CATALOG[selectedKey] || { name: category, unit: 'ед' };
+    let av = window.dbWarehouseInv[selectedKey] || 0;
+    
+    wHint.innerText = `Доступно для списания: ${item.unit === 'шт' ? parseInt(av) : parseFloat(av).toFixed(2)} ${item.unit}`;
+    if (document.getElementById('op-target-label')) {
+        document.getElementById('op-target-label').innerText = item.name;
+    }
+    if (document.getElementById('op-qty-group')) {
+        document.getElementById('op-qty-group').querySelector('label').innerText = `Количество списания (${item.unit})`;
+    }
+};
+
+window.updateWriteoffHint = () => {
+    window.updateWriteoffSpecificList();
 };
 
 window.currentBatch = [];
@@ -2197,7 +2520,7 @@ window.addToBatch = () => {
     if (qty <= 0) { window.showToast('Укажите вес (кг) в спецификации!', 'error'); return; }
     if (priceKg <= 0) { window.showToast('Укажите цену закупки!', 'error'); return; }
 
-    const metalObj = (window.dbDirectories || []).find(d => String(d.id) === String(metalId));
+    const metalObj = window.findDirectoryEntry(metalId);
     const d = metalObj?.data || metalObj || {};
     const selText = metalSel && metalSel.selectedIndex >= 0 ? metalSel.options[metalSel.selectedIndex].text : '';
 
@@ -2621,6 +2944,8 @@ window.saveOperation = async () => {
     const distMethod = document.getElementById('op-delivery-dist-method')?.value || 'weight';
     const vatRate = window.parseRusFloat(document.getElementById('op-vat-rate')?.value || '1.22');
 
+    const fromClient = document.getElementById('op-from-client')?.checked || false;
+
     let itemsToProcess = [];
 
     // Dedicated custom production handler for Edge Trimming and Slicing operations
@@ -2639,8 +2964,7 @@ window.saveOperation = async () => {
             return;
         }
 
-        const sourceDirId = sourceItem.replace('belt_blank_', '').replace('belt_', '');
-        const sourceDir = window.dbDirectories.find(d => String(d.id) === String(sourceDirId));
+        const sourceDir = window.findDirectoryEntry(sourceItem);
         if (!sourceDir) { window.showToast('Исходная номенклатура не найдена в справочнике!', 'error'); return; }
 
         const sourceD = sourceDir.data || sourceDir;
@@ -2656,7 +2980,7 @@ window.saveOperation = async () => {
             const sourcePriceMp = parseFloat(sourceD.price_m_no_vat || sourceD.price_mp || sourceD.price || 0);
 
             targetId = 'belt_blank_' + Date.now();
-            targetName = `Лента-Заготовка ${targetWidth}-EP-${sourceD.strength || sourceD.steel_type || '1200'}/${sourceD.cords || 3} ${sourceD.cover_top || 6}/${sourceD.cover_bottom || 2} ${sourceD.rubber_class || 'W'} ${sourceD.tu || ''}`;
+            targetName = `Лента-Заготовка ${targetWidth}-EP-${sourceD.strength || sourceD.steel_type || '1200'}/${sourceD.cords || 3} ${sourceD.cover_top || 6}/${sourceD.cover_bottom || 2} ${sourceD.rubber_class || 'W'}`;
 
             cardData = {
                 id: targetId,
@@ -2686,7 +3010,8 @@ window.saveOperation = async () => {
                 source_belt_ref: sourceItem,
                 invoice_num: invoiceNum || docNumber,
                 invoice_date: invoiceDate,
-                responsible: responsible
+                responsible: responsible,
+                from_client: fromClient
             };
         } else {
             const stripWidth = parseFloat(document.getElementById('op-belt-strip-width').value || '22');
@@ -2703,6 +3028,14 @@ window.saveOperation = async () => {
                 width: stripWidth,
                 diameter: stripWidth, // store in diameter for DB schema safety
                 thickness: sourceD.thickness || '',
+                strength: sourceD.strength || sourceD.steel_type || '1200',
+                steel_type: sourceD.strength || sourceD.steel_type || '1200',
+                cords: sourceD.cords || 3,
+                cover_top: sourceD.cover_top || 6,
+                cover_bottom: sourceD.cover_bottom || 2,
+                rubber_class: sourceD.rubber_class || 'W',
+                weight_per_m2: sourceD.weight_per_m2 || '',
+                tu: sourceD.tu || '',
                 length: qty,
                 price_mp: priceMp,
                 price: priceMp, // standard price property
@@ -2714,7 +3047,8 @@ window.saveOperation = async () => {
                 source_blank_ref: sourceItem,
                 invoice_num: invoiceNum || docNumber,
                 invoice_date: invoiceDate,
-                responsible: responsible
+                responsible: responsible,
+                from_client: fromClient
             };
         }
 
@@ -2754,7 +3088,8 @@ window.saveOperation = async () => {
             comment: `Склад: ${destination} | Отв: ${responsible} | Исходная партия: ${sourceD.invoice_num || '—'} | ${comment}`,
             changes: changesPayload,
             user: responsible,
-            attachments: window.opUploadedAttachments || []
+            attachments: window.opUploadedAttachments || [],
+            from_client: fromClient
         });
 
         // 6. Cloud sync directory entry
@@ -2774,31 +3109,58 @@ window.saveOperation = async () => {
         return;
     }
 
+    let targetId = '';
+    let isFlatIncomingHardwareFastener = (type === 'in_hardware' || type === 'in_fasteners');
+    
+    if (isFlatIncomingHardwareFastener) {
+        targetId = document.getElementById('op-target-item-select').value;
+        if (!targetId) { window.showToast('Выберите номенклатуру!', 'error'); return; }
+    }
+
     if ((type === 'in_metal' || type === 'in_belt') && window.currentBatch.length > 0) {
         itemsToProcess = [...window.currentBatch];
     } else {
         const qty = window.parseRusFloat(document.getElementById('op-qty')?.value);
         if (qty <= 0) { window.showToast('Укажите количество!', 'error'); return; }
 
-        const metalSel = document.getElementById('op-metal-select');
-        const metalId = config.isWriteoff ? document.getElementById('op-writeoff-item').value : (metalSel?.value || config.target);
-        const metalObj = (window.dbDirectories || []).find(d => String(d.id) === String(metalId));
+        let itemId = targetId;
+        if (config.isWriteoff) {
+            const specVal = document.getElementById('op-writeoff-specific-item')?.value;
+            itemId = specVal || document.getElementById('op-writeoff-item').value;
+        } else {
+            itemId = itemId || (document.getElementById('op-metal-select')?.value || config.target);
+        }
+        const metalObj = window.findDirectoryEntry(itemId);
         const d = metalObj?.data || metalObj || {};
-        const selText = metalSel && metalSel.selectedIndex >= 0 ? metalSel.options[metalSel.selectedIndex].text : '';
         
-        const steelType = document.getElementById('op-steel-type')?.value || d.steel_type || selText || 'Металл';
-        const diameterVal = window.parseRusFloat(document.getElementById('op-diameter')?.value || d.diameter || 0);
-        const wpmVal = window.parseRusFloat(document.getElementById('op-weight-per-m')?.value || d.weight_per_m || 0);
-        const barsVal = parseInt(document.getElementById('op-bars-count')?.value || d.bars_count || 0);
-        const barLenVal = window.parseRusFloat(document.getElementById('op-bar-len')?.value || d.bar_len || 6000);
-        const hSpecVal = document.getElementById('op-hardness-spec')?.value || d.hardness_spec || '';
-        const hFactVal = document.getElementById('op-hardness-fact')?.value || '';
-
-        const formattedLen = new Intl.NumberFormat('ru-RU').format(barLenVal || 6000).replace(/\u00A0/g, ' ');
-        const calculatedName = (steelType && diameterVal) ? `Круг Х/Т ${diameterVal}; ${steelType} (МД ${formattedLen})` : (d.name || selText || metalId);
-
+        let calculatedName = d.name || WAREHOUSE_CATALOG[itemId]?.name || itemId;
+        let steelType = '';
+        let diameterVal = 0;
+        let wpmVal = 0;
+        let barsVal = 0;
+        let barLenVal = 0;
+        let hSpecVal = '';
+        let hFactVal = '';
+        
+        if (!isFlatIncomingHardwareFastener) {
+            const metalSel = document.getElementById('op-metal-select');
+            const selText = metalSel && metalSel.selectedIndex >= 0 ? metalSel.options[metalSel.selectedIndex].text : '';
+            steelType = document.getElementById('op-steel-type')?.value || d.steel_type || selText || 'Металл';
+            diameterVal = window.parseRusFloat(document.getElementById('op-diameter')?.value || d.diameter || 0);
+            wpmVal = window.parseRusFloat(document.getElementById('op-weight-per-m')?.value || d.weight_per_m || 0);
+            barsVal = parseInt(document.getElementById('op-bars-count')?.value || d.bars_count || 0);
+            barLenVal = window.parseRusFloat(document.getElementById('op-bar-len')?.value || d.bar_len || 6000);
+            hSpecVal = document.getElementById('op-hardness-spec')?.value || d.hardness_spec || '';
+            hFactVal = document.getElementById('op-hardness-fact')?.value || '';
+            
+            const formattedLen = new Intl.NumberFormat('ru-RU').format(barLenVal || 6000).replace(/\u00A0/g, ' ');
+            if (steelType && diameterVal) {
+                calculatedName = `Круг Х/Т ${diameterVal}; ${steelType} (МД ${formattedLen})`;
+            }
+        }
+        
         itemsToProcess.push({
-            id: metalId,
+            id: itemId,
             qty: qty,
             priceKg: window.parseRusFloat(document.getElementById('op-unit-price')?.value || 0),
             priceTonne: window.parseRusFloat(document.getElementById('op-price-tonne')?.value || 0),
@@ -2821,12 +3183,30 @@ window.saveOperation = async () => {
 
     for (const item of itemsToProcess) {
         let fullId = item.id;
-        const itemCategory = item.isBelt ? 'belt' : 'metal';
+        let itemCategory = item.isBelt ? 'belt' : 'metal';
+        if (type === 'in_hardware') itemCategory = 'hardware';
+        if (type === 'in_fasteners') itemCategory = 'fasteners';
+        if (type === 'write_off') {
+            if (String(fullId).startsWith('belt_')) itemCategory = 'belt';
+            else if (String(fullId).startsWith('hardware_')) itemCategory = 'hardware';
+            else if (String(fullId).startsWith('fasteners_')) itemCategory = 'fasteners';
+            else if (String(fullId).startsWith('blank_')) itemCategory = 'blank';
+            else if (String(fullId).startsWith('straight_')) itemCategory = 'straight';
+            else if (String(fullId).startsWith('double_')) itemCategory = 'double';
+            else if (String(fullId).startsWith('bent_')) itemCategory = 'bent';
+            else if (String(fullId).startsWith('rubberized_') || String(fullId).startsWith('rubber_')) itemCategory = 'rubberized';
+            else if (String(fullId).startsWith('hedge_')) itemCategory = 'hedge';
+            else itemCategory = 'metal';
+        }
 
         if (itemCategory === 'metal') {
             fullId = String(fullId).startsWith('metal_') ? fullId : `metal_${fullId}`;
-        } else {
+        } else if (itemCategory === 'belt') {
             fullId = String(fullId).startsWith('belt_') ? fullId : `belt_${fullId}`;
+        } else if (itemCategory === 'hardware') {
+            fullId = String(fullId).startsWith('hardware_') ? fullId : `hardware_${fullId}`;
+        } else if (itemCategory === 'fasteners') {
+            fullId = String(fullId).startsWith('fasteners_') ? fullId : `fasteners_${fullId}`;
         }
 
         const Q = item.vatRate || vatRate;
@@ -2898,8 +3278,32 @@ window.saveOperation = async () => {
             contract_num: contract,
             invoice_num: invoiceNum,
             invoice_date: invoiceDate,
-            responsible: responsible
+            responsible: responsible,
+            from_client: fromClient
         };
+
+        if (item.isBelt) {
+            cardData.width = item.width;
+            cardData.strength = item.strength;
+            cardData.cords = item.cords;
+            cardData.cover_top = item.cover_top;
+            cardData.cover_bottom = item.cover_bottom;
+            cardData.rubber_class = item.rubber_class;
+            cardData.tu = item.tu;
+            cardData.thickness = item.thickness;
+            cardData.price_m2 = item.priceTonne;
+            cardData.price_mp = item.priceKg;
+        }
+
+        // Initialize catalog if not present
+        if (!WAREHOUSE_CATALOG[fullId]) {
+            WAREHOUSE_CATALOG[fullId] = {
+                name: item.name,
+                unit: itemCategory === 'hardware' || itemCategory === 'fasteners' ? 'шт' : 'кг',
+                icon: itemCategory === 'hardware' ? 'fa-toolbox' : 'fa-screwdriver-wrench',
+                parentGroup: itemCategory
+            };
+        }
 
         // Handle source consumption for production operations
         let sourceItem = null;
@@ -2955,7 +3359,8 @@ window.saveOperation = async () => {
             comment: logComment,
             changes: changesPayload,
             user: responsible,
-            attachments: window.opUploadedAttachments || []
+            attachments: window.opUploadedAttachments || [],
+            from_client: fromClient
         });
 
         if (window.supabase && (type === 'in_metal' || type === 'in_belt')) {
@@ -2998,7 +3403,8 @@ window.saveOperation = async () => {
                 certificate: item.cert || '',
                 date: docDate,
                 isBelt: item.isBelt || false,
-                created_at: new Date().toISOString()
+                created_at: new Date().toISOString(),
+                from_client: fromClient
             };
             if (!window.dbMetalBatches) window.dbMetalBatches = [];
             window.dbMetalBatches.push(batchRecord);
@@ -3018,6 +3424,80 @@ window.saveOperation = async () => {
                     console.error('Ошибка вставки партии в Supabase:', err);
                 }
             }
+        }
+    }
+
+    // Handle usable scrap (деловой отход) if checked
+    const saveScrap = document.getElementById('op-save-scrap')?.checked;
+    if (saveScrap && type === 'prod_blank') {
+        const scrapLen = window.parseRusFloat(document.getElementById('op-scrap-len')?.value || '0');
+        const scrapQty = window.parseRusFloat(document.getElementById('op-scrap-qty')?.value || '0');
+        const scrapWeight = window.parseRusFloat(document.getElementById('op-scrap-weight')?.value || '0');
+        
+        if (scrapLen > 0 && scrapQty > 0 && scrapWeight > 0) {
+            const firstItem = itemsToProcess[0];
+            const steelType = firstItem?.steel_type || 'Металл';
+            const diameterVal = firstItem?.diameter || 0;
+            const wpmVal = firstItem?.weight_per_m || 0;
+            
+            const scrapName = `Деловой отход Круг Ø${diameterVal} ${steelType} L=${scrapLen} мм`;
+            const scrapId = 'metal_scrap_' + Date.now();
+            
+            const scrapCard = {
+                id: scrapId,
+                name: scrapName,
+                category: 'metal',
+                steel_type: steelType,
+                diameter: diameterVal,
+                weight_per_m: wpmVal,
+                bar_len: scrapLen,
+                qty_kg: scrapWeight,
+                price_tonne: 0,
+                price: 0,
+                supplier: 'Внутреннее производство (отход)',
+                date_arrival: new Date().toISOString().split('T')[0],
+                responsible: responsible,
+                from_client: fromClient
+            };
+            
+            // Add to directories
+            window.dbDirectories.push({
+                id: scrapId,
+                category: 'metal',
+                name: scrapName,
+                data: scrapCard
+            });
+            
+            // Sync to Supabase directories if available
+            if (window.supabase) {
+                try {
+                    await window.supabase.from('directories').insert([{ id: scrapId, data: scrapCard }]);
+                } catch (err) {
+                    console.error('Ошибка directories scrap Supabase:', err);
+                }
+            }
+            
+            // Update WAREHOUSE_CATALOG
+            WAREHOUSE_CATALOG[scrapId] = {
+                name: scrapName,
+                unit: 'кг',
+                icon: 'fa-cube'
+            };
+            
+            // Add to inventory
+            window.dbWarehouseInv[scrapId] = (window.dbWarehouseInv[scrapId] || 0) + scrapWeight;
+            
+            // Add log entry for scrap
+            window.dbWarehouseLog.push({
+                id: Date.now() + Math.random() + 0.1,
+                date: new Date(docDate).toLocaleString(),
+                type: 'Оприходование: Деловой отход',
+                details: `Оприходован деловой отход: +${scrapWeight.toFixed(2)} кг (${scrapName})`,
+                comment: `Склад: ${destination} | Отв: ${responsible} | К операции нарезки`,
+                changes: { target: { item: scrapId, qty: scrapWeight } },
+                user: responsible,
+                from_client: fromClient
+            });
         }
     }
 
@@ -3166,7 +3646,7 @@ window.addBeltToBatch = () => {
     if (len <= 0) { window.showToast('Укажите длину рулона (м.п.)!', 'error'); return; }
     if (priceMp <= 0) { window.showToast('Укажите цену за м.п. без НДС!', 'error'); return; }
 
-    const formattedName = `Лента ${width}-EP-${strength}/${cords} ${coverTop}/${coverBottom} ${classVal} ${tuVal}${certVal ? " (" + certVal + ")" : ""}`;
+    const formattedName = `Лента ${width}-EP-${strength}/${cords} ${coverTop}/${coverBottom} ${classVal}${certVal ? " (" + certVal + ")" : ""}`;
 
     window.currentBatch.push({
         id: 'belt_' + Date.now(),
@@ -3187,7 +3667,17 @@ window.addBeltToBatch = () => {
         hardness_spec: thicknessPlan ? `${thicknessPlan} мм` : '',
         hardness_fact: thicknessFact ? `${thicknessFact} мм` : '',
         supplier: document.getElementById('op-supplier')?.value || '',
-        isBelt: true // Flag to distinguish belts in printing and costing tables!
+        isBelt: true, // Flag to distinguish belts in printing and costing tables!
+        
+        // Save raw properties for directories card insertion!
+        width: width,
+        strength: strength,
+        cords: cords,
+        cover_top: coverTop,
+        cover_bottom: coverBottom,
+        rubber_class: classVal,
+        tu: tuVal,
+        thickness: thicknessPlan
     });
 
     window.renderBatchTable();
@@ -3450,6 +3940,7 @@ window.onBlankSourceTypeChange = () => {
         for (let key in WAREHOUSE_CATALOG) {
             if (key.startsWith('metal_')) {
                 const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
+                if (av <= 0) continue; // Filter out zero/negative balance!
                 const dia = getCatalogItemDia(key);
                 const label = dia ? `Диаметр: Ø${dia} мм` : 'Без диаметра';
                 if (!groups[label]) groups[label] = [];
@@ -3471,16 +3962,32 @@ window.onBlankSourceTypeChange = () => {
         for (let key in WAREHOUSE_CATALOG) {
             if (key.startsWith('belt_strip_')) {
                 const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
+                if (av <= 0) continue; // Filter out zero/negative balance!
                 const width = getCatalogItemWidth(key);
                 const label = width ? `Ширина: ${width} мм` : 'Полосы';
                 if (!groups[label]) groups[label] = [];
-                groups[label].push({ key, name: WAREHOUSE_CATALOG[key].name, av });
+                
+                // Look up extra parameters (thickness, strength)
+                const dirEntry = window.findDirectoryEntry(key);
+                const d = dirEntry?.data || dirEntry || {};
+                const thickness = d.thickness || '';
+                const strength = d.strength || d.steel_type || '';
+                
+                groups[label].push({ key, name: WAREHOUSE_CATALOG[key].name, av, thickness, strength, width });
             }
         }
         let stripOpts = '<option value="">-- Выберите ленту-полосу --</option>';
         for (let label in groups) {
             stripOpts += `<optgroup label="${label}">`;
-            stripOpts += groups[label].map(s => `<option value="${s.key}">${window.stripTU(s.name)} (Остаток: ${s.av} м.п.)</option>`).join('');
+            stripOpts += groups[label].map(s => {
+                let paramParts = [];
+                if (s.width) paramParts.push(`${s.width} мм`);
+                if (s.thickness) paramParts.push(`${s.thickness} мм`);
+                if (s.strength) paramParts.push(`${s.strength} EP`);
+                const paramsStr = paramParts.join(' | ');
+                const displayParams = paramsStr ? ` [${paramsStr}]` : '';
+                return `<option value="${s.key}">${window.stripTU(s.name)}${displayParams} (Остаток: ${s.av} м.п.)</option>`;
+            }).join('');
             stripOpts += `</optgroup>`;
         }
         sourceItemSelect.innerHTML = stripOpts;
@@ -3494,8 +4001,7 @@ window.onSourceItemSelectChange = () => {
     const sourceItem = document.getElementById('op-source-item-select').value;
     if (!sourceItem) return;
 
-    const dirId = sourceItem.replace('belt_blank_', '').replace('belt_strip_', '').replace('belt_', '').replace('metal_', '');
-    const dirEntry = window.dbDirectories.find(d => String(d.id) === String(dirId));
+    const dirEntry = window.findDirectoryEntry(sourceItem);
     if (!dirEntry) return;
 
     const dObj = dirEntry.data || dirEntry;
@@ -3519,8 +4025,7 @@ window.calculateBeltTrimming = () => {
     const sourceItem = document.getElementById('op-source-item-select').value;
     if (!sourceItem) return;
 
-    const dirId = sourceItem.replace('belt_blank_', '').replace('belt_', '');
-    const dirEntry = window.dbDirectories.find(d => String(d.id) === String(dirId));
+    const dirEntry = window.findDirectoryEntry(sourceItem);
     if (!dirEntry) return;
 
     const dObj = dirEntry.data || dirEntry;
@@ -3568,8 +4073,7 @@ window.calculateBeltSlicing = () => {
     const sourceItem = document.getElementById('op-source-item-select').value;
     if (!sourceItem) return;
 
-    const dirId = sourceItem.replace('belt_blank_', '').replace('belt_', '');
-    const dirEntry = window.dbDirectories.find(d => String(d.id) === String(dirId));
+    const dirEntry = window.findDirectoryEntry(sourceItem);
     if (!dirEntry) return;
 
     const dObj = dirEntry.data || dirEntry;

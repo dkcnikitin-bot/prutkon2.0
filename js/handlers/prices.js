@@ -24,7 +24,8 @@ window.priceSchemaFields = {
     'user_name': 'Кто внес данные',
     'stock': 'Остаток на складе',
     'stats': 'Статистика заказов',
-    'global': 'Работа во всех таблицах'
+    'global': 'Работа во всех таблицах',
+    'brand': 'Бренд'
 };
 
 // ==========================================
@@ -510,7 +511,14 @@ window.loadProductCategoryFields = function() {
         const value = product && product[f] ? product[f] : '';
         
         // Собираем уникальные значения для этого поля
-        const uniqueValues = [...new Set(window.dbProducts.map(p => p && p[f]).filter(Boolean))];
+        let uniqueValues = [...new Set(window.dbProducts.map(p => p && p[f]).filter(Boolean))];
+        if (f === 'brand') {
+            const directoryBrands = (window.dbDirectories || []).filter(d => d.category === 'brands').map(b => b.name);
+            uniqueValues = [...new Set([...uniqueValues, ...directoryBrands])];
+        } else if (f === 'tech_type') {
+            const defaultTechTypes = ['Прицепной уборочный', 'Самоходный уборочный', 'Самоходный погрузчик', 'Приемно-сортировочный', 'Прицеп перегрузчик'];
+            uniqueValues = [...new Set([...uniqueValues, ...defaultTechTypes])];
+        }
         let datalistHtml = '';
         let listAttr = '';
         if (uniqueValues.length > 0) {
@@ -1381,7 +1389,14 @@ window.updateAddWizardUI = function() {
                     const label = window.priceSchemaFields[key] || key;
                     
                     // Собираем уникальные значения для этого поля
-                    const uniqueValues = [...new Set(window.dbProducts.map(p => p && p[key]).filter(Boolean))];
+                    let uniqueValues = [...new Set(window.dbProducts.map(p => p && p[key]).filter(Boolean))];
+                    if (key === 'brand') {
+                        const directoryBrands = (window.dbDirectories || []).filter(d => d.category === 'brands').map(b => b.name);
+                        uniqueValues = [...new Set([...uniqueValues, ...directoryBrands])];
+                    } else if (key === 'tech_type') {
+                        const defaultTechTypes = ['Прицепной уборочный', 'Самоходный уборочный', 'Самоходный погрузчик', 'Приемно-сортировочный', 'Прицеп перегрузчик'];
+                        uniqueValues = [...new Set([...uniqueValues, ...defaultTechTypes])];
+                    }
                     let datalistHtml = '';
                     let listAttr = '';
                     if (uniqueValues.length > 0) {
@@ -1632,6 +1647,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchInput = document.getElementById('price-search-input');
     if (searchInput) searchInput.oninput = (e) => { window.priceSearchQuery = e.target.value.toLowerCase().trim(); window.renderPriceTable(); };
     
+    // Refresh modals and autocomplete on db_updated
+    window.addEventListener('db_updated', () => {
+        if (document.getElementById('product-card-modal')?.classList.contains('active')) {
+            window.loadProductCategoryFields();
+        }
+        if (document.getElementById('add-master-modal')?.classList.contains('active') && window.addStep === 2) {
+            window.updateAddWizardUI();
+        }
+    });
+
     console.log("Prices OS v18.25.0 operational.");
 });
 

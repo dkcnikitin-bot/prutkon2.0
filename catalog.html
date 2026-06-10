@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -187,7 +187,7 @@
                     <div class="grid grid-2 gap-4 mb-4">
                         <div class="form-group">
                             <label>Производитель / Бренд</label>
-                            <input type="text" id="cc-brand" class="form-control">
+                            <input type="text" id="cc-brand" class="form-control" list="brands-datalist">
                         </div>
                         <div class="form-group">
                             <label>Класс / Тэг</label>
@@ -244,7 +244,7 @@
                         </div>
                         <div class="form-group">
                             <label>Производитель / Бренд</label>
-                            <input type="text" id="cat-add-brand" class="form-control" placeholder="Опционально">
+                            <input type="text" id="cat-add-brand" class="form-control" placeholder="Опционально" list="brands-datalist">
                         </div>
                         <div class="form-group" style="grid-column: span 2;">
                             <label>Фото (URL или относительный путь)</label>
@@ -364,5 +364,7 @@
     <script src="js/handlers/catalog.js?v=19.0.0"></script>
     <!-- modal-add-model placeholder for CatalogManager -->
     <div id="modal-add-model" class="hidden" style="display:none;"></div>
+    <!-- brands-datalist for autocomplete -->
+    <datalist id="brands-datalist"></datalist>
 </body>
 </html>
