@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -34,7 +34,10 @@
 
                 <div class="panel glass-panel">
                     <div class="flex justify-between items-center mb-4">
-                        <h4 id="price-title" class="mb-0">Заготовки и комплектующие</h4>
+                        <div class="flex gap-2 items-center">
+                            <h4 id="price-title" class="mb-0">Заготовки и комплектующие</h4>
+                            <button id="price-help-btn" class="btn btn-secondary btn-xs" style="padding: 2px 6px; font-size: 12px; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;" onclick="window.showPriceHelp()" title="Справка по разделу"><i class="fa-regular fa-circle-question"></i></button>
+                        </div>
                         <div class="flex gap-2 items-center">
                             <input type="text" id="price-search-input" class="form-control" placeholder="Поиск в прайсе..." style="width:280px;" oninput="window.renderPriceTable()">
                         </div>
@@ -290,7 +293,7 @@
                         <button class="btn btn-secondary btn-sm" onclick="document.getElementById('pc-photo-upload').click()" title="Загрузить фото">
                             <i class="fa-solid fa-upload"></i> Фото
                         </button>
-                        <img id="product-card-img" style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:2px solid var(--border-glass);" src="placeholder.jpg" onerror="this.src='placeholder.jpg'">
+                        <img id="product-card-img" style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:2px solid var(--border-glass);" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjI0IiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4=" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjI0IiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4='">
                     </div>
                     <div id="pc-photo-path-hint" class="text-xs text-muted mt-2" style="opacity:0.6;"></div>
                 </div>
@@ -387,6 +390,22 @@
                         <p><i class="fa-solid fa-info-circle"></i> Категории, в которых нет товаров, можно удалять.</p>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: PRICE HELP -->
+    <div id="price-help-modal" class="modal">
+        <div class="glass-panel" style="width:650px; padding:35px; border: 1px solid var(--border-glass);">
+            <h3 class="mb-4 brand-red flex items-center gap-2">
+                <i class="fa-regular fa-circle-question text-xl"></i>
+                <span id="price-help-title">Справка по разделу</span>
+            </h3>
+            <div id="price-help-content" class="mb-5" style="max-height:400px; overflow-y:auto; line-height:1.6; font-size:14px; color:var(--text-main);">
+                <!-- Справка будет добавлена через JS -->
+            </div>
+            <div class="flex justify-end">
+                <button class="btn btn-primary" onclick="document.getElementById('price-help-modal').classList.remove('active')">Понятно</button>
             </div>
         </div>
     </div>

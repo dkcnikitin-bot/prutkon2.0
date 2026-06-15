@@ -138,32 +138,54 @@ window.PrutkonFeatures = {
     },
 
     systemDirectories: {
+        _belt_widths: null,
         get belt_widths() {
+            if (this._belt_widths) return this._belt_widths;
             const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'belt_widths') : [];
             if (dbItems.length > 0) return dbItems.map(d => parseFloat(d.name) || d.name);
             return [20, 30, 40, 45, 50, 55, 60, 65, 70, 75, '60-75'];
         },
+        set belt_widths(val) { this._belt_widths = val; },
+
+        _belt_pitches: null,
         get belt_pitches() {
+            if (this._belt_pitches) return this._belt_pitches;
             const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'belt_pitches') : [];
             if (dbItems.length > 0) return dbItems.map(d => parseFloat(d.name) || d.name);
             return [20, 23, 28, 30, 32, 33, 34, 35, 36, 37, 38, 40, 42, 43, 44, 45, 48, 50, 55, 56, 60, 64, 65, 70, 75, 80, 175, 185];
         },
+        set belt_pitches(val) { this._belt_pitches = val; },
+
+        _rod_diameters: null,
         get rod_diameters() {
+            if (this._rod_diameters) return this._rod_diameters;
             const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'rod_diameters') : [];
             if (dbItems.length > 0) return dbItems.map(d => parseFloat(d.name) || d.name);
             return [8, 9, 10, 11, 12, 13, 16];
         },
+        set rod_diameters(val) { this._rod_diameters = val; },
+
+        _conn_types: null,
         get conn_types() {
+            if (this._conn_types) return this._conn_types;
             const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'connection_types') : [];
             if (dbItems.length > 0) return dbItems.map(d => d.name);
             return ['Механический замок', 'Подготовлен к вулканизации', 'Вулканизация холодная', 'Вулканизация горячая', 'Открытый тип', 'Винтовая скрутка'];
         },
+        set conn_types(val) { this._conn_types = val; },
+
+        _rod_types: null,
         get rod_types() {
+            if (this._rod_types) return this._rod_types;
             const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'rod_types') : [];
             if (dbItems.length > 0) return dbItems.map(d => d.name);
             return ['Обрезиненный прямой', 'Обрезиненный гнутый', 'Стальной гнутый', 'Игольчатый V', 'Игольчатый H', 'Игольчатый I', 'Пальчиковый прямой', 'Пальчиковый с боковыми', 'Стальной трехременный', 'Стальной 4х ременный', 'Обрезиненный гнутый трехременный'];
         },
+        set rod_types(val) { this._rod_types = val; },
+
+        _crops: null,
         get crops() {
+            if (this._crops) return this._crops;
             const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'crops') : [];
             if (dbItems.length > 0) return dbItems.map(d => d.name);
             return [
@@ -176,7 +198,8 @@ window.PrutkonFeatures = {
                 'Приемный транспортер',
                 'Сортировочный транспортер'
             ];
-        }
+        },
+        set crops(val) { this._crops = val; }
     },
 
     loadDirectories: async function() {

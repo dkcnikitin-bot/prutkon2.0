@@ -49,6 +49,11 @@ window.dirSchemaLabels = {
     'sum_no_vat': 'Сумма без НДС',
     'sum_vat': 'Сумма с НДС',
     'price_m_no_vat': 'Цена м.п. без НДС',
+    'expense_type': 'Тип расхода',
+    'amount': 'Сумма (₽)',
+    'frequency': 'Периодичность',
+    'description': 'Описание / Комментарий',
+    'date_added': 'Дата добавления',
     'price_m_vat': 'Цена м.п. с НДС',
     'delivery_m_no_vat': 'Доставка м.п. без НДС',
     'delivery_m_vat': 'Доставка м.п. с НДС',
@@ -75,7 +80,17 @@ window.dirSchemaLabels = {
     'folder': 'Папка в Битрикс',
     'crops': 'Культуры',
     'note': 'Примечание',
-    'note2': 'Примечание 2'
+    'note2': 'Примечание 2',
+    
+    // Новые поля для моделей техники и артикулов
+    'brand': 'Бренд / Производитель',
+    'model': 'Модель техники',
+    'photo': 'Фотография',
+    'year': 'Год выпуска',
+    'description': 'Описание / Характеристики',
+    'part_type': 'Тип запчасти',
+    'machinery': 'Применяемость (техника)',
+    'sizes': 'Размеры'
 };
 
 // --- 1. ИНИЦИАЛИЗАЦИЯ И ТАБЫ ---
@@ -95,19 +110,71 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+const DIR_CATEGORY_ORDER = [
+    'metal', 'belt', 'belt_blank', 'belt_strip', 'machinery', 'part_skus',
+    'brands', 'dealers', 'hardware', 'fasteners',
+    'belt_widths', 'belt_pitches', 'belt_hole_distances', 'rod_diameters',
+    'belt_strengths', 'belt_thicknesses', 'brackets', 'thread_types',
+    'crops', 'vat_rates', 'connection_types', 'machinery_types', 'rod_types'
+];
+
+const DIR_CATEGORY_NUMBERING = {
+    'metal': '1',
+    'belt': '2',
+    'belt_blank': '3',
+    'belt_strip': '4',
+    'machinery': '5',
+    'part_skus': '6',
+    'brands': '7',
+    'dealers': '8',
+    'hardware': '9',
+    'fasteners': '10',
+    'belt_widths': '11',
+    'belt_pitches': '12',
+    'belt_hole_distances': '13',
+    'rod_diameters': '14',
+    'belt_strengths': '15',
+    'belt_thicknesses': '16',
+    'brackets': '17',
+    'thread_types': '18',
+    'crops': '19',
+    'vat_rates': '20',
+    'connection_types': '21',
+    'machinery_types': '22',
+    'rod_types': '23'
+};
+
 window.loadDirCategories = () => {
     const tabs = document.getElementById('directory-tabs');
     if (!tabs) return;
     
-    tabs.innerHTML = window.dbDirectoryCategories.map(cat => `
-        <button class="btn btn-secondary btn-sm ${window.activeDirCategory === cat.id ? 'active' : ''}" 
-                style="margin-right:8px; margin-bottom:8px;"
-                onclick="window.switchDirCategory('${cat.id}')">${cat.name}</button>
-    `).join('');
+    // Сортировка категорий согласно DIR_CATEGORY_ORDER
+    const sortedCategories = [...window.dbDirectoryCategories].sort((a, b) => {
+        const idxA = DIR_CATEGORY_ORDER.indexOf(a.id);
+        const idxB = DIR_CATEGORY_ORDER.indexOf(b.id);
+        if (idxA === -1 && idxB === -1) return 0;
+        if (idxA === -1) return 1;
+        if (idxB === -1) return -1;
+        return idxA - idxB;
+    });
+
+    tabs.innerHTML = sortedCategories.map(cat => {
+        const num = DIR_CATEGORY_NUMBERING[cat.id] || '';
+        const prefix = num ? `${num}. ` : '';
+        return `
+            <button class="btn btn-secondary btn-sm ${window.activeDirCategory === cat.id ? 'active' : ''}" 
+                    style="margin-right:8px; margin-bottom:8px;"
+                    onclick="window.switchDirCategory('${cat.id}')">${prefix}${cat.name}</button>
+        `;
+    }).join('');
     
     const title = document.getElementById('directory-title');
     const activeObj = window.dbDirectoryCategories.find(c => c.id === window.activeDirCategory);
-    if (title && activeObj) title.innerText = activeObj.name;
+    if (title && activeObj) {
+        const num = DIR_CATEGORY_NUMBERING[activeObj.id] || '';
+        const prefix = num ? `${num}. ` : '';
+        title.innerText = `${prefix}${activeObj.name}`;
+    }
 };
 
 window.switchDirCategory = (id) => {
@@ -173,7 +240,13 @@ window.renderDirectoryTable = () => {
                     <td class="text-bold text-white">${r.name}</td>
                     ${schema.map(f => {
                         let val = r[f] || '-';
-                        if ((window.activeDirCategory === 'metal' || window.activeDirCategory === 'belt') && val !== '-') {
+                        if (f === 'photo' && val !== '-') {
+                            if (val.startsWith('data:image/') || val.startsWith('http') || val.startsWith('assets/') || val.startsWith('/') || val.endsWith('.jpg') || val.endsWith('.png') || val.endsWith('.webp') || val.endsWith('.jpeg')) {
+                                val = `<div style="width: 40px; height: 40px; border-radius: 4px; overflow: hidden; border: 1px solid var(--border-glass); background: #000; display: flex; align-items: center; justify-content: center;">
+                                    <img src="${val}" style="max-width: 100%; max-height: 100%; object-fit: cover; cursor: zoom-in;" onclick="window.zoomImage('${val}')" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23666\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'3\' y=\'3\' width=\'18\' height=\'18\' rx=\'2\' ry=\'2\'/><circle cx=\'8.5\' cy=\'8.5\' r=\'1.5\'/><polyline points=\'21 15 16 10 5 21\'/></svg>'">
+                                </div>`;
+                            }
+                        } else if ((window.activeDirCategory === 'metal' || window.activeDirCategory === 'belt') && val !== '-') {
                             const isCurrency = ['price', 'sum_no_vat', 'sum_vat', 'price_m_no_vat', 'price_m_vat', 'delivery_m_no_vat', 'delivery_m_vat', 'total_price_m_no_vat', 'total_price_m_vat', 'price_m2', 'price_mp'].includes(f);
                             const num = window.parseRusFloat(val);
                             if (!isNaN(num)) {
@@ -333,22 +406,61 @@ window.renderDirSchemaFields = (data) => {
         cont.innerHTML = schema.map(f => {
             let listAttr = '';
             let datalistHtml = '';
+            
+            if (f === 'photo') {
+                const imgVal = data[f] || '';
+                return `
+                    <div class="form-group col-span-2">
+                        <label>${window.dirSchemaLabels[f] || f}</label>
+                        <div class="flex gap-4 items-center mt-2 p-3" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-glass); border-radius: 8px;">
+                            <div id="dir-photo-preview" style="width: 80px; height: 80px; border-radius: 6px; border: 1px dashed var(--border-glass); display: flex; align-items: center; justify-content: center; overflow: hidden; background: #000;">
+                                ${imgVal ? `<img src="${imgVal}" style="width: 100%; height: 100%; object-fit: cover;">` : `<i class="fa-regular fa-image text-2xl neutral"></i>`}
+                            </div>
+                            <div class="flex-1 flex flex-col gap-2">
+                                <input type="text" name="photo" id="dir-photo-input" class="form-control dir-schema-input" placeholder="Вставьте ссылку на фото или выберите файл..." value="${imgVal.replace(/"/g, '&quot;')}" oninput="window.updatePhotoPreview(this.value)">
+                                <label class="btn btn-secondary btn-sm" style="cursor: pointer; width: max-content; margin-bottom: 0;">
+                                    <i class="fa-solid fa-cloud-arrow-up"></i> Загрузить файл
+                                    <input type="file" accept="image/*" style="display: none;" onchange="window.handlePhotoUpload(event)">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
             if (f === 'crops') {
                 const listId = `dl-dir-${f}`;
-                const defaultCrops = ['свекла', 'картофель', 'лук', 'морковь', 'капуста', 'свекла столовая', 'помидоры', 'специальный', 'тыква', 'огурцы', 'салат'];
-                datalistHtml = `<datalist id="${listId}">${defaultCrops.map(v => `<option value="${v}">`).join('')}</datalist>`;
+                const dbCrops = (window.dbDirectories || []).filter(d => d.category === 'crops').map(d => d.name);
+                const defaultCrops = dbCrops.length > 0 ? dbCrops : ['свекла', 'картофель', 'лук', 'морковь', 'капуста', 'свекла столовая', 'помидоры', 'специальный', 'тыква', 'огурцы', 'салат'];
+                datalistHtml = `<datalist id="${listId}">${defaultCrops.map(v => `<option value="${v.replace(/"/g, '&quot;')}">`).join('')}</datalist>`;
                 listAttr = `list="${listId}"`;
             } else if (f === 'country') {
                 const listId = `dl-dir-${f}`;
                 const defaultCountries = ['Италия', 'Беларусь', 'Россия', 'Украина', 'США', 'Австрия', 'Польша', 'Нидерланды', 'Франция', 'Германия', 'Китай', 'Бельгия', 'Великобритания', 'Канада'];
-                datalistHtml = `<datalist id="${listId}">${defaultCountries.map(v => `<option value="${v}">`).join('')}</datalist>`;
+                datalistHtml = `<datalist id="${listId}">${defaultCountries.map(v => `<option value="${v.replace(/"/g, '&quot;')}">`).join('')}</datalist>`;
                 listAttr = `list="${listId}"`;
             } else if (f === 'consolidation') {
                 const listId = `dl-dir-${f}`;
                 const defaultConsolidations = ['Grimme', 'Ricon (Grimme)', 'Spudnik (Grimme)', 'Miedema', 'Dewulf', 'PLOEGER-OXBO', 'PMC', 'Hesels', 'Durabelt Inc', 'Noffsinger Manufacturing'];
-                datalistHtml = `<datalist id="${listId}">${defaultConsolidations.map(v => `<option value="${v}">`).join('')}</datalist>`;
+                datalistHtml = `<datalist id="${listId}">${defaultConsolidations.map(v => `<option value="${v.replace(/"/g, '&quot;')}">`).join('')}</datalist>`;
+                listAttr = `list="${listId}"`;
+            } else if (f === 'brand') {
+                const listId = `dl-dir-${f}`;
+                const dbBrands = (window.dbDirectories || []).filter(d => d.category === 'brands').map(d => d.name);
+                datalistHtml = `<datalist id="${listId}">${dbBrands.map(v => `<option value="${v.replace(/"/g, '&quot;')}">`).join('')}</datalist>`;
+                listAttr = `list="${listId}"`;
+            } else if (f === 'machinery') {
+                const listId = `dl-dir-${f}`;
+                const dbMach = (window.dbDirectories || []).filter(d => d.category === 'machinery').map(d => d.name);
+                datalistHtml = `<datalist id="${listId}">${dbMach.map(v => `<option value="${v.replace(/"/g, '&quot;')}">`).join('')}</datalist>`;
+                listAttr = `list="${listId}"`;
+            } else if (f === 'part_type') {
+                const listId = `dl-dir-${f}`;
+                const defaultTypes = ['Ролик поддерживающий', 'Замок механический', 'Пруток транспортера', 'Звездочка приводная', 'Кронштейн крепления', 'Лента соединительная'];
+                datalistHtml = `<datalist id="${listId}">${defaultTypes.map(v => `<option value="${v.replace(/"/g, '&quot;')}">`).join('')}</datalist>`;
                 listAttr = `list="${listId}"`;
             }
+            
             return `
                 <div class="form-group">
                     <label>${window.dirSchemaLabels[f] || f}</label>
@@ -724,4 +836,169 @@ window.handleDirExcel = async (file) => {
         window.showToast(`Импортировано ${imported.length} записей`, "success");
     };
     reader.readAsArrayBuffer(file);
+};
+
+// --- 6. ХЕЛПЕРЫ ФОТО И СПРАВКА ---
+window.updatePhotoPreview = (val) => {
+    const preview = document.getElementById('dir-photo-preview');
+    if (!preview) return;
+    if (val) {
+        preview.innerHTML = `<img src="${val}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    } else {
+        preview.innerHTML = `<i class="fa-regular fa-image text-2xl neutral"></i>`;
+    }
+};
+
+window.handlePhotoUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 2 * 1024 * 1024) {
+        window.showToast("Файл слишком большой. Лимит 2MB.", "error");
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const base64 = e.target.result;
+        const input = document.getElementById('dir-photo-input');
+        if (input) {
+            input.value = base64;
+            window.updatePhotoPreview(base64);
+            window.showToast("Изображение успешно загружено", "success");
+        }
+    };
+    reader.readAsDataURL(file);
+};
+
+window.zoomImage = (src) => {
+    let overlay = document.getElementById('image-zoom-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'image-zoom-overlay';
+        overlay.style = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100000; display: none; align-items: center; justify-content: center; cursor: zoom-out;';
+        overlay.onclick = () => overlay.style.display = 'none';
+        
+        const img = document.createElement('img');
+        img.id = 'image-zoom-img';
+        img.style = 'max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px; border: 2px solid var(--border-glass); box-shadow: 0 10px 30px rgba(0,0,0,0.5);';
+        overlay.appendChild(img);
+        document.body.appendChild(overlay);
+    }
+    const imgEl = overlay.querySelector('img');
+    if (imgEl) imgEl.src = src;
+    overlay.style.display = 'flex';
+};
+
+const DIRECTORY_HELP_DATA = {
+    'metal': `
+        <h5>1. Материалы (Металл)</h5>
+        <p>Этот справочник содержит перечень закупаемого металлического сырья (прутков и кругов) для производства транспортеров.</p>
+        <strong>Правила заполнения:</strong>
+        <ul>
+            <li><strong>Название:</strong> Указывайте в формате "[Диаметр]-[Производитель]", например, <code>10-ОМZ</code>.</li>
+            <li><strong>Диаметр:</strong> Только цифры (в миллиметрах).</li>
+            <li><strong>Длина:</strong> Стандартная длина прутка (обычно 6000 мм).</li>
+            <li><strong>Марка стали:</strong> Например, <code>60С2ХА</code> (пружинно-рессорная сталь).</li>
+            <li>При заполнении цены за тонну и накладных расходов, стоимость метра погонного рассчитывается автоматически с учетом ставки НДС.</li>
+        </ul>
+    `,
+    'belt': `
+        <h5>2. Справочник лент (Рулоны)</h5>
+        <p>Справочник рулонов конвейерной ленты, поступающих от поставщиков в цех.</p>
+        <strong>Правила заполнения:</strong>
+        <ul>
+            <li><strong>Ширина:</strong> В миллиметрах (например, 70).</li>
+            <li><strong>Прочность (EP):</strong> Номинал прочности корда (например, EP-800, EP-1000).</li>
+            <li><strong>Толщина:</strong> Важнейший параметр для классификации ремней (например, 12, 17, 20 мм).</li>
+            <li><strong>Цена за м2/м.п.:</strong> При изменении цены за м2 цена за м.п. пересчитывается автоматически по формуле <code>Цена за м2 * (Ширина / 1000)</code>.</li>
+        </ul>
+    `,
+    'belt_blank': `
+        <h5>3. Ленты-заготовки (Обрезанные рулоны)</h5>
+        <p>Справочник подготовленных, обрезанных по ширине или длине лент для последующей нарезки на полосы.</p>
+        <strong>Правила заполнения:</strong>
+        <ul>
+            <li>Заполняется аналогично справочнику лент, но в качестве источника ссылается на исходный рулон.</li>
+            <li>Используется для контроля расхода входящего сырья при нарезке.</li>
+        </ul>
+    `,
+    'belt_strip': `
+        <h5>4. Ленты-полосы (Полосы для ремней)</h5>
+        <p>Нарезанные полосы заданной ширины и толщины, готовые к установке на прутки транспортера.</p>
+        <strong>Правила заполнения:</strong>
+        <ul>
+            <li>Указывается точная ширина и толщина полосы.</li>
+            <li>Связывается с заготовкой-источником для списания остатков.</li>
+        </ul>
+    `,
+    'machinery': `
+        <h5>5. Модели техники</h5>
+        <p>Каталог сельскохозяйственной техники (комбайны, копатели, сортировки), для которых изготавливаются транспортеры.</p>
+        <strong>Правила заполнения:</strong>
+        <ul>
+            <li><strong>Бренд:</strong> Выберите из справочника производителей (например, Grimme, ROPA).</li>
+            <li><strong>Модель:</strong> Полное наименование модели (например, SE 150-60).</li>
+            <li><strong>Фотография:</strong> Загрузите фото техники или вставьте ссылку на изображение.</li>
+            <li><strong>Культуры:</strong> Овощные культуры, с которыми работает техника (например, Картофель, Лук).</li>
+            <li><strong>Год выпуска:</strong> Год производства машины.</li>
+        </ul>
+    `,
+    'part_skus': `
+        <h5>6. Справочник артикулов запчастей</h5>
+        <p>Каталог запчастей и комплектующих с привязкой к конкретным моделям техники и брендам.</p>
+        <strong>Правила заполнения:</strong>
+        <ul>
+            <li><strong>Название (Артикул):</strong> Уникальный артикул детали (например, APT-GRI-101).</li>
+            <li><strong>Тип запчасти:</strong> Ролик, звездочка, кронштейн, замок и т.д.</li>
+            <li><strong>Бренд:</strong> Grimme, Ropa, AVR и др.</li>
+            <li><strong>Применяемость:</strong> Модель техники, на которую устанавливается деталь.</li>
+            <li><strong>Размеры:</strong> Например, 110x50 мм.</li>
+        </ul>
+    `,
+    'brands': `
+        <h5>7. Бренды / Производители</h5>
+        <p>Справочник заводов-производителей сельскохозяйственной техники.</p>
+    `,
+    'dealers': `
+        <h5>8. Поставщики / Дилеры</h5>
+        <p>Справочник поставщиков сырья, комплектующих и готовой продукции.</p>
+    `,
+    'hardware': `
+        <h5>9. Скобяные изделия</h5>
+        <p>Металлические соединительные элементы (кронштейны, соединительные планки, замки).</p>
+    `,
+    'fasteners': `
+        <h5>10. Метизы и крепеж</h5>
+        <p>Болты, гайки, заклепки, шайбы, используемые при сборке.</p>
+    `
+};
+
+window.showDirectoryHelp = () => {
+    const modal = document.getElementById('dir-help-modal');
+    const titleEl = document.getElementById('dir-help-title');
+    const contentEl = document.getElementById('dir-help-content');
+    if (!modal || !contentEl) return;
+    
+    const activeCatObj = window.dbDirectoryCategories.find(c => c.id === window.activeDirCategory);
+    if (!activeCatObj) return;
+    
+    const num = DIR_CATEGORY_NUMBERING[activeCatObj.id] || '';
+    const prefix = num ? `${num}. ` : '';
+    titleEl.innerText = `Справка: ${prefix}${activeCatObj.name}`;
+    
+    let helpHtml = DIRECTORY_HELP_DATA[activeCatObj.id];
+    if (!helpHtml) {
+        helpHtml = `
+            <h5>${prefix}${activeCatObj.name}</h5>
+            <p>Это вспомогательный технический справочник для системы автоматизации Пруткон.</p>
+            <strong>Правила заполнения:</strong>
+            <ul>
+                <li>Нажмите кнопку "Добавить запись", чтобы внести новое значение.</li>
+                <li>Заполненные значения будут доступны для выбора в выпадающих списках калькуляторов и складских документов.</li>
+            </ul>
+        `;
+    }
+    contentEl.innerHTML = helpHtml;
+    modal.classList.add('active');
 };

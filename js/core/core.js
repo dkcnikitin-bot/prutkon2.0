@@ -634,6 +634,8 @@ window.dbDirectoryCategories = window.safeParse('prutkon_dir_categories', [
     { id: 'belt_strip', name: 'Ленты-полосы', schema: ['width', 'thickness', 'length', 'price_mp', 'weight', 'vat_rate', 'invoice_num', 'delivery_date', 'supplier', 'source_blank_ref'] },
     { id: 'hardware', name: 'Скобяные изделия', schema: ['name', 'price', 'unit', 'supplier', 'invoice_num', 'delivery_date', 'description'] },
     { id: 'fasteners', name: 'Метизы и крепеж', schema: ['name', 'price', 'unit', 'supplier', 'invoice_num', 'delivery_date', 'description'] },
+    { id: 'machinery', name: 'Справочник техники', schema: ['brand', 'model', 'photo', 'crops', 'year', 'description', 'note'] },
+    { id: 'part_skus', name: 'Справочник артикулов', schema: ['part_type', 'brand', 'machinery', 'sizes', 'note'] },
     { id: 'brands', name: 'Бренды / Производители', schema: ['consolidation', 'country', 'website', 'folder', 'crops', 'note', 'note2'] },
     { id: 'dealers', name: 'Поставщики / Дилеры', schema: ['address', 'manager', 'contact'] }
 ]);
@@ -654,6 +656,8 @@ if (Array.isArray(window.dbDirectoryCategories)) {
     }
 
     const newCats = [
+        { id: 'machinery', name: 'Справочник техники', schema: ['brand', 'model', 'photo', 'crops', 'year', 'description', 'note'] },
+        { id: 'part_skus', name: 'Справочник артикулов', schema: ['part_type', 'brand', 'machinery', 'sizes', 'note'] },
         { id: 'belt_widths', name: 'Ширины ремней', schema: [] },
         { id: 'belt_pitches', name: 'Шаги ремней', schema: [] },
         { id: 'belt_hole_distances', name: 'Межосевые расстояния', schema: [] },
@@ -666,12 +670,17 @@ if (Array.isArray(window.dbDirectoryCategories)) {
         { id: 'vat_rates', name: 'Ставки НДС', schema: [] },
         { id: 'connection_types', name: 'Типы соединения', schema: [] },
         { id: 'machinery_types', name: 'Типы техники', schema: [] },
-        { id: 'rod_types', name: 'Типы прутков', schema: [] }
+        { id: 'rod_types', name: 'Типы прутков', schema: [] },
+        { id: 'finances', name: 'Финансы (ЗП, Аренда)', schema: ['expense_type', 'amount', 'frequency', 'description'] }
     ];
     let catsChanged = false;
     newCats.forEach(nc => {
-        if (!window.dbDirectoryCategories.some(c => c.id === nc.id)) {
+        const existing = window.dbDirectoryCategories.find(c => c.id === nc.id);
+        if (!existing) {
             window.dbDirectoryCategories.push(nc);
+            catsChanged = true;
+        } else if (nc.schema && JSON.stringify(existing.schema) !== JSON.stringify(nc.schema)) {
+            existing.schema = nc.schema;
             catsChanged = true;
         }
     });
@@ -763,6 +772,62 @@ for (const catId in defaultCategoryValues) {
         directoriesChanged = true;
     }
 }
+
+// Инициализация моделей техники (machinery)
+const defaultMachinery = [
+    { brand: 'Grimme', model: 'SE 150-60', photo: '', crops: 'Картофель', year: '2018', description: 'Картофелеуборочный комбайн, двухрядный.', note: 'Стандартный шаг 35/40' },
+    { brand: 'Grimme', model: 'SE 75-30', photo: '', crops: 'Картофель', year: '2015', description: 'Картофелеуборочный комбайн, однорядный.', note: 'Мягкий просеивающий ремень' },
+    { brand: 'ROPA', model: 'Keiler 2', photo: '', crops: 'Картофель', year: '2020', description: 'Двухрядный картофелеуборочный комбайн.', note: 'Использует прутки 11-ОМZ' },
+    { brand: 'AVR', model: 'Spirit 6200', photo: '', crops: 'Картофель', year: '2019', description: 'Двухрядный просеивающий комбайн.', note: 'Ленты 60-75' }
+];
+
+// Инициализация артикулов запчастей (part_skus)
+const defaultPartSkus = [
+    { part_type: 'Ролик поддерживающий', brand: 'Grimme', machinery: 'SE 150-60', sizes: '110x50', note: 'Обрезиненный ролик' },
+    { part_type: 'Замок механический', brand: 'Ropa', machinery: 'Keiler 2', sizes: '40мм', note: 'Комплект замка для лент' },
+    { part_type: 'Пруток транспортера', brand: 'Grimme', machinery: 'SE 75-30', sizes: '10x790', note: 'Сталь 60С2ХА' }
+];
+
+if (!window.dbDirectories.some(d => d.category === 'machinery')) {
+    defaultMachinery.forEach((item, idx) => {
+        const name = `${item.brand} ${item.model}`;
+        const record = {
+            id: `machinery_${idx}_${Date.now()}`,
+            category: 'machinery',
+            name: name,
+            ...item,
+            data: {
+                id: `machinery_${idx}_${Date.now()}`,
+                category: 'machinery',
+                name: name,
+                ...item
+            }
+        };
+        window.dbDirectories.push(record);
+    });
+    directoriesChanged = true;
+}
+
+if (!window.dbDirectories.some(d => d.category === 'part_skus')) {
+    defaultPartSkus.forEach((item, idx) => {
+        const name = `APT-${item.brand.substring(0,3).toUpperCase()}-${idx + 101}`;
+        const record = {
+            id: `part_skus_${idx}_${Date.now()}`,
+            category: 'part_skus',
+            name: name,
+            ...item,
+            data: {
+                id: `part_skus_${idx}_${Date.now()}`,
+                category: 'part_skus',
+                name: name,
+                ...item
+            }
+        };
+        window.dbDirectories.push(record);
+    });
+    directoriesChanged = true;
+}
+
 if (directoriesChanged) {
     localStorage.setItem('prutkon_directories', JSON.stringify(window.dbDirectories));
 }

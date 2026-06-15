@@ -173,24 +173,26 @@
                             <label class="text-xs text-muted" style="text-transform: uppercase;">Тип операции</label>
                             <select id="op-type" class="form-control" onchange="window.updateOperationForm()" style="border-color: var(--brand-red); border-width: 2px;">
                                 <optgroup label="Внешние поступления">
-                                    <option value="in_metal">1. Приход: Материал (от поставщика)</option>
-                                    <option value="in_belt">1. Приход: Лента (от поставщика)</option>
-                                    <option value="in_hardware">1. Приход: Скобяные изделия</option>
-                                    <option value="in_fasteners">1. Приход: Метизы и крепеж</option>
+                                    <option value="in_metal">1. Приход: Материалы</option>
+                                    <option value="in_belt">2. Приход: Ленты (Входящие рулоны)</option>
+                                    <option value="in_belt_blank">3. Приход: Ленты-заготовки (Обрезанные)</option>
+                                    <option value="in_belt_strip">4. Приход: Ленты-полосы (Нарезанные)</option>
+                                    <option value="in_hardware">5. Приход: Скобяные изделия</option>
+                                    <option value="in_fasteners">6. Приход: Метизы и крепеж</option>
                                 </optgroup>
                                 <optgroup label="Внутреннее производство">
-                                    <option value="prod_belt_blank">2. Обрезка бортов (Лента -> Лента-Заготовка)</option>
-                                    <option value="prod_belt_strip">2. Нарезка полос (Лента-Заготовка -> Лента-Полоса)</option>
-                                    <option value="prod_blank">3. Изготовление: Заготовка (из материала)</option>
-                                    <option value="prod_straight">4. Изготовление: Пруток прямой (из заготовки)</option>
-                                    <option value="prod_double">4. Изготовление: Сдвоенный пруток (из заготовки)</option>
-                                    <option value="prod_bent">5. Изготовление: Гнутый пруток (из прямого)</option>
-                                    <option value="prod_rubber">5. Изготовление: Обрезиненный пруток (из прямого)</option>
-                                    <option value="prod_hedge">5. Изготовление: Ёжные/пальцевые прутки (из прямого)</option>
-                                    <option value="prod_bent_rubber">6. Изготовление: Гнутый обрезиненный (из гнутого)</option>
+                                    <option value="prod_belt_blank">2.1. Обрезка бортов (Ленты -> Ленты-заготовки)</option>
+                                    <option value="prod_belt_strip">2.2. Нарезка полос (Ленты-заготовки -> Ленты-полосы)</option>
+                                    <option value="prod_blank">3. Изготовление: Заготовки (из материалов)</option>
+                                    <option value="prod_straight">4. Изготовление: Прутки прямые (из заготовок)</option>
+                                    <option value="prod_double">4.1. Изготовление: Сдвоенные прутки (из заготовок)</option>
+                                    <option value="prod_bent">5. Изготовление: Гнутые прутки (из прямых)</option>
+                                    <option value="prod_rubber">5.1. Изготовление: Обрезиненные прутки (из прямых)</option>
+                                    <option value="prod_hedge">5.2. Изготовление: Ёжные/пальцевые прутки (из прямых)</option>
+                                    <option value="prod_bent_rubber">6. Изготовление: Гнутые обрезиненные прутки (из гнутых)</option>
                                 </optgroup>
                                 <optgroup label="Корректировки">
-                                    <option value="write_off">Убыток: Списание / Брак</option>
+                                    <option value="write_off">7. Убыток: Списание / Брак</option>
                                 </optgroup>
                             </select>
                         </div>
@@ -383,16 +385,18 @@
                                             <div class="form-group mb-2">
                                                 <label class="text-xs brand-red">Номенклатура для списания</label>
                                                 <select id="op-writeoff-item" class="form-control" onchange="window.updateWriteoffSpecificList()">
-                                                    <option value="metal">Металл</option>
-                                                    <option value="belt">Лента</option>
-                                                    <option value="hardware">Скобяные изделия</option>
-                                                    <option value="fasteners">Метизы и крепеж</option>
-                                                    <option value="blank">Заготовка</option>
-                                                    <option value="straight">Пруток прямой</option>
-                                                    <option value="double">Сдвоенный пруток</option>
-                                                    <option value="bent">Гнутый пруток</option>
-                                                    <option value="rubberized">Обрезиненный пруток</option>
-                                                    <option value="hedge">Ёжные прутки</option>
+                                                    <option value="metal">1. Материалы</option>
+                                                    <option value="belt">2. Ленты (Входящие рулоны)</option>
+                                                    <option value="belt_blank">3. Ленты-заготовки (Обрезанные)</option>
+                                                    <option value="belt_strip">4. Ленты-полосы (Нарезанные)</option>
+                                                    <option value="hardware">5. Скобяные изделия</option>
+                                                    <option value="fasteners">6. Метизы и крепеж</option>
+                                                    <option value="blank">7. Заготовки</option>
+                                                    <option value="straight">8. Прутки прямые</option>
+                                                    <option value="double">8.1. Сдвоенные прутки</option>
+                                                    <option value="bent">9. Гнутые прутки</option>
+                                                    <option value="rubberized">9.1. Обрезиненные прутки</option>
+                                                    <option value="hedge">9.2. Ёжные прутки</option>
                                                 </select>
                                                 <div class="text-xs text-muted mt-2" id="op-writeoff-hint">Остаток: 0</div>
                                             </div>
@@ -736,7 +740,7 @@
                                 <div id="doc-total-weight" style="font-size: 0.9rem; font-weight: 800; color: #fff; font-family: 'JetBrains Mono', monospace;">0.00 кг</div>
                             </div>
                             <div>
-                                <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Всего прутков</div>
+                                <div style="font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase;">Кол-во позиций</div>
                                 <div id="doc-total-bars" style="font-size: 0.9rem; font-weight: 800; color: #fff; font-family: 'JetBrains Mono', monospace;">0 шт</div>
                             </div>
                             <div>

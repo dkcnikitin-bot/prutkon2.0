@@ -123,14 +123,23 @@ function initData() {
 }
 
 function initTabs() {
-    const tabs = document.querySelectorAll('#rods-tabs button');
+    const tabs = document.querySelectorAll('.tabs-scrollable button');
     tabs.forEach(btn => {
         btn.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
+            const parent = btn.closest('.tabs-scrollable');
+            parent.querySelectorAll('button').forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
             
             const step = btn.getAttribute('data-step');
-            document.querySelectorAll('.step-container').forEach(c => c.classList.remove('active'));
+            
+            // Only hide containers that belong to the current mode
+            const mode = step.startsWith('belt') ? 'belts' : 'rods';
+            if (mode === 'belts') {
+                document.querySelectorAll('#belts-engineering-view .step-container').forEach(c => c.classList.remove('active'));
+            } else {
+                document.querySelectorAll('#rods-engineering-view .step-container').forEach(c => c.classList.remove('active'));
+            }
+            
             const container = document.getElementById(`step-${step}`);
             if (container) container.classList.add('active');
             
@@ -139,12 +148,130 @@ function initTabs() {
     });
 }
 
+window.switchEngineeringMode = function(mode) {
+    const rodsView = document.getElementById('rods-engineering-view');
+    const beltsView = document.getElementById('belts-engineering-view');
+    const asmView = document.getElementById('assembly-engineering-view');
+    const rodsBtn = document.getElementById('mode-rods-btn');
+    const beltsBtn = document.getElementById('mode-belts-btn');
+    const asmBtn = document.getElementById('mode-assembly-btn');
+    const modeVal = document.getElementById('mode-display-val');
+
+    // reset all buttons
+    if(rodsBtn) rodsBtn.className = 'btn btn-secondary';
+    if(beltsBtn) beltsBtn.className = 'btn btn-secondary';
+    if(asmBtn) asmBtn.className = 'btn btn-secondary';
+
+    // hide all views
+    if(rodsView) rodsView.style.display = 'none';
+    if(beltsView) beltsView.style.display = 'none';
+    if(asmView) asmView.style.display = 'none';
+
+    if (mode === 'belts') {
+        if(beltsView) beltsView.style.display = 'block';
+        if(beltsBtn) beltsBtn.className = 'btn btn-primary';
+        if (modeVal) modeVal.innerText = 'Ремни (Belts)';
+    } else if (mode === 'assembly') {
+        if(asmView) asmView.style.display = 'block';
+        if(asmBtn) asmBtn.className = 'btn btn-primary';
+        if (modeVal) modeVal.innerText = 'Сборка транспортера (Assembly)';
+        
+        // initialize dropdowns if not yet
+        const asmBeltLabor = document.getElementById('asm-belt-labor');
+        if (asmBeltLabor && asmBeltLabor.options.length <= 1) {
+            const laborItems = window.dbDirectories.filter(d => d.category === 'labor');
+            let lopts = '<option value="">-- Выбрать --</option>';
+            laborItems.forEach(i => {
+                lopts += `<option value="${i.id}" data-price="${i.price || 0}" data-name="${i.name}">${i.name} (${i.price} ₽)</option>`;
+            });
+            if(asmBeltLabor) asmBeltLabor.innerHTML = lopts;
+            const asmAssLabor = document.getElementById('asm-assembly-labor');
+            if(asmAssLabor) asmAssLabor.innerHTML = lopts;
+        }
+        window.calcAssembly();
+    } else {
+        if(rodsView) rodsView.style.display = 'block';
+        if(rodsBtn) rodsBtn.className = 'btn btn-primary';
+        if (modeVal) modeVal.innerText = 'Прутки (Rods)';
+    }
+};
+
+window.calcAssembly = function() {
+    const rodsCount = parseInt(document.getElementById('asm-rods-count')?.value) || 0;
+    const beltsCount = parseInt(document.getElementById('asm-belts-count')?.value) || 0;
+    const locksCount = parseInt(document.getElementById('asm-locks-count')?.value) || 0;
+    
+    const tbody = document.getElementById('asm-tbody');
+    if (!tbody) return;
+    
+    // Hardcoded items as per user request to map to Price-list items dynamically
+    // In a full implementation, these would be selected from dropdowns, but for now we auto-match by name
+    const findProduct = (nameQuery) => {
+        if (!window.dbProducts) return null;
+        return window.dbProducts.find(p => p && p.name && p.name.toLowerCase().includes(nameQuery.toLowerCase()));
+    };
+
+    const stdPlate = findProduct('Пластина соединительная') || { name: 'Пластина соединительная', price: 41.48 };
+    const rivet = findProduct('Клепка спец') || { name: 'Клепка спец 6мм', price: 10.35 };
+    const lockPlate = findProduct('Пластина соединительная резьбовая') || { name: 'Пластина соединительная резьбовая', price: 150 };
+    const lockRod = findProduct('пруток-замок') || { name: 'Пруток', price: 1200 };
+
+    const beltLaborEl = document.getElementById('asm-belt-labor');
+    const assLaborEl = document.getElementById('asm-assembly-labor');
+    
+    const beltLaborPrice = beltLaborEl && beltLaborEl.selectedIndex > 0 ? parseFloat(beltLaborEl.options[beltLaborEl.selectedIndex].dataset.price) : 3150;
+    const beltLaborName = beltLaborEl && beltLaborEl.selectedIndex > 0 ? beltLaborEl.options[beltLaborEl.selectedIndex].dataset.name : 'Подготовка ремней к соединению';
+    
+    const assLaborPrice = assLaborEl && assLaborEl.selectedIndex > 0 ? parseFloat(assLaborEl.options[assLaborEl.selectedIndex].dataset.price) : 24500;
+    const assLaborName = assLaborEl && assLaborEl.selectedIndex > 0 ? assLaborEl.options[assLaborEl.selectedIndex].dataset.name : 'Сборка транспортера (энергия, амортизация, зп итд)';
+
+    // Math
+    const stdPlatesQty = (rodsCount - locksCount) * beltsCount;
+    const rivetsQty = stdPlatesQty * 2;
+    const lockPlatesQty = locksCount * beltsCount;
+    
+    const rows = [
+        { name: stdPlate.name, qty: stdPlatesQty, price: stdPlate.price },
+        { name: rivet.name, qty: rivetsQty, price: rivet.price },
+        { name: lockPlate.name, qty: lockPlatesQty, price: lockPlate.price },
+        { name: lockRod.name, qty: locksCount, price: lockRod.price },
+        { name: beltLaborName, qty: beltsCount, price: beltLaborPrice },
+        { name: assLaborName, qty: 1, price: assLaborPrice }
+    ];
+
+    let totalCost = 0;
+    let html = '';
+    
+    rows.forEach(r => {
+        const sum = (r.qty * r.price);
+        totalCost += sum;
+        html += `
+            <tr>
+                <td>${r.name}</td>
+                <td style="text-align:center;">${r.qty}</td>
+                <td style="text-align:right;">${window.formatMoney(r.price)}</td>
+                <td style="text-align:right;">${window.formatMoney(sum)}</td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+    document.getElementById('asm-total-cost').innerText = window.formatMoney(totalCost);
+};
+
 window.switchProductionStep = function(stepNum) {
-    const tabs = document.querySelectorAll('#rods-tabs button');
+    const isBelt = String(stepNum).startsWith('belt');
+    const tabsSelector = isBelt ? '#belts-tabs button' : '#rods-tabs button';
+    const tabs = document.querySelectorAll(tabsSelector);
     tabs.forEach(t => t.classList.remove('active'));
-    const targetBtn = document.querySelector(`#rods-tabs button[data-step="${stepNum}"]`);
+    const targetBtn = document.querySelector(`${tabsSelector}[data-step="${stepNum}"]`);
     if (targetBtn) targetBtn.classList.add('active');
-    document.querySelectorAll('.step-container').forEach(c => c.classList.remove('active'));
+    
+    if (isBelt) {
+        document.querySelectorAll('#belts-engineering-view .step-container').forEach(c => c.classList.remove('active'));
+    } else {
+        document.querySelectorAll('#rods-engineering-view .step-container').forEach(c => c.classList.remove('active'));
+    }
     const container = document.getElementById(`step-${stepNum}`);
     if (container) container.classList.add('active');
     window.updateDropdowns();
@@ -204,13 +331,37 @@ window.populateDirectoryEnums = function() {
     if (mWhSelect) {
         let h = '<option value="">-- Выберите партию металла из складских остатков --</option>';
         if (window.dbWarehouseBatches && window.dbWarehouseBatches.length) {
-            window.dbWarehouseBatches.forEach(b => {
+            const metalBatches = window.dbWarehouseBatches.filter(b => !b.isBelt).sort((a, b) => {
+                const diaA = parseFloat(a.dia || a.diameter || 0);
+                const diaB = parseFloat(b.dia || b.diameter || 0);
+                if (diaA !== diaB) return diaA - diaB;
+                return String(a.name || '').localeCompare(String(b.name || ''));
+            });
+            metalBatches.forEach(b => {
                 const dia = parseFloat(b.dia || b.diameter || 0);
                 const qty = parseFloat(b.qty || b.weight || b.available_weight || 0);
                 h += `<option value="${b.id}">${b.name || b.steel_type || 'Металл'} Ø${dia} мм (Накладная: ${b.invoice || b.id || 'б/н'}) [Остаток: ${window.formatWhNumber(qty)} кг]</option>`;
             });
         }
         mWhSelect.innerHTML = h;
+    }
+
+    const bWhSelect = document.getElementById('belt-warehouse-select');
+    if (bWhSelect) {
+        let h = '<option value="">-- Выберите ленту из складских остатков --</option>';
+        if (window.dbWarehouseBatches && window.dbWarehouseBatches.length) {
+            const beltBatches = window.dbWarehouseBatches.filter(b => b.isBelt).sort((a, b) => {
+                const diaA = parseFloat(a.dia || a.diameter || 0); // width is stored in diameter
+                const diaB = parseFloat(b.dia || b.diameter || 0);
+                if (diaA !== diaB) return diaB - diaA; // wider belts first
+                return String(a.name || '').localeCompare(String(b.name || ''));
+            });
+            beltBatches.forEach(b => {
+                const qty = parseFloat(b.qty || b.weight || b.available_weight || 0);
+                h += `<option value="${b.id}">${b.name || b.steel_type || 'Лента'} (Накладная: ${b.invoice || b.id || 'б/н'}) [Остаток: ${window.formatWhNumber(qty)} м.п.]</option>`;
+            });
+        }
+        bWhSelect.innerHTML = h;
     }
 
     if (window.dbDirectories) {
@@ -222,6 +373,14 @@ window.populateDirectoryEnums = function() {
                 items.map(i => `<option value="${i.price || i.name}" data-name="${i.name}">${i.name} ${i.price ? '('+i.price+' ₽)' : ''}</option>`).join('');
         };
 
+        const fillName = (id, cat, placeholder) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const items = window.dbDirectories.filter(d => d.category === cat);
+            el.innerHTML = `<option value="">${placeholder}</option>` + 
+                items.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+        };
+
         fill('r-holes', 'holes', '-- Выбрать отверстие --');
         fill('r-pitch', 'pitch', '-- Выбрать межосевое --');
         fill('r-labor-dir', 'labor', '-- Из справочника --');
@@ -229,6 +388,7 @@ window.populateDirectoryEnums = function() {
         fill('rub-labor-dir', 'labor', '-- Из справочника --');
         fill('d-clamp-select-type', 'clamps', '-- Выбрать хомут --');
         fill('d-center-clamp-select-type', 'clamps', '-- Центр. хомут --');
+        fillName('bent-type', 'rod_types', '-- Тип обработки --');
         
         const techTypes = [...new Set(window.dbDirectories.filter(d => d.category === 'equipment').map(d => d.name))];
         const ttList = document.getElementById('tech-types-list');
@@ -618,560 +778,40 @@ window.resetRodsWorkflow = function() {
     reset();
 };
 
-/* --- PRODUCTION & WAREHOUSE INTEGRATION MODULE --- */
-window.updateProductionItemDropdown = () => {
-    const type = document.getElementById('prod-type').value;
-    const batchGroup = document.getElementById('prod-batch-group');
-    const itemGroup = document.getElementById('prod-item-group');
-    const itemLabel = document.getElementById('prod-item-label');
-    const itemSel = document.getElementById('prod-item-select');
-    const rubberGroup = document.getElementById('prod-rubber-base-group');
-    
-    if (type === 'blank') {
-        batchGroup.style.display = 'block';
-        rubberGroup.style.display = 'none';
-        itemLabel.innerText = "Выберите чертеж заготовки к выпуску";
-        
-        const batchSel = document.getElementById('prod-metal-batch');
-        let h = '';
-        if (window.dbWarehouseBatches && window.dbWarehouseBatches.length) {
-            window.dbWarehouseBatches.forEach((b, i) => {
-                const dia = parseFloat(b.dia || b.diameter || 0);
-                const qty = parseFloat(b.qty || b.weight || b.available_weight || 0);
-                h += `<option value="${i}">${b.name || b.steel_type || 'Металл'} Ø${dia} мм [Склад: ${window.formatWhNumber(qty)} кг] (Накладная: ${b.invoice || 'б/н'})</option>`;
-            });
-        } else {
-            h = '<option value="">-- Нет партий металла на складе --</option>';
-        }
-        batchSel.innerHTML = h;
-        
-        const blanks = window.db.rods_blanks || [];
-        itemSel.innerHTML = blanks.map((b, i) => 
-            `<option value="${i}">Заготовка Ø${b.dia} мм L=${b.length} мм [${b.article || ''}]</option>`
-        ).join('');
-        if (!blanks.length) itemSel.innerHTML = '<option value="">-- В базе нет заготовок, добавьте сначала в Шаге 2 --</option>';
-        
-    } else if (type === 'straight') {
-        batchGroup.style.display = 'none';
-        rubberGroup.style.display = 'none';
-        itemLabel.innerText = "Выберите исполнение прямого прутка";
-        
-        const rods = window.db.rods_standard || [];
-        itemSel.innerHTML = rods.map((r, i) => 
-            `<option value="${i}">${r.name} Ø${r.dia} мм L=${r.length} мм [${r.article || ''}]</option>`
-        ).join('');
-        if (!rods.length) itemSel.innerHTML = '<option value="">-- Нет прямых прутков в Шаге 3 --</option>';
-        
-    } else if (type === 'double') {
-        batchGroup.style.display = 'none';
-        rubberGroup.style.display = 'none';
-        itemLabel.innerText = "Выберите исполнение сдвоенного прутка";
-        
-        const rods = window.db.rods_double || [];
-        itemSel.innerHTML = rods.map((r, i) => 
-            `<option value="${i}">${r.name} Ø${r.dia} мм L=${r.length} мм [${r.article || ''}]</option>`
-        ).join('');
-        if (!rods.length) itemSel.innerHTML = '<option value="">-- Нет сдвоенных прутков в Шаге 6 --</option>';
-        
-    } else if (type === 'bent') {
-        batchGroup.style.display = 'none';
-        rubberGroup.style.display = 'none';
-        itemLabel.innerText = "Выберите исполнение гнутого прутка";
-        
-        const rods = window.db.rods_bent || [];
-        itemSel.innerHTML = rods.map((r, i) => 
-            `<option value="${i}">${r.name} Ø${r.dia} мм L=${r.length} мм [${r.article || ''}]</option>`
-        ).join('');
-        if (!rods.length) itemSel.innerHTML = '<option value="">-- Нет гнутых прутков в Шаге 4 --</option>';
-        
-    } else if (type === 'rubberized') {
-        batchGroup.style.display = 'none';
-        rubberGroup.style.display = 'block';
-        itemLabel.innerText = "Выберите исполнение обрезиненного прутка";
-        
-        const rods = window.db.rods_rubber || [];
-        itemSel.innerHTML = rods.map((r, i) => 
-            `<option value="${i}">${r.name} [${r.article || ''}]</option>`
-        ).join('');
-        if (!rods.length) itemSel.innerHTML = '<option value="">-- Нет обрезиненных прутков в Шаге 5 --</option>';
-    }
-    
-    window.updateProductionRequirements();
-};
 
-window.calcRequiredMetalWeight = function(blank, qty, batch) {
-    const D = parseFloat(blank.length) || 0;
-    const T = parseFloat(blank.rodLength || 6000);
-    const S = parseFloat(blank.gap || 10);
+window.handleDrawingUpload = function(input, targetId) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const target = document.getElementById(targetId);
+    if (!target) return;
     
-    let G = parseInt(blank.qtyInRod);
-    if (!G || isNaN(G) || G <= 0) {
-        G = Math.floor(T / D);
-        if (G > 0 && (T - (G * D) - (G - 1) * S < 0)) {
-            G = Math.max(0, G - 1);
-        }
-    }
-    if (G <= 0) G = 1;
-
-    const I = T - (G * D) - (G - 1) * S;
-    const F = Math.floor(qty / G);
-    const rem = qty % G;
-
-    let totalLen = 0;
-    if (F > 0) {
-        const fullRodLen = I >= 1000 ? (T - I) : T;
-        totalLen += F * fullRodLen;
-    }
-    if (rem > 0) {
-        const usedPart = rem * D + (rem - 1) * S;
-        const partRemainder = T - usedPart;
-        const partRodLen = partRemainder >= 1000 ? usedPart : T;
-        totalLen += partRodLen;
-    }
-
-    const density = window.getSteelDensity ? window.getSteelDensity(batch.steel_type || batch.name) : 7.85;
-    const weightPerM = (Math.PI * Math.pow(parseFloat(batch.dia || batch.diameter || 0), 2) * density) / 4000;
-
-    return parseFloat(((totalLen / 1000) * weightPerM).toFixed(2));
-};
-
-window.updateProductionRequirements = () => {
-    const type = document.getElementById('prod-type').value;
-    const qty = parseInt(document.getElementById('prod-qty').value) || 0;
-    const itemSel = document.getElementById('prod-item-select');
-    const reqBox = document.getElementById('prod-requirements-box');
-    const submitBtn = document.getElementById('btn-submit-production');
-
-    const isClientProvided = document.getElementById('prod-client-provided')?.checked || false;
-    let clientQty = isClientProvided ? (parseInt(document.getElementById('prod-client-qty').value) || 0) : 0;
-    clientQty = Math.max(0, Math.min(clientQty, qty));
-    const makeQty = qty - clientQty;
-
-    const displayMakeQty = document.getElementById('prod-make-qty-display');
-    if (displayMakeQty) displayMakeQty.innerText = makeQty;
-    
-    if (qty <= 0) {
-        reqBox.innerHTML = '<div style="color:var(--brand-red);">Укажите положительное количество к выпуску.</div>';
-        submitBtn.disabled = true;
-        return;
-    }
-    
-    if (!itemSel.value || itemSel.value === "") {
-        reqBox.innerHTML = '<div style="color:var(--brand-red);">Выберите целевое изделие из списка.</div>';
-        submitBtn.disabled = true;
-        return;
-    }
-    
-    const idx = parseInt(itemSel.value);
-    let enough = true;
-    let html = '';
-    
-    if (type === 'blank') {
-        const batchSel = document.getElementById('prod-metal-batch');
-        if (!batchSel.value || batchSel.value === "") {
-            reqBox.innerHTML = '<div style="color:var(--brand-red);">Выберите партию сырья со склада.</div>';
-            submitBtn.disabled = true;
-            return;
-        }
-        
-        const bIdx = parseInt(batchSel.value);
-        const batch = window.dbWarehouseBatches[bIdx];
-        const blank = window.db.rods_blanks[idx];
-        
-        if (!batch || !blank) {
-            reqBox.innerHTML = '<div style="color:var(--brand-red);">Ошибка выбора партии или заготовки.</div>';
-            submitBtn.disabled = true;
-            return;
-        }
-        
-        const reqWeight = window.calcRequiredMetalWeight(blank, makeQty, batch);
-        const avWeight = parseFloat((batch.qty || batch.available_weight || 0).toFixed(2));
-        
-        if (avWeight < reqWeight) enough = false;
-        
-        html = `
-            <div style="font-weight:600; color:#fff; margin-bottom:8px;"><i class="fa-solid fa-list"></i> Расчет материального баланса:</div>
-            <div class="flex justify-between text-sm mb-1" style="display:flex; justify-content:space-between;">
-                <span>Потребность металла (${batch.name || 'Сырье'} Ø${batch.dia} мм):</span>
-                <span class="text-bold" style="color:${enough ? 'var(--neon-emerald)' : 'var(--brand-red)'}; font-weight:700;">${reqWeight} кг</span>
-            </div>
-            <div class="flex justify-between text-sm mb-1" style="display:flex; justify-content:space-between;">
-                <span>Доступно в партии (Накл: ${batch.invoice}):</span>
-                <strong style="color:#fff;">${avWeight} кг</strong>
-            </div>
-            <div class="flex justify-between text-sm mt-2 border-top" style="display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.05); padding-top:5px;">
-                <span>Выход готовой продукции:</span>
-                <strong style="color:var(--neon-emerald);">+${qty} шт заготовок [${blank.article || 'Заготовка'}]</strong>
-            </div>
-        `;
-        
-    } else if (type === 'straight') {
-        const rod = window.db.rods_standard[idx];
-        let blank = (window.db.rods_blanks || []).find(b => String(b.dia) === String(rod.dia) && parseFloat(b.length) === parseFloat(rod.length));
-        if (!blank && rod.blankId !== undefined) blank = window.db.rods_blanks[rod.blankId];
-        const blankKey = blank ? 'blank_' + blank.article : 'blank';
-        const avBlanks = parseInt(window.dbWarehouseInv[blankKey] || 0);
-        const reqBlanks = makeQty;
-        
-        if (avBlanks < reqBlanks) enough = false;
-        
-        html = `
-            <div style="font-weight:600; color:#fff; margin-bottom:8px;"><i class="fa-solid fa-list"></i> Расчет материального баланса:</div>
-            <div class="flex justify-between text-sm mb-1" style="display:flex; justify-content:space-between;">
-                <span>Требуется заготовок [${blank ? blank.article : 'Заготовка'}]:</span>
-                <span class="text-bold" style="color:${enough ? 'var(--neon-emerald)' : 'var(--brand-red)'}; font-weight:700;">${reqBlanks} шт</span>
-            </div>
-            <div class="flex justify-between text-sm mb-1" style="display:flex; justify-content:space-between;">
-                <span>Доступно заготовок на складе:</span>
-                <strong style="color:#fff;">${avBlanks} шт</strong>
-            </div>
-            <div class="flex justify-between text-sm mt-2 border-top" style="display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.05); padding-top:5px;">
-                <span>Выход готовой продукции:</span>
-                <strong style="color:var(--neon-emerald);">+${qty} шт базовых прутков [${rod.article || rod.name}]</strong>
-            </div>
-        `;
-        
-    } else if (type === 'double') {
-        const rod = window.db.rods_double[idx];
-        let blank = (window.db.rods_blanks || []).find(b => String(b.dia) === String(rod.dia) && parseFloat(b.length) === parseFloat(rod.length));
-        if (!blank && rod.blankId !== undefined) blank = window.db.rods_blanks[rod.blankId];
-        const blankKey = blank ? 'blank_' + blank.article : 'blank';
-        const avBlanks = parseInt(window.dbWarehouseInv[blankKey] || 0);
-        const reqBlanks = makeQty * 2;
-        
-        if (avBlanks < reqBlanks) enough = false;
-        
-        html = `
-            <div style="font-weight:600; color:#fff; margin-bottom:8px;"><i class="fa-solid fa-list"></i> Расчет материального баланса:</div>
-            <div class="flex justify-between text-sm mb-1" style="display:flex; justify-content:space-between;">
-                <span>Требуется заготовок [${blank ? blank.article : 'Заготовка'}] (2 шт на изделие):</span>
-                <span class="text-bold" style="color:${enough ? 'var(--neon-emerald)' : 'var(--brand-red)'}; font-weight:700;">${reqBlanks} шт</span>
-            </div>
-            <div class="flex justify-between text-sm mb-1" style="display:flex; justify-content:space-between;">
-                <span>Доступно заготовок на складе:</span>
-                <strong style="color:#fff;">${avBlanks} шт</strong>
-            </div>
-            <div class="flex justify-between text-sm mt-2 border-top" style="display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.05); padding-top:5px;">
-                <span>Выход готовой продукции:</span>
-                <strong style="color:var(--neon-emerald);">+${qty} шт сдвоенных прутков [${rod.article || rod.name}]</strong>
-            </div>
-        `;
-        
-    } else if (type === 'bent') {
-        const rod = window.db.rods_bent[idx];
-        let base = (window.db.rods_standard || []).find(rs => rs.name === rod.name.replace(' (Гнутый)', '').replace(' (Сварной)', ''));
-        if (!base && rod.baseId !== undefined) base = window.db.rods_standard[rod.baseId];
-        const baseKey = base ? getRodWarehouseKey(base, 'straight') : 'straight';
-        const avStandard = parseInt(window.dbWarehouseInv[baseKey] || 0);
-        const reqStandard = makeQty;
-        
-        if (avStandard < reqStandard) enough = false;
-        
-        html = `
-            <div style="font-weight:600; color:#fff; margin-bottom:8px;"><i class="fa-solid fa-list"></i> Расчет материального баланса:</div>
-            <div class="flex justify-between text-sm mb-1" style="display:flex; justify-content:space-between;">
-                <span>Требуется прямых прутков [${base ? base.article : 'Прямой'}]:</span>
-                <span class="text-bold" style="color:${enough ? 'var(--neon-emerald)' : 'var(--brand-red)'}; font-weight:700;">${reqStandard} шт</span>
-            </div>
-            <div class="flex justify-between text-sm mb-1" style="display:flex; justify-content:space-between;">
-                <span>Доступно прямых прутков на складе:</span>
-                <strong style="color:#fff;">${avStandard} шт</strong>
-            </div>
-            <div class="flex justify-between text-sm mt-2 border-top" style="display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.05); padding-top:5px;">
-                <span>Выход готовой продукции:</span>
-                <strong style="color:var(--neon-emerald);">+${qty} шт гнутых прутков [${rod.article || rod.name}]</strong>
-            </div>
-        `;
-        
-    } else if (type === 'rubberized') {
-        const rod = window.db.rods_rubber[idx];
-        const baseType = document.getElementById('prod-rubber-base-type').value;
-        const allRods = [...(window.db.rods_standard || []), ...(window.db.rods_bent || [])];
-        let base = rod.baseId !== undefined ? allRods[rod.baseId] : allRods.find(rs => rod.name.includes(rs.name));
-        const baseKey = base ? getRodWarehouseKey(base, baseType === 'straight' ? 'straight' : 'bent') : (baseType === 'straight' ? 'straight' : 'bent');
-        const avBase = parseInt(window.dbWarehouseInv[baseKey] || 0);
-        const reqBase = makeQty;
-        
-        if (avBase < reqBase) enough = false;
-        
-        html = `
-            <div style="font-weight:600; color:#fff; margin-bottom:8px;"><i class="fa-solid fa-list"></i> Расчет материального баланса:</div>
-            <div class="flex justify-between text-sm mb-1" style="display:flex; justify-content:space-between;">
-                <span>Требуется базовых прутков [${base ? base.article : 'Базовый'}]:</span>
-                <span class="text-bold" style="color:${enough ? 'var(--neon-emerald)' : 'var(--brand-red)'}; font-weight:700;">${reqBase} шт</span>
-            </div>
-            <div class="flex justify-between text-sm mb-1" style="display:flex; justify-content:space-between;">
-                <span>Доступно на складе:</span>
-                <strong style="color:#fff;">${avBase} шт</strong>
-            </div>
-            <div class="flex justify-between text-sm mt-2 border-top" style="display:flex; justify-content:space-between; border-top:1px solid rgba(255,255,255,0.05); padding-top:5px;">
-                <span>Выход готовой продукции:</span>
-                <strong style="color:var(--neon-emerald);">+${qty} шт обрезиненных прутков (${baseType === 'straight' ? 'прямой' : 'гнутый'}) [${rod.article || rod.name}]</strong>
-            </div>
-        `;
-    }
-    
-    if (!enough) {
-        html += `<div style="background:rgba(226,31,38,0.15); border:1px solid var(--brand-red); color:var(--brand-red); font-size:0.75rem; font-weight:700; padding:8px; border-radius:6px; margin-top:10px; text-align:center;"><i class="fa-solid fa-triangle-exclamation"></i> НЕХВАТКА СЫРЬЯ / МАТЕРИАЛОВ НА СКЛАДЕ!</div>`;
-        submitBtn.disabled = true;
-        submitBtn.style.opacity = '0.5';
-    } else {
-        html += `<div style="background:rgba(0,255,157,0.07); border:1px solid var(--neon-emerald); color:var(--neon-emerald); font-size:0.75rem; font-weight:700; padding:8px; border-radius:6px; margin-top:10px; text-align:center;"><i class="fa-solid fa-circle-check"></i> ВСЕГО ДОСТАТОЧНО. ГОТОВО К ЗАПУСКУ!</div>`;
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = '1';
-    }
-    
-    reqBox.innerHTML = html;
-};
-
-function getRodWarehouseKey(rod, defaultPrefix) {
-    if (!rod) return defaultPrefix;
-    const nameLower = (rod.name || '').toLowerCase();
-    const isHedge = nameLower.includes('еж') || nameLower.includes('ёж') || nameLower.includes('палец');
-    if (isHedge) return 'hedge_' + rod.article;
-    const isBent = nameLower.includes('гнут') || nameLower.includes('сварн') || nameLower.includes('комби') || nameLower.includes('bent');
-    if (defaultPrefix === 'rubberized' && isBent) return 'bent_rubberized_' + rod.article;
-    return defaultPrefix + '_' + rod.article;
-}
-
-window.saveWarehouseStateFromProduction = async (lastLogOp) => {
-    localStorage.setItem('prutkon_warehouse_inv', JSON.stringify(window.dbWarehouseInv));
-    localStorage.setItem('prutkon_warehouse_batches', JSON.stringify(window.dbWarehouseBatches));
-    
-    if (lastLogOp) {
-        if (!window.dbWarehouseLog) window.dbWarehouseLog = [];
-        window.dbWarehouseLog.push(lastLogOp);
-        localStorage.setItem('prutkon_warehouse_log', JSON.stringify(window.dbWarehouseLog));
-    }
-    
+    // Check if it's Supabase (for real upload)
     if (window.supabase) {
-        try {
-            const invToSave = Object.keys(window.dbWarehouseInv).map(key => {
-                const rawVal = window.dbWarehouseInv[key];
-                let qtyNum = 0;
-                if (typeof rawVal === 'number') {
-                    qtyNum = rawVal;
-                } else if (typeof rawVal === 'string') {
-                    qtyNum = parseFloat(rawVal.replace(/\s/g, '').replace(',', '.')) || 0;
+        target.value = "Загрузка...";
+        const fileName = drawing__;
+        window.supabase.storage.from('prutkon-files').upload(fileName, file)
+            .then(({ data, error }) => {
+                if (error) {
+                    console.error("Upload error:", error);
+                    // Fallback to base64 if bucket fails
+                    const reader = new FileReader();
+                    reader.onload = (e) => { target.value = e.target.result; };
+                    reader.readAsDataURL(file);
+                } else {
+                    const { data: pubData } = window.supabase.storage.from('prutkon-files').getPublicUrl(fileName);
+                    if (pubData) target.value = pubData.publicUrl;
                 }
-                return {
-                    id: key,
-                    data: { item_key: key, quantity: qtyNum, updated_at: new Date().toISOString() }
-                };
+            })
+            .catch(() => {
+                const reader = new FileReader();
+                reader.onload = (e) => { target.value = e.target.result; };
+                reader.readAsDataURL(file);
             });
-            const { error: invErr } = await window.supabase.from('warehouse_inventory').upsert(invToSave);
-            if (invErr) console.error('Supabase error warehouse_inventory:', invErr.message);
-            
-            const { error: batchErr } = await window.supabase.from('metal_batches').upsert(
-                window.dbWarehouseBatches.map(b => ({
-                    id: b.id,
-                    data: b
-                }))
-            );
-            if (batchErr) console.error('Supabase error metal_batches:', batchErr.message);
-
-            if (lastLogOp) {
-                const { error: logErr } = await window.supabase.from('warehouse_log').upsert({
-                    id: String(lastLogOp.id),
-                    data: lastLogOp
-                });
-                if (logErr) console.error('Supabase error warehouse_log:', logErr.message);
-            }
-            console.log('☁️ Производственное состояние успешно синхронизировано с Supabase Cloud!');
-        } catch(err) {
-            console.error('Ошибка синхронизации производства с облаком:', err);
-        }
-    }
-};
-
-window.submitProductionRun = async () => {
-    const type = document.getElementById('prod-type').value;
-    const qty = parseInt(document.getElementById('prod-qty').value) || 0;
-    const itemSel = document.getElementById('prod-item-select');
-    
-    if (qty <= 0 || !itemSel.value || itemSel.value === "") {
-        notify('Заполните все поля формы корректно', 'warning');
-        return;
-    }
-    
-    const idx = parseInt(itemSel.value);
-    const emp = (typeof window.getCurrentEmployee === 'function' ? window.getCurrentEmployee() : null) || window.currentUser;
-    const responsible = emp ? emp.name : 'Система';
-    
-    let logEntry = null;
-    let detailsText = '';
-    let changesPayload = {};
-    
-    const isClientProvided = document.getElementById('prod-client-provided')?.checked || false;
-    let clientQty = isClientProvided ? (parseInt(document.getElementById('prod-client-qty').value) || 0) : 0;
-    clientQty = Math.max(0, Math.min(clientQty, qty));
-    const makeQty = qty - clientQty;
-
-    if (type === 'blank') {
-        const batchSel = document.getElementById('prod-metal-batch');
-        const bIdx = parseInt(batchSel.value);
-        const batch = window.dbWarehouseBatches[bIdx];
-        const blank = window.db.rods_blanks[idx];
-        
-        const reqWeight = window.calcRequiredMetalWeight(blank, makeQty, batch);
-        
-        batch.qty = parseFloat((parseFloat(batch.qty || 0) - reqWeight).toFixed(2));
-        batch.available_weight = batch.qty;
-        if (batch.weight !== undefined) batch.weight = batch.qty;
-        
-        let metalKey = null;
-        if (window.dbDirectories) {
-            const found = window.dbDirectories.find(d => 
-                (d.category === 'metal' || d.category === 'Сырье') &&
-                (d.name === batch.steel_type || d.name === batch.name) &&
-                parseFloat(d.diameter || d.dia || 0) === parseFloat(batch.dia || batch.diameter || 0)
-            );
-            if (found) metalKey = 'metal_' + found.id;
-        }
-        if (!metalKey) {
-            for (let key in window.dbWarehouseInv) {
-                if (key.startsWith('metal_')) {
-                    const id = key.replace('metal_', '');
-                    const d = window.dbDirectories?.find(x => String(x.id) === id);
-                    if (d && (d.name === batch.steel_type || d.name === batch.name) && parseFloat(d.diameter || d.dia || 0) === parseFloat(batch.dia || batch.diameter || 0)) {
-                        metalKey = key;
-                        break;
-                    }
-                }
-            }
-        }
-        
-        if (metalKey) {
-            window.dbWarehouseInv[metalKey] = parseFloat((parseFloat(window.dbWarehouseInv[metalKey] || 0) - reqWeight).toFixed(2));
-        }
-        
-        const blankKey = 'blank_' + blank.article;
-        window.dbWarehouseInv[blankKey] = parseInt(window.dbWarehouseInv[blankKey] || 0) + qty;
-        
-        detailsText = `Нарезка заготовок L=${blank.length} мм: +${qty} шт [${blank.article}] (Давальческие: ${clientQty} шт). Списано сырья (${batch.name} Ø${batch.dia} мм): -${reqWeight} кг`;
-        changesPayload = {
-            source: { item: metalKey || 'metal_raw', qty: -reqWeight },
-            target: { item: blankKey, qty: qty }
+    } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            target.value = e.target.result;
         };
-        
-    } else if (type === 'straight') {
-        const rod = window.db.rods_standard[idx];
-        let blank = (window.db.rods_blanks || []).find(b => String(b.dia) === String(rod.dia) && parseFloat(b.length) === parseFloat(rod.length));
-        if (!blank && rod.blankId !== undefined) blank = window.db.rods_blanks[rod.blankId];
-        const blankKey = blank ? 'blank_' + blank.article : 'blank';
-        const rodKey = getRodWarehouseKey(rod, 'straight');
-        
-        window.dbWarehouseInv[blankKey] = parseInt(window.dbWarehouseInv[blankKey] || 0) - makeQty;
-        window.dbWarehouseInv[rodKey] = parseInt(window.dbWarehouseInv[rodKey] || 0) + qty;
-        
-        detailsText = `Сборка прямого прутка [${rod.article || rod.name}]: +${qty} шт (Давальческие: ${clientQty} шт). Списано заготовок [${blank ? blank.article : 'blank'}]: -${makeQty} шт.`;
-        changesPayload = {
-            source: { item: blankKey, qty: -makeQty },
-            target: { item: rodKey, qty: qty }
-        };
-        
-    } else if (type === 'double') {
-        const rod = window.db.rods_double[idx];
-        let blank = (window.db.rods_blanks || []).find(b => String(b.dia) === String(rod.dia) && parseFloat(b.length) === parseFloat(rod.length));
-        if (!blank && rod.blankId !== undefined) blank = window.db.rods_blanks[rod.blankId];
-        const blankKey = blank ? 'blank_' + blank.article : 'blank';
-        const rodKey = getRodWarehouseKey(rod, 'double');
-        const reqBlanks = makeQty * 2;
-        
-        window.dbWarehouseInv[blankKey] = parseInt(window.dbWarehouseInv[blankKey] || 0) - reqBlanks;
-        window.dbWarehouseInv[rodKey] = parseInt(window.dbWarehouseInv[rodKey] || 0) + qty;
-        
-        detailsText = `Сборка сдвоенного прутка [${rod.article || rod.name}]: +${qty} шт (Давальческие: ${clientQty} шт). Списано заготовок (x2) [${blank ? blank.article : 'blank'}]: -${reqBlanks} шт.`;
-        changesPayload = {
-            source: { item: blankKey, qty: -reqBlanks },
-            target: { item: rodKey, qty: qty }
-        };
-        
-    } else if (type === 'bent') {
-        const rod = window.db.rods_bent[idx];
-        let base = (window.db.rods_standard || []).find(rs => rs.name === rod.name.replace(' (Гнутый)', '').replace(' (Сварной)', ''));
-        if (!base && rod.baseId !== undefined) base = window.db.rods_standard[rod.baseId];
-        const baseKey = base ? getRodWarehouseKey(base, 'straight') : 'straight';
-        const rodKey = getRodWarehouseKey(rod, 'bent');
-        
-        window.dbWarehouseInv[baseKey] = parseInt(window.dbWarehouseInv[baseKey] || 0) - makeQty;
-        window.dbWarehouseInv[rodKey] = parseInt(window.dbWarehouseInv[rodKey] || 0) + qty;
-        
-        detailsText = `Гибка прутка [${rod.article || rod.name}]: +${qty} шт (Давальческие: ${clientQty} шт). Списано прямых прутков [${base ? base.article : 'straight'}]: -${makeQty} шт.`;
-        changesPayload = {
-            source: { item: baseKey, qty: -makeQty },
-            target: { item: rodKey, qty: qty }
-        };
-        
-    } else if (type === 'rubberized') {
-        const rod = window.db.rods_rubber[idx];
-        const baseType = document.getElementById('prod-rubber-base-type').value;
-        const allRods = [...(window.db.rods_standard || []), ...(window.db.rods_bent || [])];
-        let base = rod.baseId !== undefined ? allRods[rod.baseId] : allRods.find(rs => rod.name.includes(rs.name));
-        const baseKey = base ? getRodWarehouseKey(base, baseType === 'straight' ? 'straight' : 'bent') : (baseType === 'straight' ? 'straight' : 'bent');
-        const rodKey = getRodWarehouseKey(rod, 'rubberized');
-        
-        window.dbWarehouseInv[baseKey] = parseInt(window.dbWarehouseInv[baseKey] || 0) - makeQty;
-        window.dbWarehouseInv[rodKey] = parseInt(window.dbWarehouseInv[rodKey] || 0) + qty;
-        
-        detailsText = `Обрезинивание прутка [${rod.article || rod.name}]: +${qty} шт (Давальческие: ${clientQty} шт). Списано базовых прутков [${base ? base.article : 'base'}]: -${makeQty} шт.`;
-        changesPayload = {
-            source: { item: baseKey, qty: -makeQty },
-            target: { item: rodKey, qty: qty }
-        };
+        reader.readAsDataURL(file);
     }
-    
-    logEntry = {
-        id: Date.now() + Math.floor(Math.random() * 1000),
-        date: new Date().toLocaleString('ru-RU'),
-        type: 'Производство деталей',
-        details: detailsText,
-        comment: `Запущено из Конструктора производства | Отв: ${responsible}`,
-        changes: changesPayload,
-        user: responsible
-    };
-    
-    await window.saveWarehouseStateFromProduction(logEntry);
-    notify(`Производство успешно проведено! ${detailsText}`, 'success');
-    
-    // Сброс формы
-    document.getElementById('prod-qty').value = '10';
-    document.getElementById('prod-item-select').value = '';
-    
-    // Reset client-provided inputs
-    const clientProvidedCheckbox = document.getElementById('prod-client-provided');
-    if (clientProvidedCheckbox) {
-        clientProvidedCheckbox.checked = false;
-        window.toggleProdClientProvided(false);
-    }
-
-    window.updateProductionRequirements();
-    if (typeof window.refreshWarehouseData === 'function') window.refreshWarehouseData();
-
-    window.closeProductionModal();
-    window.updateDropdowns();
-    window.dispatchEvent(new Event('db_updated'));
-};
-
-window.toggleProdClientProvided = (checked) => {
-    const group = document.getElementById('prod-client-qty-group');
-    if (group) group.style.display = checked ? 'block' : 'none';
-    if (!checked) {
-        const input = document.getElementById('prod-client-qty');
-        if (input) input.value = 0;
-    }
-    window.updateProductionRequirements();
-};
-
-window.openProductionModal = () => {
-    const modal = document.getElementById('modal-production-run');
-    if (modal) {
-        modal.style.display = 'flex';
-        window.updateProductionItemDropdown();
-    }
-};
-
-window.closeProductionModal = () => {
-    const modal = document.getElementById('modal-production-run');
-    if (modal) modal.style.display = 'none';
 };

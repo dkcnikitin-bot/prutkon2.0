@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ПРУТКОН ОС: Модуль "Склад и Производство" (Логика)
  */
 
@@ -44,7 +44,8 @@ window.initWarehouseCatalog = () => {
             WAREHOUSE_CATALOG[key] = {
                 name: nameVal,
                 unit: 'кг',
-                icon: 'fa-cube'
+                icon: 'fa-cube',
+                dia: parseFloat(d.diameter) || 0
             };
         });
 
@@ -63,7 +64,8 @@ window.initWarehouseCatalog = () => {
             WAREHOUSE_CATALOG[key] = {
                 name: nameVal,
                 unit: 'м.п.',
-                icon: 'fa-tape'
+                icon: 'fa-tape',
+                thickness: parseFloat(d.thickness) || 0
             };
         });
 
@@ -79,7 +81,8 @@ window.initWarehouseCatalog = () => {
             WAREHOUSE_CATALOG[key] = {
                 name: nameVal,
                 unit: 'м.п.',
-                icon: 'fa-box-tissue'
+                icon: 'fa-box-tissue',
+                thickness: parseFloat(d.thickness) || 0
             };
         });
 
@@ -95,7 +98,8 @@ window.initWarehouseCatalog = () => {
             WAREHOUSE_CATALOG[key] = {
                 name: nameVal,
                 unit: 'м.п.',
-                icon: 'fa-grip-lines-vertical'
+                icon: 'fa-grip-lines-vertical',
+                thickness: parseFloat(d.thickness) || 0
             };
         });
 
@@ -150,7 +154,8 @@ window.initWarehouseCatalog = () => {
                 name: `Заготовка L=${b.length} мм, Ø${b.dia} мм`,
                 unit: 'шт',
                 icon: 'fa-cube',
-                parentGroup: 'blank'
+                parentGroup: 'blank',
+                dia: parseFloat(b.dia) || 0
             };
         });
     }
@@ -165,7 +170,8 @@ window.initWarehouseCatalog = () => {
                 name: r.name,
                 unit: 'шт',
                 icon: isHedge ? 'fa-star-of-life' : 'fa-ruler-horizontal',
-                parentGroup: isHedge ? 'hedge' : 'straight'
+                parentGroup: isHedge ? 'hedge' : 'straight',
+                dia: parseFloat(r.dia) || 0
             };
         });
     }
@@ -178,7 +184,8 @@ window.initWarehouseCatalog = () => {
                 name: r.name,
                 unit: 'шт',
                 icon: 'fa-grip-lines',
-                parentGroup: 'double'
+                parentGroup: 'double',
+                dia: parseFloat(r.dia) || 0
             };
         });
     }
@@ -193,7 +200,8 @@ window.initWarehouseCatalog = () => {
                 name: r.name,
                 unit: 'шт',
                 icon: isHedge ? 'fa-star-of-life' : 'fa-wave-square',
-                parentGroup: isHedge ? 'hedge' : 'bent'
+                parentGroup: isHedge ? 'hedge' : 'bent',
+                dia: parseFloat(r.dia) || 0
             };
         });
     }
@@ -208,7 +216,8 @@ window.initWarehouseCatalog = () => {
                 name: r.name,
                 unit: 'шт',
                 icon: isBent ? 'fa-bacon' : 'fa-ring',
-                parentGroup: isBent ? 'bent_rubberized' : 'rubberized'
+                parentGroup: isBent ? 'bent_rubberized' : 'rubberized',
+                dia: parseFloat(r.dia) || 0
             };
         });
     }
@@ -217,6 +226,8 @@ window.initWarehouseCatalog = () => {
 const OPERATIONS_CONFIG = {
     'in_metal': { type: 'Приход: Металл', target: 'metal', source: null, isIncoming: true },
     'in_belt': { type: 'Приход: Лента', target: 'belt', source: null, isIncoming: true },
+    'in_belt_blank': { type: 'Приход: Лента-заготовка', target: 'belt_blank', source: null, isIncoming: true },
+    'in_belt_strip': { type: 'Приход: Лента-полоса', target: 'belt_strip', source: null, isIncoming: true },
     'in_hardware': { type: 'Приход: Скобяные изделия', target: 'hardware', source: null, isIncoming: true },
     'in_fasteners': { type: 'Приход: Метизы и крепеж', target: 'fasteners', source: null, isIncoming: true },
     'prod_belt_blank': { type: 'Обрезка бортов (Лента -> Лента-Заготовка)', target: 'belt_blank', source: 'belt' },
@@ -368,7 +379,7 @@ window.refreshWarehouseData = () => {
                     const diam = parseFloat(dataObj.diameter || 0);
                     const exists = window.dbMetalBatches.find(b => (b.name === st || b.steel_type === st) && parseFloat(b.dia || b.diameter || 0) === diam);
                     if (!exists) {
-                        const invNum = dataObj.invoice_num || dataObj.invoice || 'Остаток';
+                        const invNum = dataObj.invoice_num || dataObj.invoice || '\u041e\u0441\u0442\u0430\u0442\u043e\u043a';
                         const pr = parseFloat(dataObj.price_tonne || dataObj.price || 0);
                         window.dbMetalBatches.push({
                             id: 'batch_auto_' + d.id + '_' + Date.now(),
@@ -385,7 +396,7 @@ window.refreshWarehouseData = () => {
                             price: pr,
                             deliveryCost: 0,
                             vat_rate: 1.2,
-                            supplier: dataObj.supplier || 'Складские остатки',
+                            supplier: dataObj.supplier || '\u0421\u043a\u043b\u0430\u0434\u0441\u043a\u0438\u0435 \u043e\u0441\u0442\u0430\u0442\u043a\u0438',
                             date: new Date().toISOString(),
                             created_at: new Date().toISOString()
                         });
@@ -405,8 +416,10 @@ function renderInventory() {
     if (!tbody) return;
 
     window.expandedGroups = window.expandedGroups || {
-        metal: false,
         belt: false,
+        belt_blank: false,
+        belt_strip: false,
+        metal: false,
         hardware: false,
         fasteners: false,
         blank: false,
@@ -421,17 +434,19 @@ function renderInventory() {
     let html = '';
 
     const groupsConfig = {
-        metal: { name: 'Материалы (в ассортименте)', unit: 'кг', icon: 'fa-cubes', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.05)', border: 'rgba(255,180,0,0.15)' },
-        belt: { name: 'Ленты (рулоны, заготовки, полосы)', unit: 'м.п.', icon: 'fa-tape', color: 'var(--accent-blue)', bg: 'rgba(0,147,255,0.05)', border: 'rgba(0,147,255,0.15)' },
-        hardware: { name: 'Скобяные изделия', unit: 'шт', icon: 'fa-toolbox', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.03)', border: 'rgba(255,180,0,0.1)' },
-        fasteners: { name: 'Метизы и крепеж', unit: 'шт', icon: 'fa-screwdriver-wrench', color: '#af52de', bg: 'rgba(175,82,222,0.03)', border: 'rgba(175,82,222,0.1)' },
-        blank: { name: 'Заготовки прутков', unit: 'шт', icon: 'fa-cube', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.03)', border: 'rgba(255,180,0,0.1)' },
-        straight: { name: 'Прутки прямые (стандартные)', unit: 'шт', icon: 'fa-ruler-horizontal', color: 'var(--neon-emerald)', bg: 'rgba(0,255,157,0.03)', border: 'rgba(0,255,157,0.1)' },
-        double: { name: 'Сдвоенные прутки', unit: 'шт', icon: 'fa-grip-lines', color: '#af52de', bg: 'rgba(175,82,222,0.03)', border: 'rgba(175,82,222,0.1)' },
-        bent: { name: 'Гнутые / Сварные прутки', unit: 'шт', icon: 'fa-wave-square', color: '#af52de', bg: 'rgba(175,82,222,0.03)', border: 'rgba(175,82,222,0.1)' },
-        rubberized: { name: 'Обрезиненные прутки', unit: 'шт', icon: 'fa-ring', color: '#00c7be', bg: 'rgba(0,199,190,0.03)', border: 'rgba(0,199,190,0.1)' },
-        hedge: { name: 'Ёжные и пальцевые прутки', unit: 'шт', icon: 'fa-star-of-life', color: '#ff2d55', bg: 'rgba(255,45,85,0.03)', border: 'rgba(255,45,85,0.1)' },
-        bent_rubberized: { name: 'Гнутые обрезиненные прутки', unit: 'шт', icon: 'fa-bacon', color: '#00c7be', bg: 'rgba(0,199,190,0.03)', border: 'rgba(0,199,190,0.1)' }
+        belt: { name: '1. Ленты (Входящие)', unit: 'м.п.', icon: 'fa-tape', color: 'var(--accent-blue)', bg: 'rgba(0,147,255,0.05)', border: 'rgba(0,147,255,0.15)' },
+        belt_blank: { name: '1.1. Ленты-заготовки (обрезные)', unit: 'м.п.', icon: 'fa-box-tissue', color: 'var(--accent-blue)', bg: 'rgba(0,147,255,0.03)', border: 'rgba(0,147,255,0.1)' },
+        belt_strip: { name: '1.2. Ленты-полосы (нарезные)', unit: 'м.п.', icon: 'fa-grip-lines-vertical', color: 'var(--accent-blue)', bg: 'rgba(0,147,255,0.03)', border: 'rgba(0,147,255,0.1)' },
+        metal: { name: '2. Материалы (в ассортименте)', unit: 'кг', icon: 'fa-cubes', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.05)', border: 'rgba(255,180,0,0.15)' },
+        blank: { name: '2.1. Заготовки прутков', unit: 'шт', icon: 'fa-cube', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.03)', border: 'rgba(255,180,0,0.1)' },
+        straight: { name: '3. Прутки прямые (стандартные)', unit: 'шт', icon: 'fa-ruler-horizontal', color: 'var(--neon-emerald)', bg: 'rgba(0,255,157,0.03)', border: 'rgba(0,255,157,0.1)' },
+        double: { name: '3.1. Сдвоенные прутки', unit: 'шт', icon: 'fa-grip-lines', color: '#af52de', bg: 'rgba(175,82,222,0.03)', border: 'rgba(175,82,222,0.1)' },
+        bent: { name: '4. Гнутые / Сварные прутки', unit: 'шт', icon: 'fa-wave-square', color: '#af52de', bg: 'rgba(175,82,222,0.03)', border: 'rgba(175,82,222,0.1)' },
+        rubberized: { name: '4.1. Обрезиненные прутки', unit: 'шт', icon: 'fa-ring', color: '#00c7be', bg: 'rgba(0,199,190,0.03)', border: 'rgba(0,199,190,0.1)' },
+        hedge: { name: '4.2. Ёжные и пальцевые прутки', unit: 'шт', icon: 'fa-star-of-life', color: '#ff2d55', bg: 'rgba(255,45,85,0.03)', border: 'rgba(255,45,85,0.1)' },
+        bent_rubberized: { name: '5. Гнутые обрезиненные прутки', unit: 'шт', icon: 'fa-bacon', color: '#00c7be', bg: 'rgba(0,199,190,0.03)', border: 'rgba(0,199,190,0.1)' },
+        hardware: { name: '6. Скобяные изделия', unit: 'шт', icon: 'fa-toolbox', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.03)', border: 'rgba(255,180,0,0.1)' },
+        fasteners: { name: '7. Метизы и крепеж', unit: 'шт', icon: 'fa-screwdriver-wrench', color: '#af52de', bg: 'rgba(175,82,222,0.03)', border: 'rgba(175,82,222,0.1)' }
     };
 
     const stripTU = (name) => {
@@ -447,6 +462,26 @@ function renderInventory() {
         return match ? parseFloat(match[1]) : 0;
     };
 
+    const getCatalogItemThickness = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return 0;
+        if (item.thickness) return parseFloat(item.thickness);
+        
+        let nameStr = String(item.name || '');
+        const match = nameStr.match(/(\d+(?:\.\d+)?)\s*мм/i);
+        if (match) return parseFloat(match[1]);
+        
+        // Попытка извлечь толщину из названия ленты (например: EP-1200/3 6/2 -> 3 + 6 + 2 = 11мм)
+        const beltMatch = nameStr.match(/\/(\d+)\s+(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)/);
+        if (beltMatch) {
+            const cords = parseFloat(beltMatch[1]) || 3;
+            const top = parseFloat(beltMatch[2]) || 0;
+            const bottom = parseFloat(beltMatch[3]) || 0;
+            return cords + top + bottom;
+        }
+        return 0;
+    };
+
     for (let groupKey in groupsConfig) {
         const conf = groupsConfig[groupKey];
         
@@ -458,7 +493,11 @@ function renderInventory() {
             if (groupKey === 'metal') {
                 belongs = (key === 'metal' || key.startsWith('metal_'));
             } else if (groupKey === 'belt') {
-                belongs = (key === 'belt' || key.startsWith('belt_') || key.startsWith('belt_blank') || key.startsWith('belt_strip'));
+                belongs = (key === 'belt' || (key.startsWith('belt_') && !key.startsWith('belt_blank') && !key.startsWith('belt_strip')));
+            } else if (groupKey === 'belt_blank') {
+                belongs = (key === 'belt_blank' || key.startsWith('belt_blank_'));
+            } else if (groupKey === 'belt_strip') {
+                belongs = (key === 'belt_strip' || key.startsWith('belt_strip_'));
             } else {
                 belongs = (item.parentGroup === groupKey || (key === groupKey && !item.parentGroup));
             }
@@ -512,6 +551,8 @@ function renderInventory() {
 
             // Группируем по диаметрам если прутки/заготовки
             const isRodGroup = ['blank', 'straight', 'double', 'bent', 'rubberized', 'hedge', 'bent_rubberized'].includes(groupKey);
+            const isBeltGroup = ['belt', 'belt_blank', 'belt_strip'].includes(groupKey);
+            
             if (isRodGroup) {
                 activeChildKeys.sort((a, b) => {
                     const diaA = getCatalogItemDia(a);
@@ -532,6 +573,36 @@ function renderInventory() {
                             <tr style="background: rgba(255,255,255,0.02); font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.03);">
                                 <td colspan="3" style="padding: 6px 15px; padding-left: 35px; color: var(--brand-gold); font-size: 0.75rem;">
                                     <i class="fa-solid fa-circle-dot" style="font-size:0.6rem;"></i> Диаметр: Ø${dia ? dia + ' мм' : 'Не указан'}
+                                </td>
+                            </tr>
+                        `;
+                    }
+                    
+                    // Strip TU from displayed name
+                    const cleanItem = { ...item, name: stripTU(item.name) };
+                    html += renderInventoryChildRow(key, cleanItem, qty, groupKey);
+                    hasChildren = true;
+                });
+            } else if (isBeltGroup) {
+                activeChildKeys.sort((a, b) => {
+                    const thickA = getCatalogItemThickness(a);
+                    const thickB = getCatalogItemThickness(b);
+                    if (thickA !== thickB) return thickA - thickB;
+                    return String(WAREHOUSE_CATALOG[a].name).localeCompare(String(WAREHOUSE_CATALOG[b].name));
+                });
+
+                let lastThickness = null;
+                activeChildKeys.forEach(key => {
+                    const item = WAREHOUSE_CATALOG[key];
+                    const qty = window.dbWarehouseInv[key] || 0;
+                    
+                    const thickness = getCatalogItemThickness(key);
+                    if (thickness !== lastThickness) {
+                        lastThickness = thickness;
+                        html += `
+                            <tr style="background: rgba(255,255,255,0.02); font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td colspan="3" style="padding: 6px 15px; padding-left: 35px; color: var(--accent-blue); font-size: 0.75rem;">
+                                    <i class="fa-solid fa-circle-dot" style="font-size:0.6rem;"></i> Толщина: ${thickness ? thickness + ' мм' : 'Не указана'}
                                 </td>
                             </tr>
                         `;
@@ -650,8 +721,9 @@ function renderMetrics() {
 
             if (key.startsWith('metal_')) {
                 const metal = window.findDirectoryEntry(key);
-                if (metal && metal.price) {
-                    const pricePerTon = parseFloat(metal.price.replace(/[^\d,]/g, '').replace(',', '.'));
+                if (metal && metal.price !== undefined && metal.price !== null) {
+                    const priceVal = metal.price;
+                    const pricePerTon = typeof priceVal === 'number' ? priceVal : parseFloat(String(priceVal).replace(/[^\d,]/g, '').replace(',', '.'));
                     if (!isNaN(pricePerTon)) {
                         totalValue += (qty * (pricePerTon / 1000));
                     }
@@ -754,7 +826,7 @@ window.manualEditStock = (key) => {
                 date: new Date().toLocaleString(),
                 type: 'Ручная корректировка',
                 details: `Изменен остаток: ${item.name}. Было: ${current}, Стало: ${val} ${item.unit}`,
-                comment: 'Корректировка администратора',
+                comment: (window.currentUser && window.currentUser.name) ? `Внес изменения: ${window.currentUser.name}` : 'Корректировка администратора',
                 user: (window.currentUser && window.currentUser.name) ? window.currentUser.name : 'Система'
             });
             window.saveWarehouseData();
@@ -932,12 +1004,14 @@ window.showNewOperationModal = (prefillType) => {
         }
     }
 
-    // Generate Doc Number (1C Style)
-    const inMetalBatches = (window.dbMetalBatches || []).filter(b => b.invoice && b.invoice.startsWith('ПМ-'));
+    // Generate Doc Number (1C Style) based on dbWarehouseLog
     let maxNum = 0;
-    inMetalBatches.forEach(b => {
-        const num = parseInt(b.invoice.replace('ПМ-', ''));
-        if (num && num > maxNum) maxNum = num;
+    const logs = window.dbWarehouseLog || [];
+    logs.forEach(log => {
+        if (log.doc_number && log.doc_number.startsWith('ПМ-')) {
+            const num = parseInt(log.doc_number.replace('ПМ-', ''));
+            if (num && num > maxNum) maxNum = num;
+        }
     });
     const docNum = 'ПМ-' + String(maxNum + 1).padStart(5, '0');
     const docNumEl = document.getElementById('op-doc-num');
@@ -1153,9 +1227,12 @@ window.onMetalManualCalc = () => {
     if (barsCount > 0 && barLen > 0 && wpm > 0) {
         const totalWeightKg = (barsCount * (barLen / 1000) * wpm);
         const qtyInput = document.getElementById('op-qty');
-        if (qtyInput) {
+        if (qtyInput && parseFloat(qtyInput.value) !== totalWeightKg) {
             qtyInput.value = window.formatWhNumber(totalWeightKg, 2);
-            window.onSpecFinancialCalc('qty');
+            // Убрали автозаполнение цен по пруткам: window.onSpecFinancialCalc('qty');
+            // Обновляем только тонны:
+            const tonneEl = document.getElementById('op-qty-tonne');
+            if (tonneEl) tonneEl.value = (totalWeightKg / 1000).toFixed(3);
         }
     }
 };
@@ -1194,6 +1271,15 @@ window.onSpecFinancialCalc = (trigger) => {
     } else if (trigger === 'qty') {
         const tonneEl = document.getElementById('op-qty-tonne');
         if (tonneEl) tonneEl.value = (G / 1000).toFixed(3);
+        
+        // Обратный расчет прутков из введенного веса
+        const barLen = window.parseRusFloat(document.getElementById('op-bar-len')?.value || '0');
+        const wpm = window.parseRusFloat(document.getElementById('op-weight-per-m')?.value || '0');
+        if (barLen > 0 && wpm > 0 && G > 0) {
+            const bars = Math.round(G / ((barLen / 1000) * wpm));
+            const barsInput = document.getElementById('op-bars-count');
+            if (barsInput) barsInput.value = bars;
+        }
     } else {
         const tonneEl = document.getElementById('op-qty-tonne');
         if (tonneEl) tonneEl.value = (G / 1000).toFixed(3);
@@ -1763,8 +1849,20 @@ window.populateBeltSelect = () => {
         belts.map(b => {
             const d = b.data || b;
             let label = d.name;
-            if (!label && d.strength && d.width) {
-                label = `Лента ${d.width}-EP-${d.strength}/${d.cords || '3'} ${d.cover_top || '6'}/${d.cover_bottom || '2'} ${d.rubber_class || 'W'} ${d.tu || ''}`;
+            if (label) {
+                const epMatch = label.match(/EP-\d+(?:\/\d+)?/i);
+                const ep = epMatch ? epMatch[0] : '';
+                const thick = d.thickness ? `${d.thickness}мм` : '';
+                const certMatch = label.match(/\([^)]+\)/);
+                const cert = certMatch ? `${certMatch[0]}` : '';
+                if (ep) {
+                    label = `Лента ${thick} ${ep} ${cert}`.trim().replace(/\s+/g, ' ');
+                } else {
+                    label = label.replace(/\b\d{3,4}-\b/g, '').replace(/\b\d{1,2}\/\d{1,2}\b/g, '').replace(/\b[A-Z]\b/g, '').replace(/ТУ\s+[\d\.\-]+/ig, '').replace(/\s+/g, ' ').trim();
+                }
+            } else if (d.strength) {
+                const thick = d.thickness ? `${d.thickness}мм` : '';
+                label = `Лента ${thick} EP-${d.strength}/${d.cords || '3'}`.trim().replace(/\s+/g, ' ');
             }
             if (!label) label = b.id;
             if (d.supplier) label += ` — ${d.supplier}`;
@@ -2325,7 +2423,7 @@ window.updateOperationForm = () => {
     }
 
     // Dynamic tabs setup (1C vs standard)
-    const isMetalOrBelt = (type === 'in_metal' || type === 'in_belt');
+    const isMetalOrBelt = (type === 'in_metal' || type === 'in_belt' || type === 'in_belt_blank' || type === 'in_belt_strip');
     const tabsHeader = document.getElementById('wh-tabs-header');
     const standardWrapper = document.getElementById('wh-standard-fields-wrapper');
     const incomingFields = document.getElementById('incoming-fields');
@@ -2484,6 +2582,10 @@ window.updateWriteoffSpecificList = () => {
             matches = key.startsWith('metal_');
         } else if (category === 'belt') {
             matches = key.startsWith('belt_') && !key.startsWith('belt_blank_') && !key.startsWith('belt_strip_');
+        } else if (category === 'belt_blank') {
+            matches = key.startsWith('belt_blank_');
+        } else if (category === 'belt_strip') {
+            matches = key.startsWith('belt_strip_');
         } else if (category === 'hardware') {
             matches = key.startsWith('hardware_') || item.parentGroup === 'hardware';
         } else if (category === 'fasteners') {
@@ -2730,7 +2832,7 @@ window.renderBatchTable = () => {
         } else if (totalBeltRolls > 0) {
             labelEl.innerText = "Всего рулонов";
         } else {
-            labelEl.innerText = "Всего прутков";
+            labelEl.innerText = "Кол-во позиций";
         }
     }
 
@@ -3627,9 +3729,26 @@ window.saveOperation = async () => {
         if (invoiceNum) logComment += ` | Накл: ${invoiceNum}`;
         if (comment) logComment += ` | Комм: ${comment}`;
 
+        // Handle proper JS date formatting to prevent Invalid Date bug
+        let formattedDate = '';
+        if (docDate === new Date().toLocaleDateString('ru-RU')) {
+            formattedDate = new Date().toLocaleString('ru-RU');
+        } else {
+            const dateParts = docDate.split('.');
+            if (dateParts.length === 3) {
+                formattedDate = `${docDate}, 00:00:00`;
+            } else {
+                try {
+                    formattedDate = new Date(docDate).toLocaleString('ru-RU');
+                } catch(e) {
+                    formattedDate = docDate;
+                }
+            }
+        }
+
         finalLogEntry = {
             id: window.editingLogId ? window.editingLogId : (Date.now() + Math.random()),
-            date: new Date(docDate).toLocaleString(),
+            date: formattedDate,
             type: config.type,
             details: detailsStr,
             comment: logComment,
@@ -3647,6 +3766,7 @@ window.saveOperation = async () => {
             contract: contract,
             invoice_num: invoiceNum,
             invoice_date: invoiceDate,
+            carrier: document.getElementById('op-delivery-carrier')?.value || '',
             destination: destination,
             responsible: responsible,
             delivery_cost: deliveryTotal,
@@ -3815,10 +3935,20 @@ window.addBeltToBatch = () => {
     if (len <= 0) { window.showToast('Укажите длину рулона (м.п.)!', 'error'); return; }
     if (priceMp <= 0) { window.showToast('Укажите цену за м.п. без НДС!', 'error'); return; }
 
-    const formattedName = `Лента ${width}-EP-${strength}/${cords} ${coverTop}/${coverBottom} ${classVal}${certVal ? " (" + certVal + ")" : ""}`;
+    const opType = document.getElementById('op-type')?.value || 'in_belt';
+    let prefix = 'belt_';
+    let formattedName = `Лента ${width}-EP-${strength}/${cords} ${coverTop}/${coverBottom} ${classVal}${certVal ? " (" + certVal + ")" : ""}`;
+    
+    if (opType === 'in_belt_blank') {
+        prefix = 'belt_blank_';
+        formattedName = `Лента-Заготовка ${width}-EP-${strength}/${cords}${certVal ? " (" + certVal + ")" : ""}`;
+    } else if (opType === 'in_belt_strip') {
+        prefix = 'belt_strip_';
+        formattedName = `Лента-Полоса ${width} мм (Дл ${len} м)`;
+    }
 
     window.currentBatch.push({
-        id: 'belt_' + Date.now(),
+        id: prefix + Date.now(),
         name: formattedName,
         steel_type: `EP-${strength}/${cords}`, // Store belt parameters in existing directory mappings!
         diameter: width, // Store width in diameter to prevent database structural changes!
@@ -3886,7 +4016,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.editingLogId = null;
 
 window.printOperationReceipt = (logId = null) => {
-    let docNumber, docDate, sup, contract, invoiceNum, invoiceDate, dest, responsible, deliveryTotal, delVatType, distMethod, vatRate;
+    let docNumber, docDate, sup, contract, invoiceNum, invoiceDate, carrier, dest, responsible, deliveryTotal, delVatType, distMethod, vatRate;
     let batch = [];
     
     if (logId) {
@@ -3899,6 +4029,7 @@ window.printOperationReceipt = (logId = null) => {
         contract = log.contract || 'б/д';
         invoiceNum = log.invoice_num || 'б/н';
         invoiceDate = log.invoice_date ? new Date(log.invoice_date).toLocaleDateString('ru-RU') : '';
+        carrier = log.carrier || 'Не указан';
         dest = log.destination || 'Основной склад';
         responsible = log.responsible || 'Не указан';
         deliveryTotal = parseFloat(log.delivery_cost || 0);
@@ -3916,6 +4047,7 @@ window.printOperationReceipt = (logId = null) => {
         contract = document.getElementById('op-contract')?.value || 'б/д';
         invoiceNum = document.getElementById('op-invoice-num')?.value || 'б/н';
         invoiceDate = document.getElementById('op-invoice-date')?.value ? new Date(document.getElementById('op-invoice-date').value).toLocaleDateString('ru-RU') : '';
+        carrier = document.getElementById('op-delivery-carrier')?.value || 'Не указан';
         dest = document.getElementById('op-destination')?.value || 'Основной склад';
         responsible = document.getElementById('op-responsible')?.value || 'Не указан';
         deliveryTotal = window.parseRusFloat(document.getElementById('op-delivery-cost')?.value || '0');
@@ -3984,8 +4116,8 @@ window.printOperationReceipt = (logId = null) => {
                     <td>Сопр. документ: <b>${invoiceNum} ${invoiceDate ? 'от ' + invoiceDate : ''}</b></td>
                 </tr>
                 <tr>
+                    <td>Перевозчик: <b>${carrier}</b></td>
                     <td>Исполнитель: <b>${responsible}</b></td>
-                    <td>Статус: <b>Проведен</b></td>
                 </tr>
             </table>
 
@@ -4375,23 +4507,40 @@ window.handleOpAttachments = (input) => {
 
     if (!input.files || input.files.length === 0) return;
 
-    Array.from(input.files).forEach(file => {
+    preview.style.display = 'flex';
+    preview.style.flexDirection = 'column';
+    preview.style.gap = '10px';
+
+    Array.from(input.files).forEach((file, index) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             const fileData = {
                 name: file.name,
+                customName: file.name,
+                comment: '',
                 size: file.size,
                 type: file.type,
                 data: e.target.result // Base64 Data URL
             };
             window.opUploadedAttachments.push(fileData);
+            const dataIndex = window.opUploadedAttachments.length - 1;
 
-            // Display a badge in the modal preview
-            const badge = document.createElement('div');
-            badge.className = 'badge';
-            badge.style.cssText = 'background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; color: #fff;';
-            badge.innerHTML = `<i class="fa-solid fa-file-invoice"></i> ${file.name.substring(0, 12)}${file.name.length > 12 ? '...' : ''} <span style="opacity:0.5;">(${(file.size/1024).toFixed(1)} KB)</span>`;
-            preview.appendChild(badge);
+            const box = document.createElement('div');
+            box.style.cssText = 'background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px;';
+            box.innerHTML = `
+                <div style="font-size: 0.75rem; color: #aaa;"><i class="fa-solid fa-file-invoice"></i> Оригинал: ${file.name} (${(file.size/1024).toFixed(1)} KB)</div>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <input type="text" class="form-control" placeholder="Название документа..." value="${file.name}" 
+                            oninput="window.opUploadedAttachments[${dataIndex}].customName = this.value" style="font-size: 0.8rem; padding: 4px 8px;">
+                    </div>
+                    <div style="flex: 2;">
+                        <input type="text" class="form-control" placeholder="Комментарий к файлу..." 
+                            oninput="window.opUploadedAttachments[${dataIndex}].comment = this.value" style="font-size: 0.8rem; padding: 4px 8px;">
+                    </div>
+                </div>
+            `;
+            preview.appendChild(box);
         };
         reader.readAsDataURL(file);
     });

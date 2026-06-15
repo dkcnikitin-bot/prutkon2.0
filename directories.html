@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -31,7 +31,10 @@
 
                 <div class="panel glass-panel">
                     <div class="flex justify-between items-center mb-4">
-                        <h4 id="directory-title" class="mb-0">Загрузка...</h4>
+                        <div class="flex gap-2 items-center">
+                            <h4 id="directory-title" class="mb-0">Загрузка...</h4>
+                            <button id="dir-help-btn" class="btn btn-secondary btn-xs" style="padding: 2px 6px; font-size: 12px; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;" onclick="window.showDirectoryHelp()" title="Справка по разделу"><i class="fa-regular fa-circle-question"></i></button>
+                        </div>
                         <div class="flex gap-2 items-center">
                             <button id="dir-mass-delete-btn" class="btn btn-danger btn-sm hidden" onclick="window.massDeleteDirectories()">Удалить выбранные</button>
                             <input type="text" id="dir-search-input" class="form-control" placeholder="Поиск по названию..." style="width:250px;" oninput="window.updateDirSearch(this.value)">
@@ -91,6 +94,22 @@
             <button class="btn btn-primary w-100" onclick="window.addNewDirCategory()">+ Добавить новый раздел</button>
             <div class="mt-4 flex justify-end">
                 <button class="btn btn-secondary" onclick="document.getElementById('dir-cat-modal').classList.remove('active')">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: DIRECTORY HELP -->
+    <div id="dir-help-modal" class="modal">
+        <div class="glass-panel" style="width:650px; padding:35px; border: 1px solid var(--border-glass);">
+            <h3 class="mb-4 brand-red flex items-center gap-2">
+                <i class="fa-regular fa-circle-question text-xl"></i>
+                <span id="dir-help-title">Справка по разделу</span>
+            </h3>
+            <div id="dir-help-content" class="mb-5" style="max-height:400px; overflow-y:auto; line-height:1.6; font-size:14px; color:var(--text-main);">
+                <!-- Справка будет добавлена через JS -->
+            </div>
+            <div class="flex justify-end">
+                <button class="btn btn-primary" onclick="document.getElementById('dir-help-modal').classList.remove('active')">Понятно</button>
             </div>
         </div>
     </div>

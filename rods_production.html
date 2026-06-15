@@ -35,7 +35,6 @@
                     <h2>Инженерия и производство</h2>
                 </div>
                 <div class="header-actions" style="display: flex; gap: 10px;">
-                    <button class="btn btn-success btn-sm" onclick="window.openProductionModal()" style="background: var(--neon-emerald); border-color: var(--neon-emerald); color: #000; font-weight: bold;"><i class="fa-solid fa-industry"></i> Изготовить детали</button>
                     <button class="btn btn-primary btn-sm" onclick="window.PrutkonFeatures.openRodCard()"><i class="fa-solid fa-ruler-horizontal"></i> Пруток (Карточка)</button>
                     <button class="btn btn-secondary btn-sm" onclick="window.location.href='catalog.html'"><i class="fa-solid fa-book"></i> Справочники</button>
                     <button class="btn btn-secondary btn-sm" onclick="window.location.href='prices.html'"><i class="fa-solid fa-tags"></i> Прайсы</button>
@@ -54,8 +53,8 @@
                         </div>
                         <div class="metric-strip">
                             <div class="metric-tile">
-                                <div class="metric-tile-label">Контур</div>
-                                <div class="metric-tile-value">Rods</div>
+                                <div class="metric-tile-label">Выбранный контур</div>
+                                <div class="metric-tile-value" id="mode-display-val">Прутки (Rods)</div>
                                 <div class="metric-tile-note">Металл, заготовки и все типы прутков</div>
                             </div>
                             <div class="metric-tile">
@@ -66,8 +65,53 @@
                         </div>
                     </div>
 
-                    <div class="panel glass-panel mb-4">
-                        <h3 class="mb-4 purple"><i class="fa-solid fa-project-diagram"></i> Маршрутная карта производства (Процесс по порядку)</h3>
+                    <div class="mb-4" style="display:flex; gap: 10px;">
+                        <button class="btn btn-primary" id="mode-rods-btn" onclick="window.switchEngineeringMode('rods')"><i class="fa-solid fa-bars"></i> Производство прутков</button>
+                        <button class="btn btn-secondary" id="mode-belts-btn" onclick="window.switchEngineeringMode('belts')"><i class="fa-solid fa-tape"></i> Производство ремней</button>
+                        <button class="btn btn-secondary" id="mode-assembly-btn" onclick="window.switchEngineeringMode('assembly')"><i class="fa-solid fa-calculator"></i> Сборка транспортера</button>
+                    </div>
+
+                    <!-- ASSEMBLY ENGINEERING VIEW -->
+                    <div id="assembly-engineering-view" style="display:none;">
+                        <div class="panel glass-panel mb-4">
+                            <h3 class="mb-4"><i class="fa-solid fa-calculator" style="color:var(--brand-red)"></i> Итоговый расчет по заказу</h3>
+                            <div class="calc-form-grid">
+                                <div class="form-group"><label>Количество прутков (шт)</label><input type="number" id="asm-rods-count" class="form-control" value="203" oninput="window.calcAssembly()"></div>
+                                <div class="form-group"><label>Количество ремней (шт)</label><input type="number" id="asm-belts-count" class="form-control" value="3" oninput="window.calcAssembly()"></div>
+                                <div class="form-group"><label>Количество замковых прутков</label><input type="number" id="asm-locks-count" class="form-control" value="1" oninput="window.calcAssembly()"></div>
+                            </div>
+                            <div class="calc-form-grid mt-3">
+                                <div class="form-group"><label>Тип ремня (Подготовка)</label><select id="asm-belt-labor" class="form-control" onchange="window.calcAssembly()"></select></div>
+                                <div class="form-group"><label>Сборка (Услуга)</label><select id="asm-assembly-labor" class="form-control" onchange="window.calcAssembly()"></select></div>
+                            </div>
+
+                            <div class="mt-4" style="overflow-x:auto;">
+                                <table class="table" style="width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>Наименование</th>
+                                            <th style="width:100px; text-align:center;">шт</th>
+                                            <th style="width:150px; text-align:right;">За ед с НДС</th>
+                                            <th style="width:150px; text-align:right;">Сумма с НДС</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="asm-tbody">
+                                        <!-- Rendered dynamically via JS -->
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style="background: rgba(255,255,255,0.05); font-weight:700;">
+                                            <td colspan="3" style="text-align:right; border:none; padding:15px;">ИТОГО (СЕБЕСТОИМОСТЬ):</td>
+                                            <td style="text-align:right; border:none; padding:15px; font-size:1.2rem; color:var(--neon-emerald);" id="asm-total-cost">0 ₽</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="rods-engineering-view">
+                        <div class="panel glass-panel mb-4">
+                            <h3 class="mb-4 purple"><i class="fa-solid fa-project-diagram"></i> Маршрутная карта: Прутки</h3>
                         <div class="production-pipeline">
                             <div class="pipeline-stage">
                                 <div class="stage-header"><span class="badge" style="background:#333;">1</span> Сырье</div>
@@ -215,9 +259,17 @@
                     <h3 class="mb-4"><i class="fa-solid fa-wave-square" style="color:var(--brand-red)"></i> Шаг 4: Гнутый или Сварной пруток</h3>
                     <div class="calc-form-grid">
                         <div class="form-group"><label>Базовый пруток (из Шага 3)</label><select id="bent-rod-select" class="form-control" onchange="calcStep4()"></select></div>
-                        <div class="form-group"><label>Тип обработки</label><select id="bent-type" class="form-control"><option value="гнутый">Гнутый</option><option value="сварной">Сварной</option><option value="комби">Комбинированный</option></select></div>
+                        <div class="form-group"><label>Тип обработки</label><select id="bent-type" class="form-control"></select></div>
                         <div class="form-group"><label>Артикул</label><input type="text" id="bent-article" class="form-control"></div>
-                        <div class="form-group"><label>Чертеж гнутья</label><input type="text" id="bent-drawing" class="form-control"></div>
+                        <div class="form-group"><label>Чертеж изделия</label>
+                            <div style="display:flex; gap:10px;">
+                                <input type="text" id="bent-drawing" class="form-control" placeholder="URL чертежа">
+                                <label class="btn btn-secondary" style="margin:0; padding: 10px; cursor: pointer;" title="Загрузить чертеж">
+                                    <i class="fa-solid fa-paperclip"></i>
+                                    <input type="file" accept="image/*,.pdf" style="display:none;" onchange="window.handleDrawingUpload(this, 'bent-drawing')">
+                                </label>
+                            </div>
+                        </div>
                         <div class="form-group"><label>Стоимость доп. работ (₽)</label>
                             <div class="flex gap-2">
                                 <select id="bent-labor-dir" class="form-control" onchange="window.onLaborDirChange('bent')"></select>
@@ -295,48 +347,6 @@
         </main>
     </div>
 
-    <!-- PRODUCTION MODAL WINDOW (GLASSMORPHIC) -->
-    <div id="modal-production-run" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); backdrop-filter:blur(15px); z-index:1000; align-items:center; justify-content:center;">
-        <div class="glass-panel" style="width:550px; padding:35px; border-top:4px solid var(--neon-emerald); position:relative; max-height: 90vh; overflow-y: auto;">
-            <button onclick="window.closeProductionModal()" style="position:absolute; top:20px; right:20px; background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
-            <div style="text-align:center; margin-bottom:25px;">
-                <i class="fa-solid fa-industry" style="font-size:3rem; color:var(--neon-emerald); filter:drop-shadow(0 0 15px rgba(0, 255, 157, 0.4)); margin-bottom:15px;"></i>
-                <h2 style="font-family:'Outfit'; margin:0 0 5px; font-size:1.6rem; color:#fff;">Запустить производство деталей</h2>
-                <p style="color:var(--text-muted); font-size:0.85rem; margin:0;">Списание сырья и оприходование готовой продукции на склад</p>
-            </div>
-            
-            <div class="form-group mb-3">
-                <label style="color:#fff; font-weight:600;">1. Выберите тип производства</label>
-                <select id="prod-type" class="form-control" onchange="window.updateProductionItemDropdown()" style="background:#111; color:#fff;">
-                    <option value="blank">Нарезка заготовок (Сырье -> Заготовки)</option>
-                    <option value="straight">Изготовление прямого прутка (Заготовки -> Прямые прутки)</option>
-                    <option value="double">Изготовление сдвоенного прутка (Заготовки -> Сдвоенные прутки)</option>
-                    <option value="bent">Гнутье прутка (Прямые прутки -> Гнутые прутки)</option>
-                    <option value="rubberized">Обрезинивание прутка (Прямые/Гнутые -> Обрезиненные прутки)</option>
-                </select>
-            </div>
-
-            <div class="form-group mb-3" id="prod-batch-group">
-                <label style="color:#fff; font-weight:600;">2. Выберите партию металла на складе</label>
-                <select id="prod-metal-batch" class="form-control" onchange="window.updateProductionRequirements()" style="background:#111; color:#fff;"></select>
-            </div>
-
-            <div class="form-group mb-3" id="prod-item-group">
-                <label style="color:#fff; font-weight:600;" id="prod-item-label">3. Выберите изделие из базы инженерии</label>
-                <select id="prod-item-select" class="form-control" onchange="window.updateProductionRequirements()" style="background:#111; color:#fff;"></select>
-            </div>
-
-            <div class="form-group mb-3" id="prod-rubber-base-group" style="display:none;">
-                <label style="color:#fff; font-weight:600;">Базовый пруток для обрезинивания</label>
-                <select id="prod-rubber-base-type" class="form-control" onchange="window.updateProductionRequirements()" style="background:#111; color:#fff;">
-                    <option value="straight">Прямой пруток (из остатков на складе)</option>
-                    <option value="bent">Гнутый пруток (из остатков на складе)</option>
-                </select>
-            </div>
-
-            <div class="form-group mb-3">
-                <label style="color:#fff; font-weight:600;">Количество к выпуску (шт)</label>
-                <input type="number" id="prod-qty" class="form-control" value="10" min="1" oninput="window.updateProductionRequirements()" style="background:#111; color:#fff;">
             </div>
 
             <!-- Client-provided rods block -->

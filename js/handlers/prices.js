@@ -13,6 +13,55 @@ window.importMappings = {};
 window.artSources = [];
 window.editingCatId = null;
 window.selectedPriceIds = [];
+
+const CATEGORY_ORDER = [
+    'transporters', 'belts', 'sec_rods', 'pushers', 'fingers', 'flaps',
+    'hardware_small', 'rollers', 'mesh', 'glue', 'pvc_belts', 'others'
+];
+
+window.getCategoryNumbering = () => {
+    const categories = window.dbCategories || [];
+    const result = {}; // map of catId -> "1.1."
+    
+    // Group by parent
+    const byParent = {};
+    categories.forEach(c => {
+        const p = c.parent || 'root';
+        if (!byParent[p]) byParent[p] = [];
+        byParent[p].push(c);
+    });
+    
+    // Sort function
+    const sortGroup = (parentKey, list) => {
+        if (parentKey === 'root') {
+            return list.sort((a, b) => {
+                const idxA = CATEGORY_ORDER.indexOf(a.id);
+                const idxB = CATEGORY_ORDER.indexOf(b.id);
+                if (idxA === -1 && idxB === -1) return a.name.localeCompare(b.name);
+                if (idxA === -1) return 1;
+                if (idxB === -1) return -1;
+                return idxA - idxB;
+            });
+        } else {
+            return list.sort((a, b) => a.name.localeCompare(b.name));
+        }
+    };
+    
+    // Traverse and build numbering
+    const traverse = (parentKey, prefix) => {
+        const list = byParent[parentKey] || [];
+        sortGroup(parentKey, list);
+        list.forEach((cat, idx) => {
+            const num = prefix ? `${prefix}.${idx + 1}` : `${idx + 1}`;
+            result[cat.id] = num;
+            traverse(cat.id, num);
+        });
+    };
+    
+    traverse('root', '');
+    return result;
+};
+
 window.priceSchemaFields = {
     'tech_type': 'Тип техники',
     'available': 'Доступен для заказа',
@@ -46,14 +95,32 @@ window.loadCategories = function() {
         curr = window.dbCategories.find(c => c.id === curr.parent);
     }
 
+    const numbering = window.getCategoryNumbering();
+    const sortLevel = (list) => {
+        return list.sort((a, b) => {
+            const numA = numbering[a.id] || '';
+            const numB = numbering[b.id] || '';
+            const partsA = numA.split('.').map(Number);
+            const partsB = numB.split('.').map(Number);
+            for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+                const valA = partsA[i] || 0;
+                const valB = partsB[i] || 0;
+                if (valA !== valB) return valA - valB;
+            }
+            return 0;
+        });
+    };
+
     // Рендерим 1 УРОВЕНЬ (Всегда видим)
-    const level1 = window.dbCategories.filter(c => c.parent === null);
+    let level1 = window.dbCategories.filter(c => c.parent === null);
+    level1 = sortLevel(level1);
     const htmlL1 = `
         <div class="category-tier tier-1 mb-4">
             <div class="tier-grid">
                 ${level1.map(cat => {
                     const isActive = pathIds.includes(cat.id);
-                    return `<button class="dir-style-btn ${isActive ? 'active' : ''}" onclick="window.switchCategory('${cat.id}')">${cat.name}</button>`;
+                    const prefix = numbering[cat.id] ? `${numbering[cat.id]}. ` : '';
+                    return `<button class="dir-style-btn ${isActive ? 'active' : ''}" onclick="window.switchCategory('${cat.id}')">${prefix}${cat.name}</button>`;
                 }).join('')}
             </div>
         </div>
@@ -63,14 +130,16 @@ window.loadCategories = function() {
     let htmlL2 = '';
     const activeL1 = level1.find(c => pathIds.includes(c.id));
     if (activeL1) {
-        const level2 = window.dbCategories.filter(c => c.parent === activeL1.id);
+        let level2 = window.dbCategories.filter(c => c.parent === activeL1.id);
+        level2 = sortLevel(level2);
         if (level2.length > 0) {
             htmlL2 = `
                 <div class="category-tier tier-2 mb-3 animated-fade-in">
                     <div class="tier-grid">
                         ${level2.map(cat => {
                             const isActive = pathIds.includes(cat.id);
-                            return `<button class="dir-style-btn btn-sm ${isActive ? 'active' : ''}" onclick="window.switchCategory('${cat.id}')">${cat.name}</button>`;
+                            const prefix = numbering[cat.id] ? `${numbering[cat.id]}. ` : '';
+                            return `<button class="dir-style-btn btn-sm ${isActive ? 'active' : ''}" onclick="window.switchCategory('${cat.id}')">${prefix}${cat.name}</button>`;
                         }).join('')}
                     </div>
                 </div>
@@ -84,14 +153,16 @@ window.loadCategories = function() {
         const level2 = window.dbCategories.filter(c => c.parent === activeL1.id);
         const activeL2 = level2.find(c => pathIds.includes(c.id));
         if (activeL2) {
-            const level3 = window.dbCategories.filter(c => c.parent === activeL2.id);
+            let level3 = window.dbCategories.filter(c => c.parent === activeL2.id);
+            level3 = sortLevel(level3);
             if (level3.length > 0) {
                 htmlL3 = `
                     <div class="category-tier tier-3 mb-3 animated-fade-in">
                         <div class="tier-grid">
                             ${level3.map(cat => {
                                 const isActive = pathIds.includes(cat.id);
-                                return `<button class="dir-style-btn btn-xs ${isActive ? 'active' : ''}" onclick="window.switchCategory('${cat.id}')">${cat.name}</button>`;
+                                const prefix = numbering[cat.id] ? `${numbering[cat.id]}. ` : '';
+                                return `<button class="dir-style-btn btn-xs ${isActive ? 'active' : ''}" onclick="window.switchCategory('${cat.id}')">${prefix}${cat.name}</button>`;
                             }).join('')}
                         </div>
                     </div>
@@ -103,9 +174,8 @@ window.loadCategories = function() {
     container.innerHTML = htmlL1 + htmlL2 + htmlL3;
 
     if (activeObj) {
-        document.getElementById('price-title').innerText = activeObj.name;
-        // Если выбрали папку (у которой есть дети) - не сбрасываем, но таблица будет пуста или надо показать первого ребенка?
-        // Лучше просто оставить как есть.
+        const prefix = numbering[activeObj.id] ? `${numbering[activeObj.id]}. ` : '';
+        document.getElementById('price-title').innerText = `${prefix}${activeObj.name}`;
     }
 };
 
@@ -325,7 +395,7 @@ window.renderPriceTable = function() {
             html += `
                 <tr class="${isSelected ? 'row-selected' : ''}" ondblclick="window.editProduct('${p.id}')">
                     <td><input type="checkbox" class="price-checkbox" data-id="${p.id}" ${isSelected ? 'checked' : ''} onchange="window.togglePriceSelection('${p.id}', this.checked)"></td>
-                    <td><img src="${p.photo || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4='}" class="table-thumb"></td>
+                    <td><img src="${p.photo || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4='}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4='" class="table-thumb"></td>
                     <td class="table-art" style="color:var(--brand-red);">${p.art || '---'}</td>
                     <td><span>${cleanName || 'Без названия'}</span></td>
                     ${displayFields.map(f => `<td>${p[f] || '-'}</td>`).join('')}
@@ -1595,19 +1665,33 @@ window.renderCategoriesList = function() {
 };
 
 window.updateExcelCatSelect = function() {
-    // Показываем только конечные категории (те, в которые можно класть товары)
-    // Либо показываем всё, но папки помечаем disabled
+    const numbering = window.getCategoryNumbering();
     const getsPath = (catId) => {
         let path = [];
         let curr = window.dbCategories.find(c => c.id === catId);
         while (curr) {
-            path.unshift(curr.name);
+            const num = numbering[curr.id] ? `${numbering[curr.id]}. ` : '';
+            path.unshift(num + curr.name);
             curr = window.dbCategories.find(c => c.id === curr.parent);
         }
         return path.join(' > ');
     };
 
-    const options = window.dbCategories.map(c => {
+    // Sort categories list by hierarchical number
+    const sortedCats = [...window.dbCategories].sort((a, b) => {
+        const numA = numbering[a.id] || '';
+        const numB = numbering[b.id] || '';
+        const partsA = numA.split('.').map(Number);
+        const partsB = numB.split('.').map(Number);
+        for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+            const valA = partsA[i] || 0;
+            const valB = partsB[i] || 0;
+            if (valA !== valB) return valA - valB;
+        }
+        return 0;
+    });
+
+    const options = sortedCats.map(c => {
         const hasChildren = window.dbCategories.some(k => k.parent === c.id);
         const fullPath = getsPath(c.id);
         return `<option value="${c.id}" ${hasChildren ? 'disabled style="color:var(--text-muted);"' : ''}>${fullPath}</option>`;
@@ -1662,3 +1746,109 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Sync handler
 window.addEventListener('pricesSynced', () => { window.renderPriceTable(); });
+
+// --- 4. PRICE HELP MODAL & DATA ---
+const PRICE_HELP_DATA = {
+    'transporters': `
+        <h5>1. Транспортеры</h5>
+        <p>Категория готовых транспортеров для различной техники.</p>
+        <strong>Правила заполнения:</strong>
+        <ul>
+            <li><strong>Артикул:</strong> Должен содержать внутренний код Пруткон (например, <code>001-TRA-28</code>).</li>
+            <li><strong>Тип техники:</strong> Применяемость (например, Grimme SE 150-60, Ropa Keiler 2).</li>
+            <li><strong>Чертеж:</strong> Ссылка или номер конструкторского чертежа.</li>
+        </ul>
+    `,
+    'belts': `
+        <h5>2. Ремни</h5>
+        <p>Ремни транспортерные (перфорированные или плоские).</p>
+        <strong>Правила заполнения:</strong>
+        <ul>
+            <li><strong>Шаг:</strong> Межосевое расстояние отверстий.</li>
+            <li><strong>Ширина:</strong> Ширина ремня в миллиметрах.</li>
+            <li><strong>Толщина:</strong> Толщина ремня в миллиметрах (влияет на группировку в отчетах склада).</li>
+        </ul>
+    `,
+    'sec_rods': `
+        <h5>3. Прутки</h5>
+        <p>Основной металлический пруток для сборки полотна.</p>
+        <strong>Правила заполнения:</strong>
+        <ul>
+            <li><strong>Диаметр (мм):</strong> Диаметр прутка (например, 10, 11, 12, 13). Используется для автоматической сортировки и группировки.</li>
+            <li><strong>Марка стали:</strong> Например, <code>60С2ХА</code>.</li>
+        </ul>
+    `,
+    'pushers': `
+        <h5>4. Сталкиватели</h5>
+        <p>Элементы для принудительного продвижения продукции.</p>
+    `,
+    'fingers': `
+        <h5>5. Пальцы</h5>
+        <p>Резиновые или полиуретановые пальцы просеивателя.</p>
+    `,
+    'flaps': `
+        <h5>6. Хлопушки</h5>
+        <p>Хлопушки и встряхиватели для очистки транспортера от грязи.</p>
+    `,
+    'hardware_small': `
+        <h5>7. Скобяные изделия</h5>
+        <p>Замки, скобы, планки, заклепки и прочие крепежные элементы.</p>
+    `,
+    'rollers': `
+        <h5>8. Ролики и звездочки</h5>
+        <p>Поддерживающие ролики, приводные и поддерживающие звездочки.</p>
+    `,
+    'mesh': `
+        <h5>9. Ленты и полотна</h5>
+        <p>Конвейерные полотна различного назначения.</p>
+    `,
+    'glue': `
+        <h5>10. Клей</h5>
+        <p>Клеящие составы для стыковки лент.</p>
+    `,
+    'pvc_belts': `
+        <h5>11. Конвейерные ленты ПВХ</h5>
+        <p>Специальные легкие транспортерные ленты ПВХ.</p>
+    `,
+    'others': `
+        <h5>12. Другие запчасти</h5>
+        <p>Любые запчасти, не вошедшие в основные группы.</p>
+    `
+};
+
+window.showPriceHelp = () => {
+    const modal = document.getElementById('price-help-modal');
+    const titleEl = document.getElementById('price-help-title');
+    const contentEl = document.getElementById('price-help-content');
+    if (!modal || !contentEl) return;
+
+    const activeObj = window.dbCategories.find(c => c.id === window.activeCategory);
+    if (!activeObj) return;
+
+    const numbering = window.getCategoryNumbering();
+    const num = numbering[activeObj.id] || '';
+    const prefix = num ? `${num}. ` : '';
+    titleEl.innerText = `Справка: ${prefix}${activeObj.name}`;
+
+    // Ищем справку для этой категории, либо для ее родителя
+    let helpHtml = PRICE_HELP_DATA[activeObj.id];
+    if (!helpHtml && activeObj.parent) {
+        helpHtml = PRICE_HELP_DATA[activeObj.parent];
+    }
+
+    if (!helpHtml) {
+        helpHtml = `
+            <h5>${prefix}${activeObj.name}</h5>
+            <p>Этот раздел содержит номенклатуру товаров и услуг для категории "${activeObj.name}".</p>
+            <strong>Правила заполнения:</strong>
+            <ul>
+                <li><strong>Артикул:</strong> Уникальный код товара для быстрого поиска и интеграции.</li>
+                <li><strong>Наименование:</strong> Полное название позиции с основными размерами.</li>
+                <li><strong>Цена:</strong> Отпускная цена в рублях.</li>
+            </ul>
+        `;
+    }
+
+    contentEl.innerHTML = helpHtml;
+    modal.classList.add('active');
+};
