@@ -203,6 +203,11 @@ window.calcAssembly = function() {
     
     const tbody = document.getElementById('asm-tbody');
     if (!tbody) return;
+
+    const printRods = document.getElementById('print-rods-count');
+    if (printRods) printRods.innerText = rodsCount;
+    const printBelts = document.getElementById('print-belts-count');
+    if (printBelts) printBelts.innerText = beltsCount;
     
     // Hardcoded items as per user request to map to Price-list items dynamically
     // In a full implementation, these would be selected from dropdowns, but for now we auto-match by name
@@ -279,6 +284,27 @@ window.switchProductionStep = function(stepNum) {
 
 // Диспетчер сохранения текущего активного шага
 window.saveCurrentStep = function() {
+    // Check if assembly mode is active
+    const asmView = document.getElementById('assembly-engineering-view');
+    if (asmView && asmView.style.display === 'block') {
+        notify('Калькуляция сборки транспортера сохранена (итоговый расчет)', 'success');
+        return;
+    }
+    
+    // Check if belts mode is active
+    const beltsView = document.getElementById('belts-engineering-view');
+    if (beltsView && beltsView.style.display === 'block') {
+        const activeBeltBtn = document.querySelector('#belts-tabs button.active');
+        const bStep = activeBeltBtn ? activeBeltBtn.getAttribute('data-step') : "belt_1";
+        
+        if (bStep === "belt_1" && window.saveStepBelt1) window.saveStepBelt1();
+        else if (bStep === "belt_2" && window.saveStepBelt2) window.saveStepBelt2();
+        else if (bStep === "belt_3" && window.saveStepBelt3) window.saveStepBelt3();
+        else notify(`Сохранение для шага ремней ${bStep} пока не настроено`, 'warning');
+        return;
+    }
+
+    // Default: rods mode
     const activeBtn = document.querySelector('#rods-tabs button.active');
     const step = activeBtn ? activeBtn.getAttribute('data-step') : "1";
 

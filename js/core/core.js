@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PRUTKON ERP OS - CORE.JS (v19.0.0)
  * ПОЛНОЕ ИСПРАВЛЕННОЕ ЯДРО (БЕЗ СОКРАЩЕНИЙ)
  */
@@ -1524,7 +1524,7 @@ window.syncWarehouseToPrices = () => {
             name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Пруток ёжный';
         }
 
-        if (!category) continue;
+        if (type === 'hardware') { category = 'hardware'; const dirItem = findDirectoryItem(key) || findDirectoryItem(art); if (dirItem) { const d = dirItem.data || dirItem; name = d.name || 'Метиз'; price = parseFloat(String(d.price).replace(/[^\d.,]/g, '').replace(',', '.')) || 0; } else { name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Метиз'; } } else if (type === 'fasteners') { category = 'fasteners'; const dirItem = findDirectoryItem(key) || findDirectoryItem(art); if (dirItem) { const d = dirItem.data || dirItem; name = d.name || 'Крепеж'; price = parseFloat(String(d.price).replace(/[^\d.,]/g, '').replace(',', '.')) || 0; } else { name = WAREHOUSE_CATALOG_FALLBACK[key]?.name || 'Крепеж'; } } if (!category) continue;
 
         if (!dia) {
             const matchDia = String(name || '').match(/Ø\s*(\d+(\.\d+)?)/i) || String(key).match(/(?:BL|DBL|PR)-(\d+(\.\d+)?)/i);

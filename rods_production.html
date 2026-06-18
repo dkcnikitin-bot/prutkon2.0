@@ -73,20 +73,49 @@
 
                     <!-- ASSEMBLY ENGINEERING VIEW -->
                     <div id="assembly-engineering-view" style="display:none;">
-                        <div class="panel glass-panel mb-4">
-                            <h3 class="mb-4"><i class="fa-solid fa-calculator" style="color:var(--brand-red)"></i> Итоговый расчет по заказу</h3>
-                            <div class="calc-form-grid">
+                        <style>
+                            @media print {
+                                body * { visibility: hidden !important; }
+                                #assembly-printable-area, #assembly-printable-area * { visibility: visible !important; color: black !important; }
+                                #assembly-printable-area { 
+                                    position: absolute; 
+                                    left: 0; top: 0; width: 100%; 
+                                    background: white; 
+                                }
+                                #assembly-printable-area table { border-collapse: collapse; width: 100%; }
+                                #assembly-printable-area table, #assembly-printable-area th, #assembly-printable-area td { border: 1px solid black; padding: 4px; }
+                                .no-print { display: none !important; }
+                                .form-control { border: none !important; background: transparent !important; color: black !important; }
+                            }
+                        </style>
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-white"><i class="fa-solid fa-calculator text-muted"></i> Итоговый расчет (Сборка)</h3>
+                            <button class="btn btn-secondary no-print" onclick="window.print()"><i class="fa-solid fa-print"></i> Печать КП</button>
+                        </div>
+                        <div class="panel glass-panel mb-4" id="assembly-printable-area" style="background: white; color: black;">
+                            <div class="calc-form-grid no-print">
                                 <div class="form-group"><label>Количество прутков (шт)</label><input type="number" id="asm-rods-count" class="form-control" value="203" oninput="window.calcAssembly()"></div>
                                 <div class="form-group"><label>Количество ремней (шт)</label><input type="number" id="asm-belts-count" class="form-control" value="3" oninput="window.calcAssembly()"></div>
                                 <div class="form-group"><label>Количество замковых прутков</label><input type="number" id="asm-locks-count" class="form-control" value="1" oninput="window.calcAssembly()"></div>
                             </div>
-                            <div class="calc-form-grid mt-3">
+                            <div class="grid grid-2 gap-3 mb-4" style="max-width: 300px;">
+                                <div style="display:flex; justify-content:space-between; border:1px solid black; padding:4px;">
+                                    <span>Количество прутков:</span>
+                                    <span id="print-rods-count">0</span>
+                                </div>
+                                <div style="display:flex; justify-content:space-between; border:1px solid black; padding:4px;">
+                                    <span>Количество ремней:</span>
+                                    <span id="print-belts-count">0</span>
+                                </div>
+                            </div>
+
+                            <div class="calc-form-grid mt-3 no-print">
                                 <div class="form-group"><label>Тип ремня (Подготовка)</label><select id="asm-belt-labor" class="form-control" onchange="window.calcAssembly()"></select></div>
                                 <div class="form-group"><label>Сборка (Услуга)</label><select id="asm-assembly-labor" class="form-control" onchange="window.calcAssembly()"></select></div>
                             </div>
 
                             <div class="mt-4" style="overflow-x:auto;">
-                                <table class="table" style="width: 100%;">
+                                <table class="table" style="width: 100%; color: black;">
                                     <thead>
                                         <tr>
                                             <th>Наименование</th>
@@ -99,9 +128,9 @@
                                         <!-- Rendered dynamically via JS -->
                                     </tbody>
                                     <tfoot>
-                                        <tr style="background: rgba(255,255,255,0.05); font-weight:700;">
+                                        <tr style="font-weight:700;">
                                             <td colspan="3" style="text-align:right; border:none; padding:15px;">ИТОГО (СЕБЕСТОИМОСТЬ):</td>
-                                            <td style="text-align:right; border:none; padding:15px; font-size:1.2rem; color:var(--neon-emerald);" id="asm-total-cost">0 ₽</td>
+                                            <td style="text-align:right; border:none; padding:15px; font-size:1.2rem; color:black;" id="asm-total-cost">0 ₽</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -369,8 +398,8 @@
                 <!-- Rendered dynamically -->
             </div>
 
-            <button id="btn-submit-production" class="btn btn-primary w-100" style="height:48px; font-size:1rem; background:var(--neon-emerald); border-color:var(--neon-emerald); color:#000; font-weight:700;" onclick="window.submitProductionRun()">
-                <i class="fa-solid fa-play"></i> Запустить производство
+            <button id="btn-submit-production" class="btn btn-primary w-100" style="height:48px; font-size:1rem; background:var(--neon-emerald); border-color:var(--neon-emerald); color:#000; font-weight:700;" onclick="window.saveCurrentStep()">
+                <i class="fa-solid fa-floppy-disk"></i> Сохранить текущий расчет
             </button>
         </div>
     </div>
@@ -386,6 +415,7 @@
     <script src="js/handlers/engineering_steps/step2_blank.js?v=19.0.0"></script>
     <script src="js/handlers/engineering_steps/step3_standard.js?v=19.0.0"></script>
     <script src="js/handlers/engineering_steps/step4_bent.js?v=19.0.0"></script>
+    <script src="js/handlers/engineering_steps/step5_rubber.js?v=19.0.0"></script>
     <script src="js/handlers/engineering_steps/step6_double.js?v=19.0.0"></script>
     <script src="js/utils/prutkon_features.js?v=1.0.0"></script>
 </body>

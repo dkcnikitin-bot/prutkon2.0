@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ПРУТКОН ОС: Модуль "Склад и Производство" (Логика)
  */
 
@@ -643,14 +643,7 @@ function renderInventoryChildRow(key, item, qty, type) {
     if (!item) return '';
     let qtyStr = window.formatWhNumber(qty, item.unit === 'шт' ? 0 : 2);
     
-    let clickHandler = '';
-    if (key.startsWith('metal_') || key === 'metal' || key.startsWith('hardware_') || key.startsWith('fasteners_')) {
-        clickHandler = `onclick="if(window.PrutkonFeatures) window.PrutkonFeatures.openMetalCard('${key}')" style="cursor:pointer;"`;
-    } else if (key.startsWith('belt_') || key.startsWith('belt_blank_') || key.startsWith('belt_strip_')) {
-        clickHandler = `onclick="if(window.editBeltById) window.editBeltById('${key}')" style="cursor:pointer;"`;
-    } else if (key.startsWith('blank_') || key.startsWith('straight_') || key.startsWith('double_') || key.startsWith('bent_') || key.startsWith('rubberized_') || key.startsWith('hedge_') || key.startsWith('bent_rubberized_')) {
-        clickHandler = `onclick="if(window.PrutkonFeatures) window.PrutkonFeatures.openRodCard('${key}')" style="cursor:pointer;"`;
-    }
+    let clickHandler = `onclick="if(window.openProductHistoryCard) window.openProductHistoryCard('${key}')" style="cursor:pointer;"`;
 
     let indentStyle = 'padding-left: 35px;';
     return `
@@ -677,14 +670,7 @@ function renderInventoryChildRow(key, item, qty, type) {
 function renderInventoryRow(key, item, qty) {
     let qtyStr = window.formatWhNumber(qty, item.unit === 'шт' ? 0 : 2);
     
-    let clickHandler = '';
-    if (key.startsWith('metal_') || key === 'metal' || key.startsWith('hardware_') || key.startsWith('fasteners_')) {
-        clickHandler = `onclick="if(window.PrutkonFeatures) window.PrutkonFeatures.openMetalCard('${key}')" style="cursor:pointer;"`;
-    } else if (key.startsWith('belt_') || key.startsWith('belt_blank_') || key.startsWith('belt_strip_')) {
-        clickHandler = `onclick="if(window.editBeltById) window.editBeltById('${key}')" style="cursor:pointer;"`;
-    } else if (key.startsWith('blank_') || key.startsWith('straight_') || key.startsWith('double_') || key.startsWith('bent_') || key.startsWith('rubberized_') || key.startsWith('hedge_') || key.startsWith('bent_rubberized_')) {
-        clickHandler = `onclick="if(window.PrutkonFeatures) window.PrutkonFeatures.openRodCard('${key}')" style="cursor:pointer;"`;
-    }
+    let clickHandler = `onclick="if(window.openProductHistoryCard) window.openProductHistoryCard('${key}')" style="cursor:pointer;"`;
 
     return `
         <tr ${clickHandler}>
@@ -3779,7 +3765,21 @@ window.saveOperation = async () => {
         if (window.editingLogId) {
             const opIndex = window.dbWarehouseLog.findIndex(o => String(o.id) === String(window.editingLogId));
             if (opIndex !== -1) {
-                finalLogEntry.date = window.dbWarehouseLog[opIndex].date;
+                const oldObj = window.dbWarehouseLog[opIndex];
+                finalLogEntry.date = oldObj.date;
+                finalLogEntry.edit_history = oldObj.edit_history || [];
+                
+                let diffs = [];
+                if (oldObj.supplier !== finalLogEntry.supplier) diffs.push(`Поставщик: ${oldObj.supplier} -> ${finalLogEntry.supplier}`);
+                if (oldObj.doc_number !== finalLogEntry.doc_number) diffs.push(`№ док: ${oldObj.doc_number} -> ${finalLogEntry.doc_number}`);
+                if (oldObj.items && finalLogEntry.items && oldObj.items.length !== finalLogEntry.items.length) diffs.push(`Позиций: ${oldObj.items.length} -> ${finalLogEntry.items.length}`);
+                
+                finalLogEntry.edit_history.push({
+                    date: new Date().toISOString(),
+                    user: window.currentUser?.name || 'Система',
+                    changes: diffs.length > 0 ? diffs.join('; ') : 'Обновлены детали'
+                });
+                
                 window.dbWarehouseLog[opIndex] = finalLogEntry;
             } else {
                 window.dbWarehouseLog.push(finalLogEntry);
@@ -4300,8 +4300,79 @@ window.editOperationReceipt = (logId) => {
         submitBtn.innerHTML = `<i class="fa-solid fa-save"></i> СОХРАНИТЬ ИЗМЕНЕНИЯ`;
     }
     
+    // Render History
+    const historyList = document.getElementById('op-edit-history-list');
+    if (historyList) {
+        if (log.edit_history && log.edit_history.length > 0) {
+            historyList.innerHTML = log.edit_history.map(h => `
+                <div style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span style="color:var(--brand-gold);"><i class="fa-solid fa-user"></i> ${h.user}</span>
+                        <span style="opacity:0.6;"><i class="fa-solid fa-calendar-day"></i> ${new Date(h.date).toLocaleString('ru-RU')}</span>
+                    </div>
+                    <div>${h.changes}</div>
+                </div>
+            `).join('');
+        } else {
+            historyList.innerHTML = `<div style="text-align:center; padding: 20px; opacity: 0.5;">История пуста</div>`;
+        }
+    }
+
     // Open modal
     document.getElementById('modal-new-operation').classList.add('active');
+};
+
+window.openProductHistoryCard = (itemId) => {
+    const itemInfo = WAREHOUSE_CATALOG[itemId] || { name: 'Неизвестный товар', category: 'unknown', unit: 'шт' };
+    const currentQty = window.dbWarehouseInv[itemId] || 0;
+    
+    document.getElementById('pc-item-name').innerText = itemInfo.name;
+    document.getElementById('pc-item-cat').innerText = itemInfo.category;
+    document.getElementById('pc-item-qty').innerText = window.formatWhNumber(currentQty, itemInfo.unit === 'шт' ? 0 : 2) + ' ' + itemInfo.unit;
+    
+    const tbody = document.getElementById('pc-history-tbody');
+    let html = '';
+    
+    // Sort logs descending (newest first)
+    const sortedLogs = [...(window.dbWarehouseLog || [])].sort((a,b) => new Date(b.date) - new Date(a.date));
+    
+    sortedLogs.forEach(log => {
+        if (!log.items) return;
+        const matchingItem = log.items.find(i => {
+            let fullId = i.id;
+            let itemCategory = i.isBelt ? 'belt' : 'metal';
+            if (log.op_type === 'in_hardware') itemCategory = 'hardware';
+            if (log.op_type === 'in_fasteners') itemCategory = 'fasteners';
+            if (itemCategory === 'metal' && !String(fullId).startsWith('metal_')) fullId = `metal_${fullId}`;
+            if (itemCategory === 'belt' && !String(fullId).startsWith('belt_')) fullId = `belt_${fullId}`;
+            if (itemCategory === 'hardware' && !String(fullId).startsWith('hardware_')) fullId = `hardware_${fullId}`;
+            if (itemCategory === 'fasteners' && !String(fullId).startsWith('fasteners_')) fullId = `fasteners_${fullId}`;
+            return fullId === itemId || String(i.id) === String(itemId) || `belt_strip_${i.id}` === String(itemId) || `belt_blank_${i.id}` === String(itemId) || `blank_${i.id}` === String(itemId);
+        });
+        
+        if (matchingItem) {
+            const isIncome = OPERATIONS_CONFIG[log.op_type]?.isIncoming;
+            const sign = isIncome ? '+' : '-';
+            const color = isIncome ? 'var(--emerald-neon)' : 'var(--brand-red)';
+            
+            html += `
+                <tr style="background: rgba(255,255,255,0.015);">
+                    <td>${new Date(log.date).toLocaleString('ru-RU')}</td>
+                    <td style="color:var(--brand-gold);">${OPERATIONS_CONFIG[log.op_type]?.title || log.op_type}</td>
+                    <td>${log.doc_number || 'Б/Н'}</td>
+                    <td style="color:${color}; font-weight:bold;">${sign}${window.formatWhNumber(matchingItem.qty, itemInfo.unit === 'шт' ? 0 : 2)}</td>
+                    <td><i class="fa-solid fa-user text-muted"></i> ${log.user || 'Система'}</td>
+                </tr>
+            `;
+        }
+    });
+    
+    if (!html) {
+        html = `<tr><td colspan="5" style="text-align:center; padding:20px; opacity:0.5;">Нет истории движений</td></tr>`;
+    }
+    
+    tbody.innerHTML = html;
+    document.getElementById('modal-product-card').classList.add('active');
 };
 
 window.onSourceQtyInput = () => {
