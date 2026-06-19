@@ -480,8 +480,8 @@ window.updateDropdowns = function() {
     const metalSel = document.getElementById('b-metal-select');
     if (metalSel && window.db.rods_metal) {
         const prevVal = metalSel.value;
-        metalIdx = window.db.rods_metal.map((m, i) => `<option value="${i}">${m.name} Ø${m.dia} мм (${window.formatCurr(m.pricePerM)}/м)</option>`).join('');
-        metalSel.innerHTML = metalIdx;
+        const metalOptions = window.db.rods_metal.map((m, i) => `<option value="${i}">${m.name} Ø${m.dia} мм (${window.formatCurr(m.pricePerM)}/м)</option>`).join('');
+        metalSel.innerHTML = metalOptions;
         if (window.db.rods_metal[prevVal]) metalSel.value = prevVal;
         if (window.calcStep2) window.calcStep2();
     }

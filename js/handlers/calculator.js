@@ -533,6 +533,38 @@ window.loadAllProducts = function() {
             });
         });
     }
+
+    // Подгрузка деталей из инженерии (металл, заготовки, прутки)
+    const rodsKeys = ['rods_metal', 'rods_blanks', 'rods_standard', 'rods_bent', 'rods_rubber', 'rods_double'];
+    if (window.db) {
+        rodsKeys.forEach(key => {
+            if (window.db[key] && window.db[key].length > 0) {
+                window.db[key].forEach((p, idx) => {
+                    let catName = 'Инженерия';
+                    if (key === 'rods_metal') catName = 'Сырье (Металл)';
+                    else if (key === 'rods_blanks') catName = 'Заготовки';
+                    else if (key === 'rods_standard') catName = 'Прутки прямые';
+                    else if (key === 'rods_bent') catName = 'Прутки гнутые';
+                    else if (key === 'rods_rubber') catName = 'Прутки в резине';
+                    else if (key === 'rods_double') catName = 'Прутки сдвоенные';
+
+                    let name = p.name || '';
+                    if (key === 'rods_metal') name = (p.name || 'Металл') + ' Ø' + p.dia + ' мм';
+                    if (key === 'rods_blanks') name = (p.metalName || 'Заготовка') + ' Ø' + p.dia + ' мм L=' + p.length;
+
+                    products.push({
+                        id: key + '_' + idx,
+                        art: p.article || p.code || 'ИНЖ',
+                        name: name,
+                        price: p.price || p.priceVat || p.pricePerM || 0,
+                        stock: p.stock || 0,
+                        category: catName,
+                        source: key
+                    });
+                });
+            }
+        });
+    }
     
     window.allProducts = products;
     console.log(`📦 Загружено товаров: ${products.length}`);

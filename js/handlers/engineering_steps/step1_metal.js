@@ -172,21 +172,24 @@ window.createBlankFromStep1 = function() {
 
     if (!window.db.rods_metal) window.db.rods_metal = [];
     let metalIdx = window.db.rods_metal.findIndex(m => m.name === steel && parseFloat(m.dia) === dia);
+    
+    const metalRecord = {
+        name: steel,
+        dia,
+        pricePerM: window.currentStep1Metal.totMNoVat,
+        pricePerMVat: window.currentStep1Metal.totMVat,
+        vatRate: window.currentStep1Metal.vatRate,
+        wpm: window.currentStep1Metal.wpm,
+        vendor: window.currentStep1Metal.vendorStr,
+        ts: Date.now(),
+        code: window.currentStep1Metal.code
+    };
+
     if (metalIdx === -1) {
-        window.db.rods_metal.push({
-            name: steel,
-            dia,
-            pricePerM: window.currentStep1Metal.totMNoVat,
-            pricePerMVat: window.currentStep1Metal.totMVat,
-            vatRate: window.currentStep1Metal.vatRate,
-            ts: Date.now(),
-            code: window.currentStep1Metal.code
-        });
+        window.db.rods_metal.push(metalRecord);
         metalIdx = window.db.rods_metal.length - 1;
     } else {
-        window.db.rods_metal[metalIdx].pricePerM = window.currentStep1Metal.totMNoVat;
-        window.db.rods_metal[metalIdx].pricePerMVat = window.currentStep1Metal.totMVat;
-        window.db.rods_metal[metalIdx].vatRate = window.currentStep1Metal.vatRate;
+        window.db.rods_metal[metalIdx] = { ...window.db.rods_metal[metalIdx], ...metalRecord };
     }
 
     if (!window.db.rods_blanks) window.db.rods_blanks = [];
@@ -265,6 +268,10 @@ window.saveStep1 = function() {
         name: window.currentStep1Metal.steel,
         dia: window.currentStep1Metal.dia,
         pricePerM: window.currentStep1Metal.totMNoVat,
+        pricePerMVat: window.currentStep1Metal.totMVat,
+        vatRate: window.currentStep1Metal.vatRate,
+        wpm: window.currentStep1Metal.wpm,
+        vendor: window.currentStep1Metal.vendorStr,
         drawing: drawingVal,
         photo: drawingVal,
         ts: Date.now(),
@@ -272,7 +279,7 @@ window.saveStep1 = function() {
     };
 
     if (existingIdx !== -1) {
-        window.db.rods_metal[existingIdx] = record;
+        window.db.rods_metal[existingIdx] = { ...window.db.rods_metal[existingIdx], ...record };
         window.persistAndRender('Данные сырья успешно обновлены в базе!');
     } else {
         window.db.rods_metal.push(record);
