@@ -23,7 +23,7 @@ let WAREHOUSE_CATALOG = {
 window.initWarehouseCatalog = () => {
     // Очищаем старые динамические ключи прутков, чтобы не дублировать
     for (let key in WAREHOUSE_CATALOG) {
-        if (key.includes('_') && key !== 'belt_blank' && key !== 'belt_strip' && key !== 'bent_rubberized') {
+        if (key.includes('_') && key !== 'belt_blank' && key !== 'belt_strip' && key !== 'belt_ring' && key !== 'bent_rubberized') {
             delete WAREHOUSE_CATALOG[key];
         }
     }
@@ -228,6 +228,7 @@ const OPERATIONS_CONFIG = {
     'in_belt': { type: 'Приход: Лента', target: 'belt', source: null, isIncoming: true },
     'in_belt_blank': { type: 'Приход: Лента-заготовка', target: 'belt_blank', source: null, isIncoming: true },
     'in_belt_strip': { type: 'Приход: Лента-полоса', target: 'belt_strip', source: null, isIncoming: true },
+    'in_belt_ring': { type: 'Приход: Ремни на складе', target: 'belt_ring', source: null, isIncoming: true },
     'in_hardware': { type: 'Приход: Скобяные изделия', target: 'hardware', source: null, isIncoming: true },
     'in_fasteners': { type: 'Приход: Метизы и крепеж', target: 'fasteners', source: null, isIncoming: true },
     'prod_belt_blank': { type: 'Обрезка бортов (Лента -> Лента-Заготовка)', target: 'belt_blank', source: 'belt' },
@@ -437,6 +438,7 @@ function renderInventory() {
         belt: { name: '1. Ленты (Входящие)', unit: 'м.п.', icon: 'fa-tape', color: 'var(--accent-blue)', bg: 'rgba(0,147,255,0.05)', border: 'rgba(0,147,255,0.15)' },
         belt_blank: { name: '1.1. Ленты-заготовки (обрезные)', unit: 'м.п.', icon: 'fa-box-tissue', color: 'var(--accent-blue)', bg: 'rgba(0,147,255,0.03)', border: 'rgba(0,147,255,0.1)' },
         belt_strip: { name: '1.2. Ленты-полосы (нарезные)', unit: 'м.п.', icon: 'fa-grip-lines-vertical', color: 'var(--accent-blue)', bg: 'rgba(0,147,255,0.03)', border: 'rgba(0,147,255,0.1)' },
+        belt_ring: { name: '1.3. Ремни на складе', unit: 'шт', icon: 'fa-life-ring', color: 'var(--accent-blue)', bg: 'rgba(0,147,255,0.03)', border: 'rgba(0,147,255,0.1)' },
         metal: { name: '2. Материалы (в ассортименте)', unit: 'кг', icon: 'fa-cubes', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.05)', border: 'rgba(255,180,0,0.15)' },
         blank: { name: '2.1. Заготовки прутков', unit: 'шт', icon: 'fa-cube', color: 'var(--brand-gold)', bg: 'rgba(255,180,0,0.03)', border: 'rgba(255,180,0,0.1)' },
         straight: { name: '3. Прутки прямые (стандартные)', unit: 'шт', icon: 'fa-ruler-horizontal', color: 'var(--neon-emerald)', bg: 'rgba(0,255,157,0.03)', border: 'rgba(0,255,157,0.1)' },
@@ -493,11 +495,13 @@ function renderInventory() {
             if (groupKey === 'metal') {
                 belongs = (key === 'metal' || key.startsWith('metal_'));
             } else if (groupKey === 'belt') {
-                belongs = (key === 'belt' || (key.startsWith('belt_') && !key.startsWith('belt_blank') && !key.startsWith('belt_strip')));
+                belongs = (key === 'belt' || (key.startsWith('belt_') && !key.startsWith('belt_blank') && !key.startsWith('belt_strip') && !key.startsWith('belt_ring')));
             } else if (groupKey === 'belt_blank') {
                 belongs = (key === 'belt_blank' || key.startsWith('belt_blank_'));
             } else if (groupKey === 'belt_strip') {
                 belongs = (key === 'belt_strip' || key.startsWith('belt_strip_'));
+            } else if (groupKey === 'belt_ring') {
+                belongs = (key === 'belt_ring' || key.startsWith('belt_ring_'));
             } else {
                 belongs = (item.parentGroup === groupKey || (key === groupKey && !item.parentGroup));
             }
@@ -551,7 +555,7 @@ function renderInventory() {
 
             // Группируем по диаметрам если прутки/заготовки
             const isRodGroup = ['blank', 'straight', 'double', 'bent', 'rubberized', 'hedge', 'bent_rubberized'].includes(groupKey);
-            const isBeltGroup = ['belt', 'belt_blank', 'belt_strip'].includes(groupKey);
+            const isBeltGroup = ['belt', 'belt_blank', 'belt_strip', 'belt_ring'].includes(groupKey);
             
             if (isRodGroup) {
                 activeChildKeys.sort((a, b) => {
@@ -2299,7 +2303,7 @@ window.updateOperationForm = () => {
                 sourceSelectWrapper.style.display = 'block';
                 const groups = {};
                 for (let key in WAREHOUSE_CATALOG) {
-                    if (key.startsWith('belt_') && !key.startsWith('belt_blank') && !key.startsWith('belt_strip')) {
+                    if (key.startsWith('belt_') && !key.startsWith('belt_blank') && !key.startsWith('belt_strip') && !key.startsWith('belt_ring')) {
                         const av = window.parseRusFloat(window.dbWarehouseInv[key] || 0);
                         if (av <= 0) continue; // Filter out zero/negative balance!
                         const width = getCatalogItemWidth(key);
@@ -2409,7 +2413,7 @@ window.updateOperationForm = () => {
     }
 
     // Dynamic tabs setup (1C vs standard)
-    const isMetalOrBelt = (type === 'in_metal' || type === 'in_belt' || type === 'in_belt_blank' || type === 'in_belt_strip');
+    const isMetalOrBelt = (type === 'in_metal' || type === 'in_belt' || type === 'in_belt_blank' || type === 'in_belt_strip' || type === 'in_belt_ring');
     const tabsHeader = document.getElementById('wh-tabs-header');
     const standardWrapper = document.getElementById('wh-standard-fields-wrapper');
     const incomingFields = document.getElementById('incoming-fields');
@@ -2567,11 +2571,13 @@ window.updateWriteoffSpecificList = () => {
         if (category === 'metal') {
             matches = key.startsWith('metal_');
         } else if (category === 'belt') {
-            matches = key.startsWith('belt_') && !key.startsWith('belt_blank_') && !key.startsWith('belt_strip_');
+            matches = key.startsWith('belt_') && !key.startsWith('belt_blank_') && !key.startsWith('belt_strip_') && !key.startsWith('belt_ring_');
         } else if (category === 'belt_blank') {
             matches = key.startsWith('belt_blank_');
         } else if (category === 'belt_strip') {
             matches = key.startsWith('belt_strip_');
+        } else if (category === 'belt_ring') {
+            matches = key.startsWith('belt_ring_');
         } else if (category === 'hardware') {
             matches = key.startsWith('hardware_') || item.parentGroup === 'hardware';
         } else if (category === 'fasteners') {
@@ -3945,6 +3951,9 @@ window.addBeltToBatch = () => {
     } else if (opType === 'in_belt_strip') {
         prefix = 'belt_strip_';
         formattedName = `Лента-Полоса ${width} мм (Дл ${len} м)`;
+    } else if (opType === 'in_belt_ring') {
+        prefix = 'belt_ring_';
+        formattedName = `Ремень на складе ${width} мм (Дл ${len} м)`;
     }
 
     window.currentBatch.push({
@@ -4011,6 +4020,19 @@ document.addEventListener('DOMContentLoaded', () => {
         window.renderInventory();
         window.renderMetrics();
         window.renderLog();
+        
+        // Обработка возврата в каталог
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('return') === 'catalog') {
+            const returnBtn = document.createElement('button');
+            returnBtn.innerText = 'ВЕРНУТЬСЯ В КАТАЛОГ (РЕМЕНЬ ДОБАВЛЕН)';
+            returnBtn.className = 'btn';
+            returnBtn.style.cssText = 'position:fixed; bottom:30px; right:30px; background:var(--brand-gold); color:#000; font-weight:900; padding:15px 30px; border-radius:15px; box-shadow:0 10px 30px rgba(255,180,0,0.4); z-index:999999; font-size:1rem; cursor:pointer; text-transform:uppercase;';
+            returnBtn.onclick = () => {
+                window.location.href = 'index.html';
+            };
+            document.body.appendChild(returnBtn);
+        }
     }
 });
 window.editingLogId = null;

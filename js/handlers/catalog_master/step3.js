@@ -75,6 +75,11 @@ window.CatalogStep3 = {
                     ${renderFullParams(false)}
                     ${renderFullParams(true)}
                 </div>
+                <div style="margin-top: 30px; text-align: center;">
+                    <button onclick="window.CatalogManager.saveStateAndRedirect('warehouse.html?return=catalog')" class="btn btn-secondary" style="height:40px; font-size:0.75rem; font-weight:900; text-transform:uppercase; letter-spacing:1px; border-radius:10px; background:#0c0c0c; border:1px solid #222;">
+                        <i class="fa-solid fa-plus" style="margin-right:10px; color:var(--brand-red);"></i> ЕСЛИ РЕМНЯ НЕТ НА СКЛАДЕ - ДОБАВИТЬ НОВЫЙ РЕМЕНЬ
+                    </button>
+                </div>
             </div>
             <style>
                 .param-pill { background:rgba(255,255,255,0.03); border:1px solid #222; color:#666; padding:8px 16px; border-radius:8px; font-size:0.9rem; font-weight:900; cursor:pointer; transition:0.3s; }

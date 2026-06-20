@@ -222,3 +222,22 @@ window.CatalogManager = {
 
 // Aliases for legacy compatibility if needed
 window.CatalogMaster = window.CatalogManager;
+
+window.CatalogManager.saveStateAndRedirect = function(url) {
+    localStorage.setItem('prutkon_catalog_draft', JSON.stringify(window.CatalogState));
+    localStorage.setItem('prutkon_catalog_restore', 'true');
+    window.location.href = url;
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (localStorage.getItem('prutkon_catalog_restore') === 'true') {
+        const saved = localStorage.getItem('prutkon_catalog_draft');
+        if (saved) {
+            try {
+                window.CatalogState = JSON.parse(saved);
+                localStorage.removeItem('prutkon_catalog_restore');
+                setTimeout(() => window.CatalogManager.open(), 500);
+            } catch(e) {}
+        }
+    }
+});

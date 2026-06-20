@@ -215,6 +215,8 @@ window.editProduct = function(id) {
         document.getElementById('pc-name').value = p.name || "";
         document.getElementById('pc-price').value = p.price || 0;
         document.getElementById('pc-stock').value = p.stock || 0;
+        document.getElementById('pc-supplier').value = p.supplier || "";
+        document.getElementById('pc-storage').value = p.storage || "";
         document.getElementById('pc-photo').value = p.photo || "";
         document.getElementById('product-card-img').src = p.photo || "placeholder.jpg";
         const catSel = document.getElementById('pc-category');
@@ -243,6 +245,8 @@ window.saveProductCard = function() {
     p.name = document.getElementById('pc-name').value;
     p.price = parseFloat(document.getElementById('pc-price').value) || 0;
     p.stock = parseInt(document.getElementById('pc-stock').value) || 0;
+    p.supplier = document.getElementById('pc-supplier').value;
+    p.storage = document.getElementById('pc-storage').value;
     p.photo = document.getElementById('pc-photo').value;
     p.category = document.getElementById('pc-category').value;
     

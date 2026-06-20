@@ -1,4 +1,4 @@
-window.DB_VERSION = "19.0.0";
+﻿window.DB_VERSION = "19.0.0";
 
 console.log("Prices OS: Module Loading v19.0.0...");
 
@@ -334,7 +334,14 @@ window.renderPriceTable = function() {
     const isRodCat = ['sec_rods', 'rods_hedgehog', 'rods_finger', 'rods_rti', 'rods_bent_metal', 'rods_bent_rti', 'rods_double', 'blanks'].includes(window.activeCategory) || (activeCategoryObj && activeCategoryObj.parent === 'rods');
     const isBeltCat = window.activeCategory === 'belts';
 
-    if (isRodCat) {
+    if (filterCatField) {
+        filtered.sort((a, b) => {
+            const valA = String(a[filterCatField] || '').toLowerCase().trim();
+            const valB = String(b[filterCatField] || '').toLowerCase().trim();
+            if (valA !== valB) return valA.localeCompare(valB);
+            return String(a.name).localeCompare(String(b.name));
+        });
+    } else if (isRodCat) {
         filtered.sort((a, b) => {
             const diaA = parseFloat(a.dia || a.diameter) || 0;
             const diaB = parseFloat(b.dia || b.diameter) || 0;
@@ -360,7 +367,21 @@ window.renderPriceTable = function() {
     } else {
         let lastGroup = null;
         filtered.forEach(p => {
-            if (isRodCat) {
+            if (filterCatField) {
+                const val = p[filterCatField] || 'Не указано';
+                const fieldName = window.priceSchemaFields[filterCatField] || filterCatField;
+                const groupLabel = `${fieldName}: ${val}`;
+                if (groupLabel !== lastGroup) {
+                    lastGroup = groupLabel;
+                    html += `
+                        <tr style="background: rgba(175,82,222,0.03); font-weight: bold; border-bottom: 1px solid rgba(175,82,222,0.08);">
+                            <td colspan="${8 + displayFields.length}" style="padding: 8px 15px; color: #af52de; font-size: 0.8rem; text-align: left;">
+                                <i class="fa-solid fa-layer-group" style="font-size:0.6rem;"></i> ${groupLabel}
+                            </td>
+                        </tr>
+                    `;
+                }
+            } else if (isRodCat) {
                 const diaVal = parseFloat(p.dia || p.diameter) || 0;
                 const groupLabel = diaVal ? `Диаметр: Ø${diaVal} мм` : 'Диаметр: Не указан';
                 if (groupLabel !== lastGroup) {
@@ -517,6 +538,8 @@ window.editProduct = function(id) {
     document.getElementById('pc-name').value = p.name || "";
     document.getElementById('pc-price').value = p.price || 0;
     document.getElementById('pc-stock').value = p.stock || 0;
+    document.getElementById('pc-supplier').value = p.supplier || "";
+    document.getElementById('pc-storage').value = p.storage || "";
     document.getElementById('pc-photo').value = p.photo || "";
     
     const photoImg = document.getElementById('product-card-img');
@@ -664,6 +687,8 @@ window.saveProductCard = async function() {
     p.name = document.getElementById('pc-name').value;
     p.price = parseFloat(document.getElementById('pc-price').value) || 0;
     p.stock = parseInt(document.getElementById('pc-stock').value) || 0;
+    p.supplier = document.getElementById('pc-supplier').value;
+    p.storage = document.getElementById('pc-storage').value;
     p.photo = document.getElementById('pc-photo').value;
     p.category = catId;
 
@@ -1852,3 +1877,4 @@ window.showPriceHelp = () => {
     contentEl.innerHTML = helpHtml;
     modal.classList.add('active');
 };
+

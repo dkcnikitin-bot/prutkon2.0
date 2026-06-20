@@ -49,6 +49,11 @@ window.CatalogStep5 = {
                                 <option value="">-- Выберите замок из прайса --</option>
                                 ${locks.map(p => `<option value="${p.id}" ${s.lockId === p.id ? 'selected' : ''}>${p.art} | ${p.name} [${p.brand || ''}]</option>`).join('')}
                             </select>
+                            <div style="margin-top: 15px;">
+                                <button onclick="window.CatalogManager.saveStateAndRedirect('prices.html?return=catalog')" class="btn btn-secondary" style="width:100%; height:35px; font-size:0.65rem; font-weight:900; text-transform:uppercase; border-radius:8px; background:#0c0c0c; border:1px solid #222;" title="Если замка нет в прайсе, добавить новый">
+                                    <i class="fa-solid fa-plus" style="margin-right:8px; color:var(--brand-red);"></i> СОЗДАТЬ ЗАМОК В ПРАЙСЕ
+                                </button>
+                            </div>
                         </div>
                         <div style="padding-left:20px; border-left:1px solid #111;">
                             ${s.lockId ? this.renderLockPreview(s.lockId) : '<div style="font-size:0.65rem; color:#333; text-transform:uppercase;">Выберите замок для просмотра характеристик</div>'}

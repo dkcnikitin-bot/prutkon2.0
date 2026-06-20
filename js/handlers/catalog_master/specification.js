@@ -48,8 +48,25 @@ window.CatalogReport = {
             const sortedItems = [...s.additionalItems].sort((a, b) => (parseInt(a.order) || 999) - (parseInt(b.order) || 999));
             sortedItems.forEach(it => {
                 const d = window.CatalogDicts.additionalComponentsDef.find(x=>x.id===it.id);
-                if (d) bodyHtml += add(d.name, it.total+' шт', `Чередование: ${it.step} | Порядок: № ${it.order} | Жесткость: ${it.diam} мм`, d.img);
+                if (d) bodyHtml += add(d.name, it.total+' шт', `Чередование: ${it.step} | Порядок: № ${it.order} | Диаметр: ${it.diam} мм`, d.img);
             });
+            
+            // АВТОПОДБОР КОМПЛЕКТУЮЩИХ (ПЛАСТИНЫ, КЛЕПКИ/ВИНТЫ)
+            if (s.rodsCount) {
+                let totalBelts = 2; // side belts
+                if (s.convType === '3x') totalBelts = 3;
+                if (s.convType === '4x') totalBelts = 4;
+                
+                const attachPoints = (parseInt(s.rodsCount) || 0) * totalBelts;
+                if (attachPoints > 0) {
+                    bodyHtml += add('ПЛАСТИНА СТАЛЬНАЯ', attachPoints + ' шт', 'Скрытый автоподбор (для сборки)', '23.jpg');
+                    if (s.connectionType === 'screws') {
+                        bodyHtml += add('ВИНТЫ КРЕПЕЖНЫЕ', (attachPoints * 2) + ' шт', 'Скрытый автоподбор (для сборки)', '38.jpg');
+                    } else {
+                        bodyHtml += add('ЗАКЛЕПКИ', (attachPoints * 2) + ' шт', 'Скрытый автоподбор (для сборки)', '35.jpg');
+                    }
+                }
+            }
         }
 
         // 4. СОЕДИНЕНИЕ И ЗАМКИ (ШАГ 5)
@@ -85,7 +102,7 @@ window.CatalogReport = {
                         
                         <div style="margin-bottom:20px; text-align:center;">
                             <div style="font-size:1rem; font-weight:900; color:#fff;">${s.step >= 2 ? (s.length||0) + ' × ' + (s.width||0) : '— × —'}</div>
-                            <div style="font-size:0.55rem; color:#444; text-transform:uppercase; font-weight:900;">ДЛИНА × ШИРИНА (ММ)</div>
+                            <div style="font-size:0.55rem; color:#444; text-transform:uppercase; font-weight:900;">ДЛИНА В КОЛЬЦО × ШИРИНА (ММ)</div>
                         </div>
 
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">

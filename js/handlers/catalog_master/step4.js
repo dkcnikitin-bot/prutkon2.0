@@ -52,11 +52,14 @@ window.CatalogStep4 = {
                     <div style="flex:1; color:var(--brand-red); font-size:0.6rem; text-transform:uppercase; font-weight:900; text-align:center;">
                          Совпадение без учета длины
                     </div>
-                    <div style="flex:2;">
-                        <button onclick="window.CatalogStep4.searchMatches()" class="btn btn-secondary" style="width:100%; height:40px; font-size:0.75rem; font-weight:900; text-transform:uppercase; letter-spacing:1px; border-radius:10px; background:#0c0c0c; border:1px solid #222;">
-                            <i class="fa-solid fa-magnifying-glass-chart" style="margin-right:10px; color:var(--brand-red);"></i> НАЙТИ ПОХОЖИЕ В БАЗЕ
-                        </button>
-                    </div>
+                      <div style="flex:2; display:flex; gap:10px;">
+                          <button onclick="window.CatalogStep4.searchMatches()" class="btn btn-secondary" style="flex:1; height:40px; font-size:0.75rem; font-weight:900; text-transform:uppercase; letter-spacing:1px; border-radius:10px; background:#0c0c0c; border:1px solid #222;">
+                              <i class="fa-solid fa-magnifying-glass-chart" style="margin-right:10px; color:var(--brand-red);"></i> ИСКАТЬ ПРУТОК-МАТЧ  В БАЗЕ
+                          </button>
+                          <button onclick="window.CatalogManager.saveStateAndRedirect('rods_production.html?return=catalog')" class="btn btn-secondary" style="flex:1; height:40px; font-size:0.75rem; font-weight:900; text-transform:uppercase; letter-spacing:1px; border-radius:10px; background:#0c0c0c; border:1px solid #222;" title="Если в базе нет, создание позиции прутка">
+                              <i class="fa-solid fa-plus" style="margin-right:10px; color:var(--brand-red);"></i> СОЗДАТЬ В ИНЖЕНЕРИИ
+                          </button>
+                      </div>
                 </div>
                 <div id="m4-match-results" class="hidden animate-fade-in" style="margin-bottom:30px; padding:20px; background:rgba(255,255,255,0.02); border-radius:20px; border:1px solid #181818;"></div>
 
@@ -138,20 +141,32 @@ window.CatalogStep4 = {
         const resEl = document.getElementById(`ss-res-${id}`);
         if (!resEl) return;
         
-        if (!query || query.length < 1) {
-            resEl.classList.add('hidden');
-            return;
+        const s = window.CatalogState;
+        let matches = [];
+
+        if (!query || query.trim().length === 0) {
+            // Если запрос пустой, показываем умные рекомендации (Ширина + Шаг)
+            matches = window.allProductsListForStep4.filter(p => {
+                const pW = parseFloat(p.width) || 0;
+                const sW = parseFloat(s.width) || 0;
+                const pP = parseFloat(p.pitch) || 0;
+                const sP = parseFloat(s.pitch) || 0;
+                // Строгое совпадение по ширине и шагу (если они заданы в каталоге)
+                let matchW = (sW > 0) ? (Math.abs(pW - sW) < 2) : true;
+                let matchP = (sP > 0) ? (Math.abs(pP - sP) < 0.5) : true;
+                // Для клепок/комплектующих иногда важен только диаметр или шаг
+                return (matchW || matchP) && (pW > 0 || pP > 0);
+            }).slice(0, 15);
+        } else {
+            const qParts = query.toLowerCase().split(' ').filter(Boolean);
+            matches = window.allProductsListForStep4.filter(p => {
+                const str = `${p.art||''} ${p.name||''} ${p.category||''} ${p.width||''} ${p.length||''} ${p.pitch||''} ${p.diam||''}`.toLowerCase();
+                return qParts.every(word => str.includes(word));
+            }).slice(0, 15);
         }
         
-        const qParts = query.toLowerCase().split(' ').filter(Boolean);
-        
-        const matches = window.allProductsListForStep4.filter(p => {
-            const str = `${p.art||''} ${p.name||''} ${p.category||''} ${p.width||''} ${p.length||''} ${p.pitch||''} ${p.diam||''}`.toLowerCase();
-            return qParts.every(word => str.includes(word));
-        }).slice(0, 15);
-        
         if (matches.length === 0) {
-            resEl.innerHTML = '<div style="padding:10px; color:#888; font-size:0.7rem; text-align:center;">Ничего не найдено</div>';
+            resEl.innerHTML = '<div style="padding:10px; color:#888; font-size:0.7rem; text-align:center;">Ничего не найдено (введите запрос)</div>';
         } else {
             resEl.innerHTML = matches.map(p => {
                 const imgPath = p.photo ? p.photo : (p.img ? (p.img.includes('/') ? p.img : 'extracted_xlsx/xl/media/' + p.img) : 'extracted_xlsx/xl/media/no_photo.png');
@@ -211,11 +226,17 @@ window.CatalogStep4 = {
         
         setTimeout(() => {
             const dbTrans = window.dbTransProducts || [];
-            // Критерий поиска: совпадение по ширине и типу
+            // Критерий поиска: совпадение по ширине, шагу и диаметру (если применимо)
             const matches = dbTrans.filter(p => {
                 const pW = parseFloat(p.width) || 0;
                 const sW = parseFloat(s.width) || 0;
-                return Math.abs(pW - sW) < 2; // Ширина совпадает
+                const pP = parseFloat(p.pitch) || 0;
+                const sP = parseFloat(s.pitch) || 0;
+                
+                const matchW = (Math.abs(pW - sW) < 2); // Ширина совпадает
+                const matchP = (sP > 0) ? (Math.abs(pP - sP) < 0.5) : true; // Шаг совпадает
+                
+                return matchW && matchP; 
             }).slice(0, 5); // Топ-5
 
             if(matches.length === 0) {

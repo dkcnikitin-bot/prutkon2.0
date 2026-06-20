@@ -11,6 +11,19 @@ document.addEventListener('DOMContentLoaded', () => {
     initData();
     renderRegistry();
 
+    // Обработка возврата в каталог
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('return') === 'catalog') {
+        const returnBtn = document.createElement('button');
+        returnBtn.innerText = 'ВЕРНУТЬСЯ В КАТАЛОГ (ПРУТОК СОЗДАН)';
+        returnBtn.className = 'btn';
+        returnBtn.style.cssText = 'position:fixed; bottom:30px; right:30px; background:var(--brand-gold); color:#000; font-weight:900; padding:15px 30px; border-radius:15px; box-shadow:0 10px 30px rgba(255,180,0,0.4); z-index:999999; font-size:1rem; cursor:pointer; text-transform:uppercase;';
+        returnBtn.onclick = () => {
+            window.location.href = 'index.html'; // This triggers the catalog master restoration
+        };
+        document.body.appendChild(returnBtn);
+    }
+
     // Ожидание асинхронной загрузки справочников из core.js
     const checkCoreData = setInterval(() => {
         if (window.dbDirectories && window.dbDirectories.length > 0) {
