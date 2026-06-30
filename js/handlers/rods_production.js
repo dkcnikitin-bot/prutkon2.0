@@ -1,4 +1,4 @@
-/* rods_production.js - ПРУТКОН Engineering Workflow Central Module */
+﻿/* rods_production.js - ПРУТКОН Engineering Workflow Central Module */
 
 const RODS_STORAGE_KEY = 'prutkon_rods_registry';
 const RODS_KEYS = ['rods_metal', 'rods_blanks', 'rods_standard', 'rods_bent', 'rods_rubber', 'rods_double'];
@@ -310,7 +310,7 @@ window.saveCurrentStep = function() {
         const activeBeltBtn = document.querySelector('#belts-tabs button.active');
         const bStep = activeBeltBtn ? activeBeltBtn.getAttribute('data-step') : "belt_1";
         
-        if (bStep === "belt_1" && window.saveStepBelt1) window.saveStepBelt1();
+        if (bStep === "belt_1") { if(window.saveStepBelt1) window.saveStepBelt1(); if(window.saveStep1_3) window.saveStep1_3(); }
         else if (bStep === "belt_2" && window.saveStepBelt2) window.saveStepBelt2();
         else if (bStep === "belt_3" && window.saveStepBelt3) window.saveStepBelt3();
         else notify(`Сохранение для шага ремней ${bStep} пока не настроено`, 'warning');
@@ -321,7 +321,7 @@ window.saveCurrentStep = function() {
     const activeBtn = document.querySelector('#rods-tabs button.active');
     const step = activeBtn ? activeBtn.getAttribute('data-step') : "1";
 
-    if (step == "1" && window.saveStep1) window.saveStep1();
+    if (step == "1" && window.saveStep1) window.saveStep1(); else if (step == "1-3" && window.saveStep1_3) window.saveStep1_3();
     else if (step == "2" && window.saveStep2) window.saveStep2();
     else if (step == "3" && window.saveStep3) window.saveStep3();
     else if (step == "4" && window.saveStep4) window.saveStep4();
@@ -853,4 +853,102 @@ window.handleDrawingUpload = function(input, targetId) {
         };
         reader.readAsDataURL(file);
     }
+};
+
+window.saveStep1_3 = function() {
+    const name = document.getElementById('belt1-name')?.value;
+    const qty = document.getElementById('belt1-qty')?.value;
+    const price = document.getElementById('belt1-price')?.value || 0;
+    
+    if (!name || !qty) return window.notify ? window.notify('Укажите наименование и метраж ремня', 'warning') : alert('Укажите данные');
+    
+    if (!window.db.rods_rubber) window.db.rods_rubber = [];
+    window.db.rods_rubber.push({
+        article: "RB-$"{Date.now()}",
+        name: name,
+        length: qty,
+        price: price,
+        ts: Date.now()
+    });
+    if (window.persistAndRender) window.persistAndRender(Ремень "$"name" сохранен на склад);
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('return') === 'catalog') {
+        const headerActions = document.querySelector('.header-actions');
+        if (headerActions) {
+            const returnBtn = document.createElement('button');
+            returnBtn.className = 'btn btn-secondary btn-sm';
+            returnBtn.style.backgroundColor = 'var(--brand-gold)';
+            returnBtn.style.color = '#000';
+            returnBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> ВЕРНУТЬСЯ В КАТАЛОГ (ПРУТОК СОЗДАН)';
+            returnBtn.onclick = () => window.location.href = 'catalog.html#step4';
+            headerActions.prepend(returnBtn);
+        }
+    }
+});
+
+window.sendAssemblyToBasket = function() {
+    const rodsCount = parseInt(document.getElementById('asm-rods-count')?.value) || 0;
+    const beltsCount = parseInt(document.getElementById('asm-belts-count')?.value) || 0;
+    const locksCount = parseInt(document.getElementById('asm-locks-count')?.value) || 0;
+    const lockRodsCount = parseInt(document.getElementById('asm-lock-rods-count')?.value) || 1;
+
+    if (rodsCount === 0 || beltsCount === 0) {
+        return window.notify ? window.notify('Введите данные для расчета', 'warning') : alert('Введите данные');
+    }
+
+    const findProduct = (nameQuery) => {
+        if (!window.dbProducts) return null;
+        return window.dbProducts.find(p => p && p.name && p.name.toLowerCase().includes(nameQuery.toLowerCase()));
+    };
+
+    const stdPlate = findProduct('Пластина соединительная') || { name: 'Пластина соединительная', price: 41.48 };
+    const rivet = findProduct('Клепка') || { name: 'Клепка спец 6мм', price: 10.35 };
+    const lockPlate = findProduct('Пластина соединительная резьбовая') || { name: 'Пластина соединительная резьбовая', price: 150 };
+    const lockRod = findProduct('пруток') || { name: 'пруток', price: 1200 };
+
+    const beltLaborEl = document.getElementById('asm-belt-labor');
+    const assLaborEl = document.getElementById('asm-assembly-labor');
+    
+    const beltLaborPrice = beltLaborEl && beltLaborEl.selectedIndex > 0 ? parseFloat(beltLaborEl.options[beltLaborEl.selectedIndex].dataset.price) : 3150;
+    const beltLaborName = beltLaborEl && beltLaborEl.selectedIndex > 0 ? beltLaborEl.options[beltLaborEl.selectedIndex].dataset.name : 'Подготовка ремней к соединению';
+    
+    const assLaborPrice = assLaborEl && assLaborEl.selectedIndex > 0 ? parseFloat(assLaborEl.options[assLaborEl.selectedIndex].dataset.price) : 24500;
+    const assLaborName = assLaborEl && assLaborEl.selectedIndex > 0 ? assLaborEl.options[assLaborEl.selectedIndex].dataset.name : 'Сборка транспортера (энергия, амортизация, зп итд)';
+
+    const stdPlatesQty = (rodsCount - locksCount) * beltsCount;
+    const rivetsQty = stdPlatesQty * 2;
+    const lockPlatesQty = locksCount * beltsCount;
+    
+    const itemsToAdd = [
+        { name: stdPlate.name, qty: stdPlatesQty, price: stdPlate.price },
+        { name: rivet.name, qty: rivetsQty, price: rivet.price },
+        { name: lockPlate.name, qty: lockPlatesQty, price: lockPlate.price },
+        { name: lockRod.name, qty: lockRodsCount, price: lockRod.price },
+        { name: beltLaborName, qty: beltsCount, price: beltLaborPrice },
+        { name: assLaborName, qty: 1, price: assLaborPrice }
+    ];
+
+    let basket = [];
+    try {
+        basket = JSON.parse(localStorage.getItem('prutkon_calc_basket')) || [];
+    } catch(e) {}
+    
+    itemsToAdd.forEach(item => {
+        basket.push({
+            id: Date.now() + Math.random(),
+            art: 'СБОРКА',
+            name: item.name,
+            specs: 'Из инженерии прутка',
+            qty: item.qty,
+            price: item.price,
+            total: item.qty * item.price,
+            priceFormatted: window.formatCurr ? window.formatCurr(item.qty * item.price) : (item.qty * item.price + " ₽")
+        });
+    });
+
+    localStorage.setItem('prutkon_calc_basket', JSON.stringify(basket));
+    if (window.notify) window.notify('Сборка добавлена в Калькулятор КП!', 'success');
 };

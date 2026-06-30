@@ -28,7 +28,12 @@ window.CatalogReport = {
 
         // 2. Тяговые ленты (ШАГ 3+)
         if (s.step >= 3) {
-            const beltLengthMm = parseFloat(s.length) || 0;
+            let overlapSteps = 0;
+            if (s.connectionType === 'screws' || s.connectionType === 'vulcanization_cold' || s.connectionType === 'vulcanization_hot' || s.connectionType === 'vulcanization') {
+                overlapSteps = s.connectionOverlapSteps !== undefined ? parseInt(s.connectionOverlapSteps) : 6;
+            }
+            const pitchMm = parseFloat(s.pitch) || 0;
+            const beltLengthMm = (parseFloat(s.length) || 0) + (overlapSteps * pitchMm);
             const sideBeltsQty = (beltLengthMm * 2) / 1000;
             let centralBeltsCount = (s.convType === '3x' ? 1 : (s.convType === '4x' ? 2 : 0));
             const centralBeltsQty = (beltLengthMm * centralBeltsCount) / 1000;
@@ -59,11 +64,14 @@ window.CatalogReport = {
                 
                 const attachPoints = (parseInt(s.rodsCount) || 0) * totalBelts;
                 if (attachPoints > 0) {
-                    bodyHtml += add('ПЛАСТИНА СТАЛЬНАЯ', attachPoints + ' шт', 'Скрытый автоподбор (для сборки)', '23.jpg');
+                    const plateWidth = s.sideBeltWidth || '60';
+                    bodyHtml += add(`ПЛАСТИНА СТАЛЬНАЯ ${plateWidth} мм`, attachPoints + ' шт', `Автоподбор под ремень шириной ${plateWidth} мм`, '23.jpg');
+                    
+                    const holeDiam = s.sideHoleDiam || '6';
                     if (s.connectionType === 'screws') {
-                        bodyHtml += add('ВИНТЫ КРЕПЕЖНЫЕ', (attachPoints * 2) + ' шт', 'Скрытый автоподбор (для сборки)', '38.jpg');
+                        bodyHtml += add(`ВИНТЫ КРЕПЕЖНЫЕ M${holeDiam}`, (attachPoints * 2) + ' шт', `Автоподбор под отверстия ремня ${holeDiam} мм`, '38.jpg');
                     } else {
-                        bodyHtml += add('ЗАКЛЕПКИ', (attachPoints * 2) + ' шт', 'Скрытый автоподбор (для сборки)', '35.jpg');
+                        bodyHtml += add(`ЗАКЛЕПКИ ${holeDiam} мм`, (attachPoints * 2) + ' шт', `Автоподбор под отверстия ремня ${holeDiam} мм`, '35.jpg');
                     }
                 }
             }

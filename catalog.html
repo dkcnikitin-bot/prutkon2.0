@@ -43,6 +43,14 @@
                     <div id="dynamic-cat-filters" class="flex flex-wrap gap-2 mb-4 padding-15" style="background:rgba(0,0,0,0.2); border-radius:12px; border:1px solid var(--border-glass);">
                         <!-- Filter inputs -->
                     </div>
+                    <div class="flex flex-wrap gap-2 mb-4 padding-15" style="background:rgba(0,0,0,0.2); border-radius:12px; border:1px solid var(--border-glass);">
+                        <select id="catalog-grouping-select" class="form-control" style="width:200px; font-size:0.75rem;" onchange="window.renderCatalogTable()">
+                            <option value="">-- Без группировки --</option>
+                            <option value="category">Группировка по Разделу</option>
+                            <option value="type">Группировка по Типу (Классу)</option>
+                            <option value="brand">Группировка по Бренду</option>
+                        </select>
+                    </div>
 
                     <div class="table-wrapper">
                         <table class="data-table" id="catalog-table"></table>
@@ -192,6 +200,14 @@
                         <div class="form-group">
                             <label>Класс / Тэг</label>
                             <input type="text" id="cc-type" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Поставщик</label>
+                            <input type="text" id="cc-supplier" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Место хранения</label>
+                            <input type="text" id="cc-storage" class="form-control">
                         </div>
                     </div>
                     <h5 class="stat-label border-bottom pb-2 mb-3">Технические спецификации</h5>

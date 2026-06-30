@@ -145,24 +145,43 @@ window.CatalogStep4 = {
         let matches = [];
 
         if (!query || query.trim().length === 0) {
-            // Если запрос пустой, показываем умные рекомендации (Ширина + Шаг)
             matches = window.allProductsListForStep4.filter(p => {
                 const pW = parseFloat(p.width) || 0;
                 const sW = parseFloat(s.width) || 0;
                 const pP = parseFloat(p.pitch) || 0;
                 const sP = parseFloat(s.pitch) || 0;
-                // Строгое совпадение по ширине и шагу (если они заданы в каталоге)
                 let matchW = (sW > 0) ? (Math.abs(pW - sW) < 2) : true;
                 let matchP = (sP > 0) ? (Math.abs(pP - sP) < 0.5) : true;
-                // Для клепок/комплектующих иногда важен только диаметр или шаг
                 return (matchW || matchP) && (pW > 0 || pP > 0);
             }).slice(0, 15);
         } else {
             const qParts = query.toLowerCase().split(' ').filter(Boolean);
-            matches = window.allProductsListForStep4.filter(p => {
+            let scoredMatches = window.allProductsListForStep4.map(p => {
                 const str = `${p.art||''} ${p.name||''} ${p.category||''} ${p.width||''} ${p.length||''} ${p.pitch||''} ${p.diam||''}`.toLowerCase();
-                return qParts.every(word => str.includes(word));
-            }).slice(0, 15);
+                let score = 0;
+                let allMatch = true;
+                
+                for (let word of qParts) {
+                    if (!str.includes(word)) {
+                        allMatch = false;
+                        break;
+                    }
+                    // Увеличиваем вес если совпадает диаметр или ширина
+                    if (word === String(p.diam)) score += 50;
+                    if (word === String(p.width)) score += 30;
+                    if (word === String(p.pitch)) score += 30;
+                }
+                
+                // Умный поиск: если ширина совпадает с шириной транспортера (s.width)
+                if (s.width && Math.abs((parseFloat(p.width) || 0) - parseFloat(s.width)) < 2) {
+                    score += 20;
+                }
+
+                return { item: p, score: score, isMatch: allMatch };
+            }).filter(x => x.isMatch);
+
+            // Сортируем: сначала те, у кого совпал диаметр (наивысший score), затем по остальным параметрам
+            matches = scoredMatches.sort((a, b) => b.score - a.score).map(x => x.item).slice(0, 15);
         }
         
         if (matches.length === 0) {
@@ -226,7 +245,6 @@ window.CatalogStep4 = {
         
         setTimeout(() => {
             const dbTrans = window.dbTransProducts || [];
-            // Критерий поиска: совпадение по ширине, шагу и диаметру (если применимо)
             const matches = dbTrans.filter(p => {
                 const pW = parseFloat(p.width) || 0;
                 const sW = parseFloat(s.width) || 0;

@@ -39,6 +39,22 @@ window.CatalogStep5 = {
                     }).join('')}
                 </div>
 
+                ${s.connectionType === 'screws' || s.connectionType === 'vulcanization_cold' || s.connectionType === 'vulcanization_hot' || s.connectionType === 'vulcanization' ? `
+                <div class="panel glass-panel animate-fade-in" style="padding:20px; border:1px solid #111; background:rgba(0,0,0,0.5); margin-bottom:20px; border-radius:15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <label style="font-size:0.75rem; color:#fff; font-weight:900; text-transform:uppercase; display:block; margin-bottom: 5px;">Увеличение длины ремня на стык (в шагах):</label>
+                            <span style="font-size:0.75rem; color:#ffb400; font-weight: bold;" id="overlap-display-val">
+                                Текущее увеличение: ${s.connectionOverlapSteps !== undefined ? s.connectionOverlapSteps : 6} шагов * ${s.pitch || 0} мм = ${(s.connectionOverlapSteps !== undefined ? s.connectionOverlapSteps : 6) * (parseFloat(s.pitch) || 0)} мм
+                            </span>
+                        </div>
+                        <input type="number" id="m-overlap-steps" value="${s.connectionOverlapSteps !== undefined ? s.connectionOverlapSteps : 6}" 
+                               oninput="window.CatalogStep5.syncOverlap(this.value)" 
+                               style="background:rgba(0,0,0,0.4); border:1px solid #333; color:#fff; padding:10px; border-radius:8px; width:90px; text-align:center; font-size:1.1rem; font-weight:900;">
+                    </div>
+                </div>
+                ` : ''}
+
                 <!-- ВЫБОР КОНКРЕТНОГО ЗАМКА -->
                 ${s.connectionType === 'mechanical' || s.connectionType === 'screws' ? `
                 <div class="panel glass-panel animate-fade-in" style="padding:25px; border:1px solid #111; background:rgba(0,0,0,0.5);">
@@ -126,6 +142,17 @@ window.CatalogStep5 = {
     setType(id) {
         window.CatalogState.connectionType = id;
         window.CatalogManager.refreshStep();
+        window.CatalogManager.syncReport();
+    },
+
+    syncOverlap(val) {
+        const parsed = parseInt(val);
+        window.CatalogState.connectionOverlapSteps = isNaN(parsed) ? 0 : parsed;
+        const displayVal = document.getElementById('overlap-display-val');
+        if (displayVal) {
+            const pitch = parseFloat(window.CatalogState.pitch) || 0;
+            displayVal.innerText = `Текущее увеличение: ${window.CatalogState.connectionOverlapSteps} шагов * ${pitch} мм = ${window.CatalogState.connectionOverlapSteps * pitch} мм`;
+        }
         window.CatalogManager.syncReport();
     },
 

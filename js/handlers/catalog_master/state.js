@@ -17,7 +17,8 @@ window.CatalogState = {
     calcCycleSum: '0',
     // Step 5: Connection
     connectionType: 'open',
-    lockId: ''
+    lockId: '',
+    connectionOverlapSteps: 6
 };
 
 window.CatalogDicts = {

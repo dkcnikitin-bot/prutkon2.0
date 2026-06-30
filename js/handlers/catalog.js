@@ -147,31 +147,50 @@ window.renderCatalogTable = function() {
     if (filtered.length === 0) {
         html += `<tr><td colspan="${extraFields.length + 6}" style="text-align:center; padding:80px; color:#555; font-style:italic;">Ничего не найдено</td></tr>`;
     } else {
-        filtered.forEach(item => {
-            const isSelected = window.selectedCatIds.includes(item.id.toString());
-            const photoUrl = (item.photo && item.photo.trim().length > 5) ? item.photo : svgPlaceholder;
-            
-            html += `<tr class="${isSelected ? 'selected-row' : ''}">
-                <td><input type="checkbox" class="cat-checkbox" data-id="${item.id}" ${isSelected ? 'checked' : ''} onchange="window.toggleCatItemSelection('${item.id}', this.checked)"></td>
-                <td><div style="width:40px; height:40px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); background:#000;">
-                    <img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='${svgPlaceholder}'">
-                </div></td>
-                <td style="font-weight:700; color:#888;">${item.art || '---'}</td>
-                <td style="font-weight:600; font-size:0.9rem;">${item.name || 'Не указано'}</td>
-                <td>
-                    <span style="opacity:0.6">${item.brand || '-'}</span> 
-                    <span class="badge" style="margin-left:8px; opacity:0.8">${item.type || '-'}</span>
-                </td>
-                ${extraFields.map(f => `<td>${item[f] || '-'}</td>`).join('')}
-                <td style="text-align:right;">
-                    <div style="display:flex; justify-content:flex-end; gap:5px;">
-                        <button class="action-btn" onclick="window.showCatItemHistory('${item.id}')" title="Журнал" style="width:32px; height:32px;"><i class="fa-solid fa-clock-rotate-left"></i></button>
-                        <button class="action-btn" onclick="window.editCatalogItem('${item.id}')" title="Правка" style="width:32px; height:32px;"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button class="action-btn action-btn-danger" onclick="window.deleteCatalogItem('${item.id}')" title="Удалить" style="width:32px; height:32px;"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
-                </td>
-            </tr>`;
-        });
+        const groupSel = document.getElementById('catalog-grouping-select');
+        const groupKey = groupSel ? groupSel.value : '';
+        
+        let groupedData = {};
+        if (groupKey) {
+            filtered.forEach(item => {
+                const gVal = item[groupKey] || 'Без значения';
+                if (!groupedData[gVal]) groupedData[gVal] = [];
+                groupedData[gVal].push(item);
+            });
+        } else {
+            groupedData['All'] = filtered;
+        }
+
+        for (const [groupName, groupItems] of Object.entries(groupedData)) {
+            if (groupKey) {
+                html += `<tr><td colspan="${extraFields.length + 6}" style="background:rgba(255,255,255,0.05); color:var(--brand-gold); font-weight:bold; padding:10px;">Группа: ${groupName}</td></tr>`;
+            }
+            groupItems.forEach(item => {
+                const isSelected = window.selectedCatIds.includes(item.id.toString());
+                const photoUrl = (item.photo && item.photo.trim().length > 5) ? item.photo : svgPlaceholder;
+                
+                html += `<tr class="${isSelected ? 'selected-row' : ''}">
+                    <td><input type="checkbox" class="cat-checkbox" data-id="${item.id}" ${isSelected ? 'checked' : ''} onchange="window.toggleCatItemSelection('${item.id}', this.checked)"></td>
+                    <td><div style="width:40px; height:40px; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); background:#000;">
+                        <img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='${svgPlaceholder}'">
+                    </div></td>
+                    <td style="font-weight:700; color:#888;">${item.art || '---'}</td>
+                    <td style="font-weight:600; font-size:0.9rem;">${item.name || 'Не указано'}</td>
+                    <td>
+                        <span style="opacity:0.6">${item.brand || '-'}</span> 
+                        <span class="badge" style="margin-left:8px; opacity:0.8">${item.type || '-'}</span>
+                    </td>
+                    ${extraFields.map(f => `<td>${item[f] || '-'}</td>`).join('')}
+                    <td style="text-align:right;">
+                        <div style="display:flex; justify-content:flex-end; gap:5px;">
+                            <button class="action-btn" onclick="window.showCatItemHistory('${item.id}')" title="Журнал" style="width:32px; height:32px;"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                            <button class="action-btn" onclick="window.editCatalogItem('${item.id}')" title="Правка" style="width:32px; height:32px;"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button class="action-btn action-btn-danger" onclick="window.deleteCatalogItem('${item.id}')" title="Удалить" style="width:32px; height:32px;"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+        }
     }
     tableCont.innerHTML = html + '</tbody>';
 
@@ -443,6 +462,10 @@ window.editCatalogItem = function(id) {
     document.getElementById('cc-name').value = item.name || "";
     document.getElementById('cc-brand').value = item.brand || "";
     document.getElementById('cc-type').value = item.type || "";
+    const supplierEl = document.getElementById('cc-supplier');
+    if (supplierEl) supplierEl.value = item.supplier || "";
+    const storageEl = document.getElementById('cc-storage');
+    if (storageEl) storageEl.value = item.storageLocation || "";
     document.getElementById('cc-photo').value = item.photo || "";
     const imgEl = document.getElementById('catalog-card-img');
     const svgPlaceholder = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjIwMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzExMSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjUyIiBmaWxsPSIjMzMzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUgNiBGcmVlLCAiRm9udCBBd2Vzb21lIDYgU29saWQiLCBzYW5zLXNlcmlmIiBmb250LXdlaWdodD0iOTAwIj7VrjwvdGV4dD48L3N2Zz4='; // image icon placeholder using fa-image unicode
@@ -481,7 +504,7 @@ window.editCatalogItem = function(id) {
 
     const extraCont = document.getElementById('catalog-card-extra');
     if (extraCont) {
-        const base = ['id', 'art', 'name', 'brand', 'type', 'photo', 'category', 'history', 'selected'];
+        const base = ['id', 'art', 'name', 'brand', 'type', 'photo', 'category', 'history', 'selected', 'supplier', 'storageLocation'];
         const keys = new Set();
         if (window.catalogData) {
             window.catalogData.forEach(row => {
@@ -528,6 +551,10 @@ window.saveCatalogCard = function() {
     checkChange('name', 'Наименование', document.getElementById('cc-name').value);
     checkChange('brand', 'Бренд', document.getElementById('cc-brand').value);
     checkChange('type', 'Тип', document.getElementById('cc-type').value);
+    const supplierEl = document.getElementById('cc-supplier');
+    if (supplierEl) checkChange('supplier', 'Поставщик', supplierEl.value);
+    const storageEl = document.getElementById('cc-storage');
+    if (storageEl) checkChange('storageLocation', 'Место хранения', storageEl.value);
     checkChange('photo', 'Фото', document.getElementById('cc-photo').value);
     checkChange('category', 'Раздел', document.getElementById('cc-category').value);
 
@@ -550,6 +577,10 @@ window.saveCatalogCard = function() {
     item.name = document.getElementById('cc-name').value;
     item.brand = document.getElementById('cc-brand').value;
     item.type = document.getElementById('cc-type').value;
+    const supplierEl = document.getElementById('cc-supplier');
+    if (supplierEl) item.supplier = supplierEl.value;
+    const storageEl = document.getElementById('cc-storage');
+    if (storageEl) item.storageLocation = storageEl.value;
     item.photo = document.getElementById('cc-photo').value;
     item.category = document.getElementById('cc-category').value;
     document.querySelectorAll('.cc-dynamic-field').forEach(inp => {
