@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Пруткон | Конструктор прутков</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="css/styles.css?v=19.1.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .step-container { display: none; }
@@ -72,78 +72,51 @@
                     </div>
 
                     <div id="assembly-engineering-view" style="display:none;">
-                            <style>
-                                @media print {
-                                    body * { visibility: hidden !important; }
-                                    #assembly-printable-area, #assembly-printable-area * { visibility: visible !important; color: black !important; }
-                                    #assembly-printable-area { 
-                                        position: absolute; 
-                                        left: 0; top: 0; width: 100%; 
-                                        background: white; 
-                                        font-family: Arial, sans-serif;
-                                    }
-                                    #assembly-printable-area table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
-                                    #assembly-printable-area table, #assembly-printable-area th, #assembly-printable-area td { border: 1px solid black; padding: 6px; }
-                                    .no-print { display: none !important; }
-                                    .form-control { border: none !important; background: transparent !important; color: black !important; }
-                                }
-                                .print-table { border-collapse: collapse; width: 100%; color: black; background: white; margin-bottom: 15px; }
-                                .print-table td, .print-table th { border: 1px solid black; padding: 6px; }
-                                .print-table th { font-weight: bold; text-align: center; }
-                            </style>
                             <div class="flex justify-between items-center mb-3">
                                 <h3 class="text-white"><i class="fa-solid fa-calculator text-muted"></i> ИНЖЕНЕРНЫЙ РАСЧЕТ (СБОРКА)</h3>
-                                <button class="btn btn-secondary no-print" onclick="window.print()"><i class="fa-solid fa-print"></i> ПЕЧАТЬ ФОРМЫ</button>
+                                <button class="btn btn-secondary no-print" onclick="window.printEngineeringAssembly()"><i class="fa-solid fa-print"></i> ПЕЧАТЬ ФОРМЫ</button>
                             </div>
-                            <div class="panel glass-panel mb-4" id="assembly-printable-area" style="background: white; color: black; padding: 20px;">
+                            <div class="panel glass-panel mb-4" id="assembly-printable-area" style="padding: 25px;">
                                 
-                                <div class="calc-form-grid no-print mb-4" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
-                                    <div class="form-group"><label style="color:#333;">Количество прутков (шт)</label><input type="number" id="asm-rods-count" class="form-control" style="background:#fff; color:#000; border:1px solid #ccc;" value="203" oninput="window.calcAssembly()"></div>
-                                    <div class="form-group"><label style="color:#333;">Количество ремней (шт)</label><input type="number" id="asm-belts-count" class="form-control" style="background:#fff; color:#000; border:1px solid #ccc;" value="3" oninput="window.calcAssembly()"></div>
-                                    <div class="form-group"><label style="color:#333;">Количество замков (рядов)</label><input type="number" id="asm-locks-count" class="form-control" style="background:#fff; color:#000; border:1px solid #ccc;" value="7" oninput="window.calcAssembly()"></div>
-                                    <div class="form-group"><label style="color:#333;">Кол-во прутков для замка (шт)</label><input type="number" id="asm-lock-rods-count" class="form-control" style="background:#fff; color:#000; border:1px solid #ccc;" value="1" oninput="window.calcAssembly()"></div>
+                                <div class="calc-form-grid mb-4">
+                                    <div class="form-group"><label>Количество прутков (шт)</label><input type="number" id="asm-rods-count" class="form-control" value="203" oninput="window.calcAssembly()"></div>
+                                    <div class="form-group"><label>Количество ремней (шт)</label><input type="number" id="asm-belts-count" class="form-control" value="3" oninput="window.calcAssembly()"></div>
+                                    <div class="form-group"><label>Тип стыка ремня</label>
+                                        <select id="asm-connection-type" class="form-control" onchange="window.calcAssembly()">
+                                            <option value="vulcanization">Вулканизация / Бесшовное</option>
+                                            <option value="screws" selected>Винтовая скрутка (стык)</option>
+                                            <option value="mechanical">Механический замок</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group"><label>Шаги нахлеста стыка (шт)</label><input type="number" id="asm-overlap-steps" class="form-control" value="6" oninput="window.calcAssembly()"></div>
+                                    <div class="form-group"><label>Количество замков (рядов)</label><input type="number" id="asm-locks-count" class="form-control" value="0" oninput="window.calcAssembly()"></div>
+                                    <div class="form-group"><label>Кол-во прутков для замка (шт)</label><input type="number" id="asm-lock-rods-count" class="form-control" value="0" oninput="window.calcAssembly()"></div>
                                 </div>
                                 
-                                <div class="calc-form-grid no-print mb-4" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
-                                    <div class="form-group"><label style="color:#333;">Подготовка ремней (услуга)</label><select id="asm-belt-labor" class="form-control" style="background:#fff; color:#000; border:1px solid #ccc;" onchange="window.calcAssembly()"></select></div>
-                                    <div class="form-group"><label style="color:#333;">Сборка (услуга)</label><select id="asm-assembly-labor" class="form-control" style="background:#fff; color:#000; border:1px solid #ccc;" onchange="window.calcAssembly()"></select></div>
+                                <div class="calc-form-grid mb-4" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+                                    <div class="form-group"><label>Подготовка ремней (услуга)</label><select id="asm-belt-labor" class="form-control" onchange="window.calcAssembly()"></select></div>
+                                    <div class="form-group"><label>Сборка (услуга)</label><select id="asm-assembly-labor" class="form-control" onchange="window.calcAssembly()"></select></div>
                                 </div>
 
-                                <table class="print-table" style="width: 300px;">
+                                <div style="font-weight:900; color:#fff; font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:10px; margin-top:30px;">
+                                    Спецификация комплектующих и работ
+                                </div>
+                                <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th></th>
-                                            <th style="width: 80px;">шт</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>количество прутков</td>
-                                            <td style="text-align: center;" id="print-rods-count">203</td>
-                                        </tr>
-                                        <tr>
-                                            <td>количество ремней</td>
-                                            <td style="text-align: center;" id="print-belts-count">3</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-
-                                <table class="print-table">
-                                    <thead>
-                                        <tr>
-                                            <th></th>
-                                            <th style="width: 80px;"></th>
-                                            <th style="width: 150px;">за ед с НДС</th>
-                                            <th style="width: 150px;">сумма с НДС</th>
+                                            <th style="text-align:left;">Компонент / Услуга</th>
+                                            <th style="width: 80px; text-align:center;">Кол-во</th>
+                                            <th style="width: 150px; text-align:right;">Цена</th>
+                                            <th style="width: 150px; text-align:right;">Сумма</th>
                                         </tr>
                                     </thead>
                                     <tbody id="asm-tbody">
                                         <!-- Rendered dynamically via JS -->
                                     </tbody>
                                     <tfoot>
-                                        <tr>
-                                            <td colspan="3" style="border:none;"></td>
-                                            <td style="text-align:right; font-weight:bold; font-size:1.1rem; border:none; padding-top: 15px;" id="asm-total-cost">0 ₽</td>
+                                        <tr style="border-top: 1px solid rgba(255,255,255,0.1);">
+                                            <td colspan="3" style="text-align:right; font-weight:900; color:#888; font-size:0.75rem; text-transform:uppercase; padding-top:15px;">Итого сметная стоимость сборки:</td>
+                                            <td style="text-align:right; font-weight:900; color:var(--brand-red); font-size:1.2rem; font-family:'Roboto Mono'; padding-top:15px;" id="asm-total-cost">0 ₽</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -254,15 +227,15 @@
                             <div class="form-group" style="grid-column: span 2; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">
                                 <label style="color:var(--brand-gold)"><i class="fa-solid fa-warehouse"></i> Выбрать ремни со склада</label>
                                 <div class="flex gap-2">
-                                    <select id="belt-warehouse-select" class="form-control">
+                                    <select id="belt-warehouse-select" class="form-control" onchange="window.onBeltWarehouseSelect()">
                                         <option value="">-- Выберите ремни --</option>
                                     </select>
-                                    <button class="btn btn-secondary btn-sm"><i class="fa-solid fa-eraser"></i></button>
+                                    <button class="btn btn-secondary btn-sm" onclick="window.clearSelectedBelts()"><i class="fa-solid fa-eraser"></i></button>
                                 </div>
                             </div>
-                            <div class="form-group"><label>Тип ремня</label><input type="text" class="form-control"></div>
-                            <div class="form-group"><label>Количество (шт)</label><input type="number" class="form-control"></div>
-                            <div class="form-group"><label>Стоимость за шт (₽)</label><input type="number" class="form-control"></div>
+                            <div class="form-group"><label>Тип ремня</label><input type="text" id="belt1-name" class="form-control"></div>
+                            <div class="form-group"><label>Количество (шт)</label><input type="number" id="belt1-qty" class="form-control"></div>
+                            <div class="form-group"><label>Стоимость за шт (₽)</label><input type="number" id="belt1-price" class="form-control"></div>
                         </div>
                     </div>
 
@@ -284,6 +257,16 @@
                         <div class="mini-stat" style="margin-top:8px;">Цена металла в заготовке: <strong id="b-res-metal-cost">0 ₽</strong></div>
                         <div style="font-size: 1.2rem; font-weight: 700; color: var(--neon-emerald); margin-top: 10px;">ЦЕНА ЗАГОТОВКИ: <span id="b-res-total">0 ₽</span></div>
                     </div>
+                    
+                    <div class="panel glass-panel mb-3" style="padding:15px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); font-size:0.65rem; color:#888; line-height:1.4; margin-top: 15px;">
+                        <strong style="color:#fff; text-transform:uppercase; font-size:0.7rem; display:block; margin-bottom:5px;"><i class="fa-solid fa-circle-info" style="color:var(--brand-red);"></i> Справка по Шагу 2 (Нарезка заготовок):</strong>
+                        * <b>Металл</b> — Выберите марку и диаметр стали, импортированные из складской партии. (Обязательно)<br>
+                        * <b>Длина заготовки (мм)</b> — Физическая длина одной нарезанной детали. (Обязательно)<br>
+                        * <b>Размер хлыста (мм)</b> — Исходная длина стального прутка на складе (по умолчанию 6000 мм). (Обязательно)<br>
+                        * <b>Отход на руб (мм)</b> — Толщина реза пилы или технологический припуск на торцовку. (Обязательно)<br>
+                        * <b>Стоимость работ (₽)</b> — Сдельная оплата труда за нарезку одной заготовки. (Обязательно)
+                    </div>
+                    </div>
                     </div>
 
                     <!-- STEP 3: ROD -->
@@ -292,14 +275,11 @@
                     <div class="calc-form-grid">
                         <div class="form-group"><label>Диаметр детали (мм)</label><select id="r-dia-select" class="form-control" onchange="updateBlanksForStep3()"></select></div>
                         <div class="form-group"><label>Длина прутка (L, мм)</label><input type="number" id="r-length" class="form-control" oninput="calcStep3()"></div>
-                        <div class="form-group"><label>Центральная часть / Особенности</label>
-                            <select id="r-center" class="form-control" onchange="calcStep3()">
-                                <option value="0">Нет</option>
-                                <option value="10">1 центр. часть (+10 мм)</option>
-                                <option value="20">2 центр. части (+20 мм)</option>
-                                <option value="30">3 центр. части (+30 мм)</option>
-                            </select>
-                        </div>
+                        <div class="form-group"><label>Длина сплющ. законцовки (мм)</label><input type="number" id="r-ends-flat-len" class="form-control" value="217" oninput="calcStep3()"></div>
+                        <div class="form-group"><label>Кол-во средних ремней (шт)</label><input type="number" id="r-center-count" class="form-control" value="1" oninput="calcStep3()"></div>
+                        <div class="form-group"><label>Удлинение концов (мм)</label><input type="number" id="r-ext-ends" class="form-control" value="5" oninput="calcStep3()"></div>
+                        <div class="form-group"><label>Удлинение центра (мм)</label><input type="number" id="r-ext-center" class="form-control" value="5" oninput="calcStep3()"></div>
+                        <div class="form-group"><label>Усадка центра (мм)</label><input type="number" id="r-shrink-center" class="form-control" value="50" oninput="calcStep3()"></div>
                         <div class="form-group"><label>Заготовка</label>
                             <div style="display:flex; gap:10px;">
                                 <select id="r-blank-select" class="form-control" onchange="calcStep3()"></select>
@@ -321,6 +301,17 @@
                     <div class="result-box mt-4">
                         <div class="mini-stat">Цена заготовки: <strong id="r-res-blank-cost">0 ₽</strong></div>
                         <div style="font-size: 1.2rem; font-weight: 700; color: var(--neon-emerald); margin-top: 10px;">ЦЕНА ПРУТКА (Стандарт): <span id="r-res-total">0 ₽</span></div>
+                    </div>
+                    
+                    <div class="panel glass-panel mb-3" style="padding:15px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); font-size:0.65rem; color:#888; line-height:1.4; margin-top: 15px;">
+                        <strong style="color:#fff; text-transform:uppercase; font-size:0.7rem; display:block; margin-bottom:5px;"><i class="fa-solid fa-circle-info" style="color:var(--brand-red);"></i> Справка по Шагу 3 (Изготовление прутка):</strong>
+                        * <b>Длина прутка (L, мм)</b> — Длина готового стандартного прутка. (Обязательно)<br>
+                        * <b>Длина сплющ. законцовки (мм)</b> — Расплющенная зона концов прутка под ремни (по чертежу 217 мм). (Обязательно)<br>
+                        * <b>Кол-во средних ремней (шт)</b> — Число средних усиливающих лент. (Обязательно)<br>
+                        * <b>Удлинение концов (мм)</b> — Суммарное удлинение концов детали при плющении участков под ремни (+2.5 мм левый, +2.5 мм правый, суммарно +5 мм).<br>
+                        * <b>Удлинение центра (мм)</b> — Удлинение детали при ковке/плющении каждого среднего участка под ремни (+5 мм на один ремень).<br>
+                        * <b>Усадка центра (мм)</b> — Сжатие (уменьшение длины детали) при формовании средней части прутка для 3-х и более ремней (-50 мм).<br>
+                        * <b>Заготовка</b> — Базовая заготовка (из Шага 2). Нажмите «Рассчитать» для автоподбора. (Обязательно)
                     </div>
                     </div>
 
@@ -351,6 +342,13 @@
                         <div class="mini-stat">Базовая цена: <strong id="bent-res-base">0 ₽</strong></div>
                         <div style="font-size: 1.2rem; font-weight: 700; color: var(--neon-emerald); margin-top: 10px;">ЦЕНА ИЗДЕЛИЯ: <span id="bent-res-total">0 ₽</span></div>
                     </div>
+                    
+                    <div class="panel glass-panel mb-3" style="padding:15px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); font-size:0.65rem; color:#888; line-height:1.4; margin-top: 15px;">
+                        <strong style="color:#fff; text-transform:uppercase; font-size:0.7rem; display:block; margin-bottom:5px;"><i class="fa-solid fa-circle-info" style="color:var(--brand-red);"></i> Справка по Шагу 4 (Модификация прутка):</strong>
+                        * <b>Базовый пруток</b> — Готовый стандартный прямой пруток (из Шага 3). (Обязательно)<br>
+                        * <b>Тип обработки</b> — Способ изменения: гибка, сварка, обрезинивание, игольчатый, пальчиковый или комбинированный. (Обязательно)<br>
+                        * <b>Стоимость доп. работ (₽)</b> — Оплата трудозатрат на слесарные и сварочные операции. (Обязательно)
+                    </div>
                     </div>
 
                     <!-- STEP 5: RUBBER -->
@@ -380,21 +378,59 @@
                     <div id="step-6" class="step-container panel glass-panel">
                     <h3 class="mb-4"><i class="fa-solid fa-equals" style="color:var(--brand-red)"></i> Шаг 6: Сдвоенный пруток</h3>
                     <div class="calc-form-grid">
-                        <div class="form-group"><label>Диаметр (мм)</label><select id="d-dia-select" class="form-control" onchange="updateBlanksForStep6()"></select></div>
-                        <div class="form-group"><label>Длина (L, мм)</label><input type="number" id="d-length" class="form-control" oninput="calcStep6()"></div>
-                        <div class="form-group"><label>Заготовка (нужно 2 шт)</label>
+                        <div class="form-group">
+                            <label>Диаметр (мм) <i class="fa-solid fa-circle-info text-muted" style="cursor:help; margin-left:3px;" title="Диаметр исходного металлического прутка (выбирается из справочника металлов)"></i></label>
+                            <select id="d-dia-select" class="form-control" onchange="updateBlanksForStep6()"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Длина (L, мм) <i class="fa-solid fa-circle-info text-muted" style="cursor:help; margin-left:3px;" title="Длина готового сдвоенного прутка в миллиметрах"></i></label>
+                            <input type="number" id="d-length" class="form-control" oninput="calcStep6()">
+                        </div>
+                        <div class="form-group">
+                            <label>Заготовка (нужно 2 шт) <i class="fa-solid fa-circle-info text-muted" style="cursor:help; margin-left:3px;" title="Исходная заготовка из Шага 2. Для сдвоенного прутка требуется ровно 2 штуки"></i></label>
                             <div style="display:flex; gap:10px;">
                                 <select id="d-blank-select" class="form-control" onchange="calcStep6()"></select>
-                                <button class="btn btn-secondary btn-sm" onclick="suggestBlank(6)">Рассчитать</button>
+                                <button class="btn btn-secondary btn-sm" onclick="suggestBlank(6)" title="Автоматически подобрать подходящую заготовку из базы или рассчитать и создать новую">Рассчитать</button>
                             </div>
                         </div>
-                        <div class="form-group"><label>Центральное крепление</label><input type="text" id="d-center-hook" class="form-control"></div>
-                        <div class="form-group"><label>Выбор хомута (2 шт)</label><select id="d-clamp-select-type" class="form-control" onchange="window.onClampSelect()"></select></div>
-                        <div class="form-group"><label>Цена корд-хомутов (₽)</label><input type="number" id="d-clamp-price" class="form-control" value="150" oninput="calcStep6()"></div>
-                        <div class="form-group"><label>Выбор центр. хомута</label><select id="d-center-clamp-select-type" class="form-control" onchange="window.onClampSelect()"></select></div>
-                        <div class="form-group"><label>Цена центр. хомута (₽)</label><input type="number" id="d-center-clamp-price" class="form-control" value="0" oninput="calcStep6()"></div>
-                        <div class="form-group"><label>Артикул</label><input type="text" id="d-article" class="form-control"></div>
-                        <div class="form-group"><label>Стоимость сборки (₽)</label><input type="number" id="d-labor" class="form-control" value="300" oninput="calcStep6()"></div>
+                        <div class="form-group">
+                            <label>Центральное крепление <i class="fa-solid fa-circle-info text-muted" style="cursor:help; margin-left:3px;" title="Тип или артикул центральной связующей пластины/соединителя"></i></label>
+                            <input type="text" id="d-center-hook" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Выбор хомута (2 шт) <i class="fa-solid fa-circle-info text-muted" style="cursor:help; margin-left:3px;" title="Выбор соединительных хомутов для краев прутка (влияет на себестоимость)"></i></label>
+                            <select id="d-clamp-select-type" class="form-control" onchange="window.onClampSelect()"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Цена корд-хомутов (₽) <i class="fa-solid fa-circle-info text-muted" style="cursor:help; margin-left:3px;" title="Стоимость боковых хомутов (2 шт.). Рассчитывается автоматически на основе справочника"></i></label>
+                            <input type="number" id="d-clamp-price" class="form-control" value="150" oninput="calcStep6()">
+                        </div>
+                        <div class="form-group">
+                            <label>Выбор центр. хомута <i class="fa-solid fa-circle-info text-muted" style="cursor:help; margin-left:3px;" title="Дополнительный хомут для усиления центрального узла соединения"></i></label>
+                            <select id="d-center-clamp-select-type" class="form-control" onchange="window.onClampSelect()"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Цена центр. хомута (₽) <i class="fa-solid fa-circle-info text-muted" style="cursor:help; margin-left:3px;" title="Стоимость центрального хомута. Рассчитывается автоматически"></i></label>
+                            <input type="number" id="d-center-clamp-price" class="form-control" value="0" oninput="calcStep6()">
+                        </div>
+                        <div class="form-group">
+                            <label>Артикул <i class="fa-solid fa-circle-info text-muted" style="cursor:help; margin-left:3px;" title="Уникальный шифр изделия. Генерируется автоматически по шаблону DBL-[диаметр]-[длина]"></i></label>
+                            <input type="text" id="d-article" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Чертеж изделия <i class="fa-solid fa-circle-info text-muted" style="cursor:help; margin-left:3px;" title="Прямая ссылка на чертеж или прикрепленный PDF/изображение спецификации"></i></label>
+                            <div style="display:flex; gap:10px;">
+                                <input type="text" id="d-drawing" class="form-control" placeholder="URL чертежа">
+                                <label class="btn btn-secondary" style="margin:0; padding: 10px; cursor: pointer;" title="Загрузить чертеж">
+                                    <i class="fa-solid fa-paperclip"></i>
+                                    <input type="file" accept="image/*,.pdf" style="display:none;" onchange="window.handleDrawingUpload(this, 'd-drawing')">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Стоимость сборки (₽) <i class="fa-solid fa-circle-info text-muted" style="cursor:help; margin-left:3px;" title="Тариф на работы по сварке и сборке сдвоенного прутка"></i></label>
+                            <input type="number" id="d-labor" class="form-control" value="300" oninput="calcStep6()">
+                        </div>
                     </div>
                     <div class="result-box mt-4">
                         <div class="mini-stat">Заготовки (2x): <strong id="d-res-blanks">0 ₽</strong></div>
@@ -410,6 +446,53 @@
                                 <tr><th>Тип</th><th>Наименование</th><th>Параметры</th><th>Себестоимость</th><th style="width:50px"></th></tr>
                             </thead>
                             <tbody id="rods-registry-tbody"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-4 panel glass-panel">
+                        <h4 class="mb-3" style="color:var(--brand-gold)"><i class="fa-solid fa-circle-info"></i> Классификация деталей и заготовок (Прутки)</h4>
+                        <table class="data-table" style="font-size:0.75rem;">
+                            <thead>
+                                <tr><th>Этап / Деталь</th><th>Статус</th><th>Артикул</th><th>Описание спецификации</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><b>Деталь 0</b></td>
+                                    <td>Сырье</td>
+                                    <td>---</td>
+                                    <td>Хлысты прутка по 6 метров</td>
+                                </tr>
+                                <tr>
+                                    <td><b>Деталь 0/1</b></td>
+                                    <td>Сырье (деловой остаток)</td>
+                                    <td>---</td>
+                                    <td>Деловые остатки прутка длиной до 6 метров</td>
+                                </tr>
+                                <tr>
+                                    <td><b>Деталь 1</b></td>
+                                    <td>Полуфабрикат</td>
+                                    <td>Артикул Пруткон (BL-*)</td>
+                                    <td>Необработанная заготовка прутка, нарубленные в размер куски (Шаг 2)</td>
+                                </tr>
+                                <tr>
+                                    <td><b>Деталь 2</b></td>
+                                    <td>Полуфабрикат</td>
+                                    <td>Артикул Пруткон (PR-*)</td>
+                                    <td>Заготовка прутка с расплющенными краями (увеличение концов на 2.5 мм с каждой стороны), без отверстий</td>
+                                </tr>
+                                <tr>
+                                    <td><b>Деталь 2/1</b></td>
+                                    <td>Полуфабрикат</td>
+                                    <td>Артикул Пруткон (PR-*)</td>
+                                    <td>Заготовка с плющеными краями (2.5 мм) и плющеной серединой (+5 мм), без отверстий</td>
+                                </tr>
+                                <tr>
+                                    <td><b>Деталь 3</b></td>
+                                    <td>Готовое изделие / Полуфабрикат</td>
+                                    <td>Артикул производителя</td>
+                                    <td>Готовый прямой пруток (с отверстиями), без покрытия и гибки (Шаг 3)</td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -439,7 +522,7 @@
                 <!-- Rendered dynamically -->
             </div>
 
-            <button id="btn-submit-production" class="btn btn-primary w-100" style="height:48px; font-size:1rem; background:var(--neon-emerald); border-color:var(--neon-emerald); color:#000; font-weight:700;" onclick="window.saveCurrentStep()">
+            <button id="btn-submit-production" class="btn btn-primary w-100" style="height:48px; font-size:1rem; background:var(--neon-emerald); border-color:var(--neon-emerald); color:#000; font-weight:700;" onclick="window.saveCurrentStep()" title="Записать текущий расчет в локальную базу данных и синхронизировать с облаком Supabase">
                 <i class="fa-solid fa-floppy-disk"></i> Сохранить текущий расчет
             </button>
         </div>
@@ -450,14 +533,14 @@
     <script src="js/layout/header.js?v=19.0.0"></script>
     <script src="js/layout/menu.js?v=19.0.0"></script>
     <script src="js/layout/footer.js?v=19.0.0"></script>
-    <script src="js/core/core.js?v=19.0.0"></script>
-    <script src="js/handlers/rods_production.js?v=19.0.0"></script>
+    <script src="js/core/core.js?v=19.1.6"></script>
+    <script src="js/handlers/rods_production.js?v=19.1.6"></script>
     <script src="js/handlers/engineering_steps/step1_metal.js?v=19.0.0"></script>
     <script src="js/handlers/engineering_steps/step2_blank.js?v=19.0.0"></script>
-    <script src="js/handlers/engineering_steps/step3_standard.js?v=19.0.0"></script>
+    <script src="js/handlers/engineering_steps/step3_standard.js?v=19.1.6"></script>
     <script src="js/handlers/engineering_steps/step4_bent.js?v=19.0.0"></script>
     <script src="js/handlers/engineering_steps/step5_rubber.js?v=19.0.0"></script>
-    <script src="js/handlers/engineering_steps/step6_double.js?v=19.0.0"></script>
+    <script src="js/handlers/engineering_steps/step6_double.js?v=19.1.5"></script>
     <script src="js/utils/prutkon_features.js?v=1.0.0"></script>
 </body>
 </html>

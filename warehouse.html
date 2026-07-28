@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ПРУТКОН | Склад</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..700;1,100..700&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="css/styles.css?v=19.1.2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .production-pipeline { display: flex; align-items: stretch; justify-content: space-between; gap: 15px; overflow-x: auto; padding-bottom: 10px; }
@@ -114,6 +114,72 @@
                     <div class="grid grid-2 gap-4 mb-4">
                         <div class="panel glass-panel">
                             <h3 class="mb-4 emerald"><i class="fa-solid fa-cubes"></i> Остатки на складе</h3>
+                            
+                            <!-- Фильтры остатков на складе -->
+                            <div class="warehouse-filters mb-4" style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 12px;">
+                                <!-- Группа общих фильтров / металлов -->
+                                <div style="display: flex; gap: 12px; flex-wrap: wrap; width: 100%;">
+                                    <div class="form-group mb-0" style="flex: 2; min-width: 160px;">
+                                        <label class="text-xs text-muted" style="text-transform: uppercase; display: block; margin-bottom: 6px; font-weight:700; letter-spacing:0.5px;">Поиск</label>
+                                        <input type="text" id="filter-search" class="form-control text-sm" placeholder="Наименование..." oninput="window.applyWarehouseFilters()" style="height: 38px;">
+                                    </div>
+                                    <div class="form-group mb-0" style="flex: 1; min-width: 120px;">
+                                        <label class="text-xs text-muted" style="text-transform: uppercase; display: block; margin-bottom: 6px; font-weight:700; letter-spacing:0.5px;">Диаметр (мм)</label>
+                                        <select id="filter-diameter" class="form-control text-sm" onchange="window.applyWarehouseFilters()" style="height: 38px; padding: 0 10px;">
+                                            <option value="">Все диаметры</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-0" style="flex: 1; min-width: 120px;">
+                                        <label class="text-xs text-muted" style="text-transform: uppercase; display: block; margin-bottom: 6px; font-weight:700; letter-spacing:0.5px;">Марка стали</label>
+                                        <select id="filter-steel-type" class="form-control text-sm" onchange="window.applyWarehouseFilters()" style="height: 38px; padding: 0 10px;">
+                                            <option value="">Все марки</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-0" style="flex: 1; min-width: 120px;">
+                                        <label class="text-xs text-muted" style="text-transform: uppercase; display: block; margin-bottom: 6px; font-weight:700; letter-spacing:0.5px;">Длина прутка</label>
+                                        <select id="filter-length" class="form-control text-sm" onchange="window.applyWarehouseFilters()" style="height: 38px; padding: 0 10px;">
+                                            <option value="">Все длины</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div style="width: 100%; border-top: 1px solid rgba(255,255,255,0.05); margin: 4px 0;"></div>
+                                
+                                <!-- Группа фильтров конвейерных лент -->
+                                <div style="display: flex; gap: 12px; flex-wrap: wrap; width: 100%;">
+                                    <div class="form-group mb-0" style="flex: 1; min-width: 120px;">
+                                        <label class="text-xs text-muted" style="text-transform: uppercase; display: block; margin-bottom: 6px; font-weight:700; letter-spacing:0.5px;">Ширина ленты</label>
+                                        <select id="filter-belt-width" class="form-control text-sm" onchange="window.applyWarehouseFilters()" style="height: 38px; padding: 0 10px;">
+                                            <option value="">Все ширины</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-0" style="flex: 1; min-width: 120px;">
+                                        <label class="text-xs text-muted" style="text-transform: uppercase; display: block; margin-bottom: 6px; font-weight:700; letter-spacing:0.5px;">Прочность ленты</label>
+                                        <select id="filter-belt-strength" class="form-control text-sm" onchange="window.applyWarehouseFilters()" style="height: 38px; padding: 0 10px;">
+                                            <option value="">Все прочности</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-0" style="flex: 1; min-width: 120px;">
+                                        <label class="text-xs text-muted" style="text-transform: uppercase; display: block; margin-bottom: 6px; font-weight:700; letter-spacing:0.5px;">Толщина ленты</label>
+                                        <select id="filter-belt-thickness" class="form-control text-sm" onchange="window.applyWarehouseFilters()" style="height: 38px; padding: 0 10px;">
+                                            <option value="">Все толщины</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-0" style="flex: 1; min-width: 120px;">
+                                        <label class="text-xs text-muted" style="text-transform: uppercase; display: block; margin-bottom: 6px; font-weight:700; letter-spacing:0.5px;">Класс резины</label>
+                                        <select id="filter-rubber-class" class="form-control text-sm" onchange="window.applyWarehouseFilters()" style="height: 38px; padding: 0 10px;">
+                                            <option value="">Все классы</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-0" style="flex: 1; min-width: 120px;">
+                                        <label class="text-xs text-muted" style="text-transform: uppercase; display: block; margin-bottom: 6px; font-weight:700; letter-spacing:0.5px;">Кол-во кордов</label>
+                                        <select id="filter-cords-count" class="form-control text-sm" onchange="window.applyWarehouseFilters()" style="height: 38px; padding: 0 10px;">
+                                            <option value="">Все корды</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="table-wrapper">
                                 <table class="data-table" id="inventory-table">
                                     <thead>
@@ -914,15 +980,18 @@
             <h3 class="text-white mb-4" style="font-size: 1.25rem;"><i class="fa-solid fa-box-open text-brand-gold"></i> Карточка товара</h3>
             
             <div style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:15px;">
                     <div>
-                        <div id="pc-item-name" style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 5px;"></div>
-                        <div id="pc-item-cat" style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;"></div>
+                        <div id="pc-item-name" style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary); margin-bottom: 5px; font-family: 'Outfit', sans-serif;"></div>
+                        <div id="pc-item-cat" style="font-size: 0.75rem; color: var(--brand-gold); font-weight:700; text-transform: uppercase; letter-spacing: 0.5px;"></div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">Текущий остаток</div>
-                        <div id="pc-item-qty" style="font-size: 1.5rem; font-weight: 900; color: var(--emerald-neon);">0</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform:uppercase; font-weight:700; letter-spacing:0.5px;">Текущий остаток</div>
+                        <div id="pc-item-qty" style="font-size: 1.5rem; font-weight: 900; color: var(--emerald-neon); font-family: 'JetBrains Mono', monospace;">0</div>
                     </div>
+                </div>
+                <!-- Динамическая сетка технических параметров -->
+                <div id="pc-item-params-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; font-size: 0.8rem; color: var(--text-secondary);">
                 </div>
             </div>
 
@@ -931,11 +1000,11 @@
                 <table class="data-table" style="width:100%; border:none;">
                     <thead>
                         <tr>
-                            <th style="padding:10px;">Дата</th>
-                            <th style="padding:10px;">Тип Операции</th>
-                            <th style="padding:10px;">№ Док</th>
-                            <th style="padding:10px;">Кол-во</th>
-                            <th style="padding:10px;">Пользователь</th>
+                            <th style="padding:10px; text-align:left; width:150px;">Дата / Документ</th>
+                            <th style="padding:10px; text-align:left; width:120px;">Операция</th>
+                            <th style="padding:10px; text-align:left;">Поставщик / Накладная</th>
+                            <th style="padding:10px; text-align:right; width:95px;">Кол-во</th>
+                            <th style="padding:10px; text-align:left; width:140px;">Исполнитель</th>
                         </tr>
                     </thead>
                     <tbody id="pc-history-tbody">
@@ -955,8 +1024,8 @@
     <script src="js/layout/header.js?v=19.0.0"></script>
     <script src="js/layout/menu.js?v=19.0.0"></script>
     <script src="js/layout/footer.js?v=19.0.0"></script>
-    <script src="js/core/core.js?v=19.0.0"></script>
+    <script src="js/core/core.js?v=19.1.4"></script>
     <script src="js/utils/prutkon_features.js?v=1.0.0"></script>
-    <script src="js/handlers/warehouse.js?v=19.0.0"></script>
+    <script src="js/handlers/warehouse.js?v=19.1.4"></script>
 </body>
 </html>

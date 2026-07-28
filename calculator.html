@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Пруткон | Калькулятор КП</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="css/styles.css?v=19.1.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="with-hero-bg">
@@ -169,11 +169,12 @@
                         <!-- TECHNICAL SPECS -->
                         <div class="panel glass-panel mt-4" style="border-top: 4px solid var(--brand-red);">
                             <h4 class="mb-4 brand-red"><i class="fa-solid fa-gears"></i> 2. ТЕХНИЧЕСКИЕ ПАРАМЕТРЫ ЗАГОТОВКИ</h4>
-                            <div class="grid grid-4 gap-3">
+                            <div class="grid gap-3" style="grid-template-columns: repeat(5, 1fr);">
                                 <div class="form-group mb-0"><label>L (Длина, мм)</label><input type="number" id="calc-length" class="form-control" value="12000"></div>
                                 <div class="form-group mb-0"><label>W (Ширина, мм)</label><input type="number" id="calc-width" class="form-control" value="800"></div>
                                 <div class="form-group mb-0"><label>P (Шаг, мм)</label><input type="number" id="calc-pitch" class="form-control" value="40"></div>
                                 <div class="form-group mb-0"><label>Кол-во (шт)</label><input type="number" id="calc-qty" class="form-control" value="1"></div>
+                                <div class="form-group mb-0"><label>Цена за шт (₽)</label><input type="number" id="calc-price-override" class="form-control" placeholder="Авто..." step="0.01" oninput="window.calculateCP()"></div>
                             </div>
 
                             <!-- Client-provided rods block -->
@@ -241,6 +242,6 @@
     <script src="js/core/core.js?v=19.0.0"></script>
     <script src="js/utils/bitrix.js?v=19.0.0"></script>
     <script src="js/handlers/catalog_master.js?v=19.0.0"></script>
-    <script src="js/handlers/calculator.js?v=19.0.0"></script>
+    <script src="js/handlers/calculator.js?v=19.1.0"></script>
 </body>
 </html>

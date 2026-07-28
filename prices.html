@@ -63,6 +63,18 @@
                             </select>
                         </div>
                         <div class="filter-group">
+                            <label class="text-xs neutral uppercase mb-1">Диаметр</label>
+                            <select id="filter-diameter" class="form-control form-control-sm" onchange="window.renderPriceTable()" style="width:130px;">
+                                <option value="">Все диаметры</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="text-xs neutral uppercase mb-1">Марка стали</label>
+                            <select id="filter-steel-type" class="form-control form-control-sm" onchange="window.renderPriceTable()" style="width:140px;">
+                                <option value="">Все марки</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
                             <label class="text-xs neutral uppercase mb-1">Только с фото</label>
                             <div class="checkbox-custom" style="padding:5px 0;">
                                 <label style="font-size:0.85rem; cursor:pointer;">
@@ -293,18 +305,7 @@
                     <label>Категория</label>
                     <select id="pc-category" class="form-control" onchange="window.loadProductCategoryFields()"></select>
                 </div>
-                <div class="form-group" style="grid-column:1/-1;">
-                    <label>Фото</label>
-                    <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
-                        <input type="text" id="pc-photo" class="form-control" style="flex:1; min-width:200px;" placeholder="Путь к изображению">
-                        <input type="file" id="pc-photo-upload" class="hidden" accept="image/*" onchange="window.handlePhotoUpload(this)">
-                        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('pc-photo-upload').click()" title="Загрузить фото">
-                            <i class="fa-solid fa-upload"></i> Фото
-                        </button>
-                        <img id="product-card-img" style="width:80px; height:80px; object-fit:cover; border-radius:8px; border:2px solid var(--border-glass);" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjI0IiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4=" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjI0IiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4='">
-                    </div>
-                    <div id="pc-photo-path-hint" class="text-xs text-muted mt-2" style="opacity:0.6;"></div>
-                </div>
+                <div class="form-group" style="grid-column:1/-1;" id="pc-photo-container"></div>
             </div>
             
             <!-- Динамические поля категории -->

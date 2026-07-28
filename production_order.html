@@ -86,9 +86,13 @@
                                 <h2 id="order-title-id" style="font-family: 'Outfit'; font-size: 2.2rem; font-weight: 900; color: #fff; margin-top: 10px; margin-bottom: 5px;">Заказ № 0</h2>
                                 <p id="order-meta-info" style="color: var(--text-muted); font-size: 0.9rem; margin: 0;"></p>
                             </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold;">Итого по заказу</div>
-                                <div id="order-total-sum" style="font-family: 'JetBrains Mono'; font-size: 2.2rem; font-weight: 900; color: #fff;">0 ₽</div>
+                            <div style="text-align: right; display: flex; gap: 10px; align-items: center; margin-top: 15px;">
+                                <button id="launch-prod-btn" class="btn btn-primary btn-sm" onclick="window.sendOrderToProduction()" style="background: var(--brand-red); border-color: var(--brand-red); font-weight: bold; font-size: 0.75rem; height: 38px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa-solid fa-play"></i> В ПРОИЗВОДСТВО
+                                </button>
+                                <button id="write-off-all-btn" class="btn btn-secondary btn-sm" onclick="window.writeOffAllOrderItemsAction()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); font-weight: bold; color: #fff; font-size: 0.75rem; height: 38px; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa-solid fa-warehouse"></i> СПИСАТЬ ВСЕ СО СКЛАДА
+                                </button>
                             </div>
                         </div>
 
@@ -102,6 +106,7 @@
                                         <th>Артикул / Код</th>
                                         <th>Количество</th>
                                         <th style="text-align: center;">Чертеж / Эскиз</th>
+                                        <th style="width: 320px;">Чек-лист производства / Склад</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>

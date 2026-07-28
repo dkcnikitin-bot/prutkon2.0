@@ -1,11 +1,11 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ДОКУМЕНТООБОРОТ | ПРУТКОН ОС</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=19.0.0">
+    <link rel="stylesheet" href="css/styles.css?v=19.1.2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .doc-registry-table { width: 100%; border-collapse: collapse; }
@@ -85,6 +85,11 @@
                                 <option value="bill">СЧЕТА</option>
                                 <option value="ttn">ТТН</option>
                                 <option value="prod">НАРЯДЫ</option>
+                                <option value="in_order">ПРИХОДНЫЕ ОРДЕРА</option>
+                                <option value="write_off">АКТЫ СПИСАНИЯ</option>
+                                <option value="prod_act">АКТЫ ВЫПУСКА</option>
+                                <option value="kp_calc">КАЛЬКУЛЯЦИИ КП</option>
+                                <option value="eng_calc">ИНЖЕНЕРНЫЕ РАСЧЕТЫ</option>
                             </select>
                         </div>
                         <div>
@@ -96,9 +101,14 @@
                             </select>
                         </div>
                     </div>
-                    <div style="margin-top:15px; display:flex; gap:10px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
+                    <div style="margin-top:15px; display:flex; gap:10px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px; align-items:center;">
                         <button class="btn btn-secondary btn-sm" onclick="window.clearFilters()"><i class="fa-solid fa-eraser"></i> СБРОСИТЬ</button>
                         <button class="btn btn-secondary btn-sm" onclick="window.exportToExcel()"><i class="fa-solid fa-file-csv"></i> ВЫГРУЗИТЬ CSV</button>
+                        <div style="margin-left:auto; display:flex; gap:10px; align-items:center;">
+                            <span id="selected-count" style="font-size:11px; color:var(--text-muted); display:none;">Выбрано: 0</span>
+                            <button id="bulk-post-btn" class="btn btn-sm" style="display:none; background:rgba(0,255,150,0.15); border:1.5px solid var(--emerald-neon); color:#fff; font-weight:600;" onclick="window.bulkPostDocs()"><i class="fa-solid fa-file-circle-check"></i> ПРОВЕСТИ ВЫБРАННЫЕ</button>
+                            <button id="bulk-delete-btn" class="btn btn-sm" style="display:none; background:rgba(255,0,0,0.15); border:1.5px solid var(--brand-red); color:#fff; font-weight:600;" onclick="window.bulkDeleteDocs()"><i class="fa-solid fa-trash-can"></i> МАССОВОЕ УДАЛЕНИЕ</button>
+                        </div>
                     </div>
                 </div>
 
@@ -107,6 +117,7 @@
                     <table class="doc-registry-table">
                         <thead>
                             <tr>
+                                <th style="width:40px; text-align:center;"><input type="checkbox" id="select-all-docs" onclick="window.selectAllDocs(this.checked)"></th>
                                 <th style="width:140px;">НОМЕР ДОК.</th>
                                 <th style="width:100px;">ДАТА</th>
                                 <th style="width:100px;">ТИП</th>
@@ -252,8 +263,8 @@
     <script src="js/layout/menu.js?v=19.0.0"></script>
     <script src="js/layout/footer.js?v=19.0.0"></script>
     <script src="js/core/firebase_config.js"></script>
-    <script src="js/core/core.js?v=19.0.0"></script>
-    <script src="js/utils/printer.js?v=19.0.0"></script>
-    <script src="js/handlers/documents.js?v=19.0.0"></script>
+    <script src="js/core/core.js?v=19.1.4"></script>
+    <script src="js/utils/printer.js?v=19.1.4"></script>
+    <script src="js/handlers/documents.js?v=19.1.4"></script>
 </body>
 </html>
