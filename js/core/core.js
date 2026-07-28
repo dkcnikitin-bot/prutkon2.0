@@ -759,23 +759,45 @@ const defaultCategoryValues = {
 };
 
 let directoriesChanged = false;
+
+// Очистка дубликатов в справочниках по категории и названию
+if (Array.isArray(window.dbDirectories) && window.dbDirectories.length > 0) {
+    const seenDirEntries = new Set();
+    const uniqueDirectories = [];
+    for (const item of window.dbDirectories) {
+        if (!item || !item.category || !item.name) {
+            uniqueDirectories.push(item);
+            continue;
+        }
+        const key = `${item.category}:::${String(item.name).trim().toLowerCase()}`;
+        if (seenDirEntries.has(key)) {
+            directoriesChanged = true;
+            continue; // пропуск дубликата
+        }
+        seenDirEntries.add(key);
+        uniqueDirectories.push(item);
+    }
+    window.dbDirectories = uniqueDirectories;
+}
+
 for (const catId in defaultCategoryValues) {
-    const hasCategory = window.dbDirectories.some(d => d.category === catId);
-    if (!hasCategory) {
-        defaultCategoryValues[catId].forEach((val, idx) => {
+    defaultCategoryValues[catId].forEach((val, idx) => {
+        const exists = window.dbDirectories.some(d => d.category === catId && String(d.name).trim().toLowerCase() === String(val).trim().toLowerCase());
+        if (!exists) {
+            const itemKey = `${catId}_default_${idx}_${Date.now()}`;
             window.dbDirectories.push({
-                id: `${catId}_default_${idx}_${Date.now()}`,
+                id: itemKey,
                 category: catId,
                 name: val,
                 data: {
-                    id: `${catId}_default_${idx}_${Date.now()}`,
+                    id: itemKey,
                     category: catId,
                     name: val
                 }
             });
-        });
-        directoriesChanged = true;
-    }
+            directoriesChanged = true;
+        }
+    });
 }
 
 // Инициализация моделей техники (machinery)

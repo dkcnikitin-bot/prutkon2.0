@@ -7,10 +7,17 @@ window.CatalogStep5 = {
         const IMG = 'extracted_xlsx/xl/media/';
         
         // Получаем список замков из базы заготовок (поиск по категории или названию)
-        const locks = (window.dbProducts || []).filter(p => {
+        const locksRaw = (window.dbProducts || []).filter(p => {
             const cat = (p.category || "").toLowerCase();
             const name = (p.name || "").toLowerCase();
             return cat.includes('замок') || cat.includes('locks') || name.includes('замок') || name.includes('замки');
+        });
+        const seenLockArts = new Set();
+        const locks = locksRaw.filter(p => {
+            const key = (p.art || p.id || p.name || '').toString().toLowerCase();
+            if (seenLockArts.has(key)) return false;
+            seenLockArts.add(key);
+            return true;
         });
         
         return `

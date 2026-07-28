@@ -173,7 +173,7 @@ window.PrutkonFeatures = {
         get conn_types() {
             if (this._conn_types) return this._conn_types;
             const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'connection_types') : [];
-            if (dbItems.length > 0) return dbItems.map(d => d.name);
+            if (dbItems.length > 0) return [...new Set(dbItems.map(d => (d.name || '').trim()).filter(Boolean))];
             return ['Механический замок', 'Подготовлен к вулканизации', 'Вулканизация холодная', 'Вулканизация горячая', 'Открытый тип', 'Винтовая скрутка'];
         },
         set conn_types(val) { this._conn_types = val; },

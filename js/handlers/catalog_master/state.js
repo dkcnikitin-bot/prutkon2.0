@@ -80,17 +80,26 @@ window.CatalogDicts = {
     get connectionTypes() {
         const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'connection_types') : [];
         if (dbItems.length > 0) {
-            return dbItems.map(d => {
-                const name = d.name;
+            const seen = new Set();
+            const uniqueItems = [];
+            for (const d of dbItems) {
+                const name = (d.name || '').trim();
+                if (!name) continue;
                 let id = name;
-                if (name === 'Механический замок') id = 'mechanical';
-                else if (name === 'Подготовлен к вулканизации') id = 'vulcanization';
-                else if (name === 'Вулканизация холодная') id = 'vulcanization_cold';
-                else if (name === 'Вулканизация горячая') id = 'vulcanization_hot';
-                else if (name === 'Открытый') id = 'open';
-                else if (name === 'Винтовая скрутка') id = 'screws';
-                return { id: id, name: name, img: '36.jpg' };
-            });
+                let img = '36.jpg';
+                if (name === 'Механический замок' || name === 'Мех. замок') { id = 'mechanical'; img = '35.jpg'; }
+                else if (name === 'Подготовлен к вулканизации' || name === 'Вулканизация') { id = 'vulcanization'; img = '36.jpg'; }
+                else if (name === 'Вулканизация холодная') { id = 'vulcanization_cold'; img = '36.jpg'; }
+                else if (name === 'Вулканизация горячая') { id = 'vulcanization_hot'; img = '36.jpg'; }
+                else if (name === 'Открытый' || name === 'Открытый тип') { id = 'open'; img = '37.jpg'; }
+                else if (name === 'Винтовая скрутка') { id = 'screws'; img = '38.jpg'; }
+
+                if (!seen.has(id)) {
+                    seen.add(id);
+                    uniqueItems.push({ id: id, name: name, img: img });
+                }
+            }
+            if (uniqueItems.length > 0) return uniqueItems;
         }
         return [
             { id: 'mechanical', name: 'Мех. замок', img: '35.jpg' },
