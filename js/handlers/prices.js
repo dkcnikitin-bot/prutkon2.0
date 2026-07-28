@@ -1,4 +1,4 @@
-﻿window.DB_VERSION = "19.0.0";
+window.DB_VERSION = "19.0.0";
 
 console.log("Prices OS: Module Loading v19.0.0...");
 
@@ -63,7 +63,7 @@ window.getCategoryNumbering = () => {
 };
 
 window.priceSchemaFields = {
-    'tech_type': 'Тип техники',
+    'tech_type': 'Модели',
     'available': 'Доступен для заказа',
     'photo': 'Фото-изображение',
     'drawing': 'Чертеж',
@@ -229,9 +229,67 @@ window.buildFiltersBar = function() {
     fBar.dataset.cat = window.activeCategory;
 };
 
+window.populatePriceFilters = () => {
+    const filterDia = document.getElementById('filter-diameter');
+    const filterSteel = document.getElementById('filter-steel-type');
+    if (!filterDia || !filterSteel) return;
+
+    const currentDia = filterDia.value;
+    const currentSteel = filterSteel.value;
+
+    const uniqueDias = new Set();
+    const uniqueSteels = new Set();
+
+    (window.dbProducts || []).forEach(p => {
+        if (!p) return;
+        
+        // Diameter
+        const diaVal = parseFloat(p.dia || p.diameter || 0);
+        if (diaVal > 0) {
+            uniqueDias.add(diaVal);
+        } else {
+            const matchDia = String(p.name || '').match(/Ø\s*(\d+(\.\d+)?)/i) || String(p.art || '').match(/(?:BL|DBL|PR)-(\d+(\.\d+)?)/i);
+            if (matchDia) uniqueDias.add(parseFloat(matchDia[1]));
+        }
+
+        // Steel / Material
+        let mat = (p.material || p.steel_type || p.steel || '').trim();
+        if (!mat && p.name && p.name.includes(';')) {
+            const parts = p.name.split(';');
+            if (parts.length > 1) {
+                const candidate = parts[1].split('(')[0].trim();
+                if (candidate && candidate !== 'Металл' && candidate !== 'Сталь') mat = candidate;
+            }
+        }
+        if (mat) {
+            const norm = window.normalizeSteelType(mat);
+            if (norm && norm !== 'Не указана' && norm !== 'Нераспределенный остаток') {
+                uniqueSteels.add(norm);
+            }
+        }
+    });
+
+    const sortedDias = Array.from(uniqueDias).sort((a, b) => a - b);
+    const sortedSteels = Array.from(uniqueSteels).filter(s => s && s.toLowerCase() !== 'металл' && s.toLowerCase() !== 'не указана').sort();
+
+    let diaHtml = '<option value="">Все диаметры</option>';
+    sortedDias.forEach(d => { diaHtml += `<option value="${d}">Ø${d} мм</option>`; });
+    filterDia.innerHTML = diaHtml;
+    filterDia.value = currentDia;
+
+    let steelHtml = '<option value="">Все марки</option>';
+    sortedSteels.forEach(s => { steelHtml += `<option value="${s}">${s}</option>`; });
+    filterSteel.innerHTML = steelHtml;
+    filterSteel.value = currentSteel;
+};
+
 window.renderPriceTable = function() {
     if (typeof window.syncWarehouseToPrices === 'function') window.syncWarehouseToPrices();
     if (!Array.isArray(window.dbProducts)) window.dbProducts = [];
+    
+    // Наполняем фильтры
+    window.populatePriceFilters();
+
     const tableContainer = document.getElementById('price-table');
     if (!tableContainer) return;
 
@@ -241,6 +299,8 @@ window.renderPriceTable = function() {
     const filterMinPrice = document.getElementById('filter-price-min')?.value;
     const filterMaxPrice = document.getElementById('filter-price-max')?.value;
     const filterStock = document.getElementById('filter-stock')?.value;
+    const filterDiameter = document.getElementById('filter-diameter')?.value;
+    const filterSteelType = document.getElementById('filter-steel-type')?.value;
     const filterHasPhoto = document.getElementById('filter-has-photo')?.checked;
     const filterCatField = document.getElementById('filter-category-field')?.value;
     const filterCatValue = document.getElementById('filter-category-value')?.value?.toLowerCase().trim();
@@ -290,6 +350,27 @@ window.renderPriceTable = function() {
         if (filterStock === 'low_stock' && (p.stock || 0) <= 0) return false;
         if (filterStock === 'out_of_stock' && (p.stock || 0) > 0) return false;
         
+        // Фильтр по диаметру
+        if (filterDiameter) {
+            const pDia = parseFloat(p.dia || p.diameter || 0);
+            const matchDia = String(p.name || '').match(/Ø\s*(\d+(\.\d+)?)/i) || String(p.art || '').match(/(?:BL|DBL|PR)-(\d+(\.\d+)?)/i);
+            const resolvedDia = pDia || (matchDia ? parseFloat(matchDia[1]) : 0);
+            if (String(resolvedDia) !== String(filterDiameter)) return false;
+        }
+
+        // Фильтр по марке стали (материалу)
+        if (filterSteelType) {
+            let pSteel = (p.material || p.steel_type || p.steel || '').trim();
+            if (!pSteel && p.name && p.name.includes(';')) {
+                const parts = p.name.split(';');
+                if (parts.length > 1) {
+                    const candidate = parts[1].split('(')[0].trim();
+                    if (candidate && candidate !== 'Металл' && candidate !== 'Сталь') pSteel = candidate;
+                }
+            }
+            if (window.normalizeSteelType(pSteel) !== window.normalizeSteelType(filterSteelType)) return false;
+        }
+
         // Фильтр по фото
         if (filterHasPhoto && !p.photo) return false;
         
@@ -310,7 +391,7 @@ window.renderPriceTable = function() {
     const displayFields = schema.filter(f => !bFields.includes(f));
 
     // Счетчик фильтров
-    const activeFiltersCount = [filterMinPrice, filterMaxPrice, filterStock, filterHasPhoto, filterCatField].filter(Boolean).length;
+    const activeFiltersCount = [filterMinPrice, filterMaxPrice, filterStock, filterDiameter, filterSteelType, filterHasPhoto, filterCatField].filter(Boolean).length;
 
     let html = `
         <thead>
@@ -413,10 +494,17 @@ window.renderPriceTable = function() {
             const isSelected = window.selectedPriceIds.includes(String(p.id));
             const cleanName = window.formatProductNameForList ? window.formatProductNameForList(p) : p.name;
 
+            let photoHtml = '';
+            if (p.photo && p.photo.trim() && p.photo !== 'no_photo.jpg' && p.photo !== 'no-image.png') {
+                photoHtml = `<img src="${p.photo}" onerror="this.outerHTML='<div class=\\'table-thumb-placeholder\\'>📷</div>'" class="table-thumb">`;
+            } else {
+                photoHtml = `<div class="table-thumb-placeholder">📷</div>`;
+            }
+
             html += `
                 <tr class="${isSelected ? 'row-selected' : ''}" ondblclick="window.editProduct('${p.id}')">
                     <td><input type="checkbox" class="price-checkbox" data-id="${p.id}" ${isSelected ? 'checked' : ''} onchange="window.togglePriceSelection('${p.id}', this.checked)"></td>
-                    <td><img src="${p.photo || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4='}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4='" class="table-thumb"></td>
+                    <td>${photoHtml}</td>
                     <td class="table-art" style="color:var(--brand-red);">${p.art || '---'}</td>
                     <td><span>${cleanName || 'Без названия'}</span></td>
                     ${displayFields.map(f => `<td>${p[f] || '-'}</td>`).join('')}
@@ -453,6 +541,8 @@ window.clearFilters = function() {
         'filter-price-min': '',
         'filter-price-max': '',
         'filter-stock': '',
+        'filter-diameter': '',
+        'filter-steel-type': '',
         'filter-has-photo': false,
         'filter-category-field': '',
         'filter-category-value': ''
@@ -540,11 +630,7 @@ window.editProduct = function(id) {
     document.getElementById('pc-stock').value = p.stock || 0;
     document.getElementById('pc-supplier').value = p.supplier || "";
     document.getElementById('pc-storage').value = p.storage || "";
-    document.getElementById('pc-photo').value = p.photo || "";
-    
-    const photoImg = document.getElementById('product-card-img');
-    photoImg.src = p.photo || "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4=";
-    photoImg.onerror = function() { this.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjEyIiBmaWxsPSIjNDQ0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4='; };
+    window.renderMultiImageSection('pc-photo-container', 'Фото', 'photo', p.photo || "");
     
     const catSel = document.getElementById('pc-category');
     if (catSel) {
@@ -603,14 +689,87 @@ window.loadProductCategoryFields = function() {
         const label = window.priceSchemaFields[f] || f;
         const value = product && product[f] ? product[f] : '';
         
+        if (f === 'tech_type') {
+            // Множественный выбор моделей
+            const selectedModels = value ? value.split(',').map(x => x.trim()).filter(Boolean) : [];
+            
+            // Собираем все доступные модели
+            const HARVESTER_BRANDS = {
+                'Grimme': ['SE 75-20', 'SE 75-30', 'SE 75-40', 'SE 75-55', 'SE 85-55', 'SE 150-60', 'SE 260', 'SV 260', 'GT 170', 'WR 200', 'Tectron 415', 'Varitron 220', 'Varitron 270', 'Varitron 470', 'EVO 280', 'EVO 290'],
+                'Ropa': ['Keiler 1', 'Keiler 2', 'Tiger 6', 'Tiger 6S', 'Panther 2', 'Panther 2S', 'Maus 5', 'Maus 6'],
+                'Dewulf': ['Kwatro', 'Torro', 'RA3060', 'Enduro', 'R3060', 'Zeno', 'R2060', 'R1060'],
+                'AVR': ['Puma 3', 'Puma 4', 'Spirit 5200', 'Spirit 7200', 'Spirit 9200', 'Spirit 6100', 'Spirit 6200', 'Spirit 8200'],
+                'Holmer': ['Terra Dos T4-30', 'Terra Dos T4-40', 'Terra Felis 3'],
+                'Wühlmaus': ['1033', '1633', '2011', '2411'],
+                'Amac': ['ZM2', 'ZM4', 'AX2', 'G2'],
+                'Kverneland': ['UN 3100', 'UN 3200', 'Minos']
+            };
+            
+            const directoryModelsByBrand = {};
+            (window.dbDirectories || [])
+                .filter(d => d.category === 'machinery')
+                .forEach(d => {
+                    const br = d.brand || d.data?.brand || 'Другие';
+                    const md = d.model || d.data?.model || d.name;
+                    if (md) {
+                        if (!directoryModelsByBrand[br]) directoryModelsByBrand[br] = [];
+                        directoryModelsByBrand[br].push(md);
+                    }
+                });
+                
+            // Объединяем все бренды и модели
+            const allBrands = [...new Set([...Object.keys(HARVESTER_BRANDS), ...Object.keys(directoryModelsByBrand)])].sort();
+            const brandGroupsHtml = allBrands.map(br => {
+                const staticList = HARVESTER_BRANDS[br] || [];
+                const dirList = directoryModelsByBrand[br] || [];
+                const models = [...new Set([...staticList, ...dirList])].filter(Boolean).sort();
+                if (models.length === 0) return '';
+                
+                return `
+                    <div class="brand-group-heading" style="padding:6px 10px; font-weight:900; font-size:0.65rem; color:var(--brand-red); text-transform:uppercase; background:rgba(255,255,255,0.02); margin-top:8px; border-radius:4px; letter-spacing:0.5px;">${br}</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:8px 10px;">
+                        ${models.map(m => {
+                            const fullName = `${br} ${m}`;
+                            const isChecked = selectedModels.includes(fullName) || selectedModels.includes(m);
+                            return `
+                                <label style="display:flex; align-items:center; gap:8px; font-size:0.75rem; cursor:pointer; color:#eee; user-select:none; margin:0;">
+                                    <input type="checkbox" class="pc-model-cb" value="${fullName}" ${isChecked ? 'checked' : ''} onchange="window.updateSelectedModels()" style="width:14px; height:14px; cursor:pointer;">
+                                    <span>${m}</span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="form-group" style="position:relative; grid-column: span 2;">
+                    <label style="color:#888; font-size:0.65rem; text-transform:uppercase; font-weight:900; display:block; margin-bottom:5px;">${icon} ${label} ${isReq ? '<i class="fa-solid fa-flag text-xs" style="color:var(--brand-red)"></i>' : ''}</label>
+                    <input type="hidden" class="pc-dyn-input" data-key="tech_type" id="pc-tech_type-hidden" value="${value}">
+                    
+                    <div id="pc-models-selector" onclick="window.toggleModelsDropdown(event)" style="background:rgba(0,0,0,0.4); border:1px solid #333; color:#fff; padding:12px; border-radius:8px; min-height:45px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; cursor:pointer; font-size:0.8rem; user-select:none;">
+                        ${selectedModels.length > 0 ? selectedModels.map(m => `<span class="model-tag" style="background:rgba(226,31,38,0.15); border:1px solid rgba(226,31,38,0.3); color:#fff; padding:3px 8px; border-radius:4px; font-size:0.7rem; font-weight:700; display:flex; align-items:center; gap:5px;">${m} <i class="fa-solid fa-times" onclick="window.removeModelTag(event, '${m}')" style="cursor:pointer; opacity:0.6; font-size:0.65rem;"></i></span>`).join('') : '<span style="color:#666;">Выберите модели техники...</span>'}
+                    </div>
+                    
+                    <div id="pc-models-dropdown" class="glass-panel" style="display:none; position:absolute; top:100%; left:0; right:0; max-height:280px; overflow-y:auto; background:#0c0c0c; border:1px solid #222; border-radius:8px; z-index:999; box-shadow:0 10px 30px rgba(0,0,0,0.8); margin-top:5px; padding:10px;">
+                        <input type="text" id="pc-models-search" placeholder="Поиск по моделям..." oninput="window.filterModelsInDropdown(this.value)" style="width:100%; background:#050505; border:1px solid #222; color:#fff; padding:8px 12px; border-radius:6px; font-size:0.75rem; margin-bottom:10px; outline:none;" onclick="event.stopPropagation()">
+                        <div id="pc-models-list">
+                            ${brandGroupsHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (f === 'drawing') {
+            return `<div class="form-group" style="grid-column: span 2;" id="pc-drawing-container"></div>`;
+        }
+
         // Собираем уникальные значения для этого поля
         let uniqueValues = [...new Set(window.dbProducts.map(p => p && p[f]).filter(Boolean))];
         if (f === 'brand') {
             const directoryBrands = (window.dbDirectories || []).filter(d => d.category === 'brands').map(b => b.name);
             uniqueValues = [...new Set([...uniqueValues, ...directoryBrands])];
-        } else if (f === 'tech_type') {
-            const defaultTechTypes = ['Прицепной уборочный', 'Самоходный уборочный', 'Самоходный погрузчик', 'Приемно-сортировочный', 'Прицеп перегрузчик'];
-            uniqueValues = [...new Set([...uniqueValues, ...defaultTechTypes])];
         }
         let datalistHtml = '';
         let listAttr = '';
@@ -628,6 +787,12 @@ window.loadProductCategoryFields = function() {
             </div>
         `;
     }).join('');
+
+    // Инициализируем контейнер чертежей, если поле присутствует в схеме
+    if (displayFields.includes('drawing')) {
+        const drawingVal = product && product['drawing'] ? product['drawing'] : '';
+        window.renderMultiImageSection('pc-drawing-container', 'Чертежи', 'drawing', drawingVal);
+    }
     
     // Скроллим к динамическим полям если их много
     setTimeout(() => {
@@ -1876,5 +2041,184 @@ window.showPriceHelp = () => {
 
     contentEl.innerHTML = helpHtml;
     modal.classList.add('active');
+};
+
+// Хендлеры для множественного выбора моделей техники
+window.toggleModelsDropdown = function(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('pc-models-dropdown');
+    if (dropdown) {
+        const isHidden = dropdown.style.display === 'none';
+        document.querySelectorAll('#pc-models-dropdown').forEach(d => d.style.display = 'none');
+        dropdown.style.display = isHidden ? 'block' : 'none';
+    }
+};
+
+window.updateSelectedModels = function() {
+    const selected = [];
+    document.querySelectorAll('.pc-model-cb:checked').forEach(cb => {
+        selected.push(cb.value);
+    });
+    
+    const hiddenInp = document.getElementById('pc-tech_type-hidden');
+    if (hiddenInp) {
+        hiddenInp.value = selected.join(', ');
+    }
+    
+    const selector = document.getElementById('pc-models-selector');
+    if (selector) {
+        if (selected.length > 0) {
+            selector.innerHTML = selected.map(m => `
+                <span class="model-tag" style="background:rgba(226,31,38,0.15); border:1px solid rgba(226,31,38,0.3); color:#fff; padding:3px 8px; border-radius:4px; font-size:0.7rem; font-weight:700; display:flex; align-items:center; gap:5px;" onclick="event.stopPropagation()">
+                    ${m} 
+                    <i class="fa-solid fa-times" onclick="window.removeModelTag(event, '${m}')" style="cursor:pointer; opacity:0.6; font-size:0.65rem;"></i>
+                </span>
+            `).join('');
+        } else {
+            selector.innerHTML = '<span style="color:#666;">Выберите модели техники...</span>';
+        }
+    }
+};
+
+window.removeModelTag = function(event, modelName) {
+    event.stopPropagation();
+    document.querySelectorAll(`.pc-model-cb[value="${modelName}"]`).forEach(cb => {
+        cb.checked = false;
+    });
+    window.updateSelectedModels();
+};
+
+window.filterModelsInDropdown = function(query) {
+    const q = query.toLowerCase().trim();
+    document.querySelectorAll('#pc-models-dropdown label').forEach(lbl => {
+        const text = lbl.textContent.toLowerCase();
+        const parentFullName = lbl.querySelector('input')?.value.toLowerCase() || '';
+        if (text.includes(q) || parentFullName.includes(q)) {
+            lbl.style.display = 'flex';
+        } else {
+            lbl.style.display = 'none';
+        }
+    });
+    
+    document.querySelectorAll('#pc-models-dropdown .brand-group-heading').forEach(heading => {
+        const nextGrid = heading.nextElementSibling;
+        if (nextGrid) {
+            let hasVisible = false;
+            nextGrid.querySelectorAll('label').forEach(lbl => {
+                if (lbl.style.display !== 'none') hasVisible = true;
+            });
+            heading.style.display = hasVisible ? 'block' : 'none';
+            nextGrid.style.display = hasVisible ? 'grid' : 'none';
+        }
+    });
+};
+
+document.addEventListener('click', () => {
+    const dropdown = document.getElementById('pc-models-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+});
+
+// Функции для множественного добавления/загрузки фото и чертежей
+window.renderMultiImageSection = function(containerId, label, fieldKey, currentValue) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const images = currentValue ? currentValue.split(',').map(x => x.trim()).filter(Boolean) : [];
+    
+    let html = `
+        <label style="color:#888; font-size:0.65rem; text-transform:uppercase; font-weight:900; display:block; margin-bottom:10px;">${label}</label>
+        <div class="multi-images-grid" id="mig-${fieldKey}" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:15px; margin-bottom:12px;">
+            ${images.map((img, idx) => `
+                <div class="multi-image-card glass-panel" style="padding:10px; background:rgba(0,0,0,0.4); border:1px solid #222; border-radius:8px; position:relative; display:flex; flex-direction:column; gap:8px; align-items:center;">
+                    <button type="button" class="action-btn" onclick="window.removeMultiImage('${fieldKey}', ${idx})" style="position:absolute; top:5px; right:5px; width:20px; height:20px; padding:0; display:flex; align-items:center; justify-content:center; background:rgba(226,31,38,0.2); border:1px solid rgba(226,31,38,0.4); color:var(--brand-red); border-radius:4px; font-size:0.6rem;" title="Удалить"><i class="fa-solid fa-times"></i></button>
+                    <img src="${img}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjE4IiBmaWxsPSIjNTU1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0iRm9udEF3ZXNvbWUiPvVrjwvdGV4dD48L3N2Zz4='" style="width:70px; height:70px; object-fit:cover; border-radius:6px; border:1px solid #333; background:rgba(255,255,255,0.01);">
+                    <input type="text" class="form-control form-control-xs pc-image-path-${fieldKey}" value="${img}" oninput="window.saveMultiImagesState('${fieldKey}')" placeholder="Путь/URL" style="font-size:0.65rem; padding:4px 8px; height:auto; text-align:center; background:rgba(0,0,0,0.5); border-color:#222; width:100%;">
+                </div>
+            `).join('')}
+            
+            <div class="multi-image-card add-card glass-panel" onclick="window.addMultiImagePlaceholder('${fieldKey}')" style="border:2px dashed #333; border-radius:8px; height:120px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; cursor:pointer; color:#666; transition:0.3s; user-select:none;" onmouseover="this.style.borderColor='var(--brand-red)'; this.style.color='#fff';" onmouseout="this.style.borderColor='#333'; this.style.color='#666';">
+                <i class="fa-solid fa-plus text-lg"></i>
+                <span style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Добавить</span>
+            </div>
+        </div>
+        
+        <div style="display:flex; gap:10px; align-items:center;">
+            <input type="file" id="upload-${fieldKey}" class="hidden" multiple accept="image/*" onchange="window.handleMultiImageUpload('${fieldKey}', this)">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('upload-${fieldKey}').click()" style="font-size:0.7rem; font-weight:900; padding:6px 15px; border-radius:8px;">
+                <i class="fa-solid fa-upload"></i> Загрузить файлы
+            </button>
+            <input type="hidden" class="${fieldKey === 'photo' ? '' : 'pc-dyn-input'}" data-key="${fieldKey}" id="pc-${fieldKey}" value="${currentValue}">
+        </div>
+    `;
+    
+    container.innerHTML = html;
+};
+
+window.addMultiImagePlaceholder = function(fieldKey) {
+    const hiddenInp = document.getElementById(`pc-${fieldKey}`);
+    if (!hiddenInp) return;
+    
+    const currentVal = hiddenInp.value;
+    const items = currentVal ? currentVal.split(',').map(x => x.trim()).filter(Boolean) : [];
+    items.push('');
+    
+    hiddenInp.value = items.join(', ');
+    window.renderMultiImageSection(fieldKey === 'photo' ? 'pc-photo-container' : 'pc-drawing-container', fieldKey === 'photo' ? 'Фото' : 'Чертежи', fieldKey, hiddenInp.value);
+};
+
+window.removeMultiImage = function(fieldKey, index) {
+    const hiddenInp = document.getElementById(`pc-${fieldKey}`);
+    if (!hiddenInp) return;
+    
+    const currentVal = hiddenInp.value;
+    const items = currentVal ? currentVal.split(',').map(x => x.trim()).filter(Boolean) : [];
+    items.splice(index, 1);
+    
+    hiddenInp.value = items.join(', ');
+    window.renderMultiImageSection(fieldKey === 'photo' ? 'pc-photo-container' : 'pc-drawing-container', fieldKey === 'photo' ? 'Фото' : 'Чертежи', fieldKey, hiddenInp.value);
+};
+
+window.saveMultiImagesState = function(fieldKey) {
+    const hiddenInp = document.getElementById(`pc-${fieldKey}`);
+    if (!hiddenInp) return;
+    
+    const inputs = document.querySelectorAll(`.pc-image-path-${fieldKey}`);
+    const selected = [];
+    inputs.forEach(inp => {
+        if (inp.value.trim()) selected.push(inp.value.trim());
+    });
+    
+    hiddenInp.value = selected.join(', ');
+};
+
+window.handleMultiImageUpload = function(fieldKey, input) {
+    if (!input.files || input.files.length === 0) return;
+    
+    const targetCategory = document.getElementById('pc-category')?.value;
+    let folderName = 'General';
+    if (targetCategory) {
+        const cat = window.dbCategories.find(c => c.id === targetCategory);
+        if (cat) {
+            folderName = cat.name.toLowerCase().replace(/[^a-z0-9а-яё\s-]/g, '').trim().replace(/\s+/g, '');
+        }
+    }
+    
+    const hiddenInp = document.getElementById(`pc-${fieldKey}`);
+    if (!hiddenInp) return;
+    const currentVal = hiddenInp.value;
+    const items = currentVal ? currentVal.split(',').map(x => x.trim()).filter(Boolean) : [];
+    
+    let loadedCount = 0;
+    Array.from(input.files).forEach(file => {
+        const fileName = file.name;
+        const relativePath = `extracted_xlsx/${folderName}/${fileName}`;
+        items.push(relativePath);
+        loadedCount++;
+    });
+    
+    hiddenInp.value = items.join(', ');
+    window.renderMultiImageSection(fieldKey === 'photo' ? 'pc-photo-container' : 'pc-drawing-container', fieldKey === 'photo' ? 'Фото' : 'Чертежи', fieldKey, hiddenInp.value);
+    window.showToast(`Успешно добавлено ${loadedCount} изображений`, 'success');
+    input.value = '';
 };
 

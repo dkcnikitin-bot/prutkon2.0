@@ -45,7 +45,10 @@ window.initWarehouseCatalog = () => {
                 name: nameVal,
                 unit: 'кг',
                 icon: 'fa-cube',
-                dia: parseFloat(d.diameter) || 0
+                dia: parseFloat(d.diameter) || 0,
+                steel_type: (d.steel_type || d.steel || 'Не указана').trim(),
+                category: 'Металлопрокат (Круги)',
+                raw: d
             };
         });
 
@@ -65,7 +68,9 @@ window.initWarehouseCatalog = () => {
                 name: nameVal,
                 unit: 'м.п.',
                 icon: 'fa-tape',
-                thickness: parseFloat(d.thickness) || 0
+                thickness: parseFloat(d.thickness) || 0,
+                category: 'Конвейерные ленты',
+                raw: d
             };
         });
 
@@ -82,7 +87,9 @@ window.initWarehouseCatalog = () => {
                 name: nameVal,
                 unit: 'м.п.',
                 icon: 'fa-box-tissue',
-                thickness: parseFloat(d.thickness) || 0
+                thickness: parseFloat(d.thickness) || 0,
+                category: 'Рулоны-заготовки',
+                raw: d
             };
         });
 
@@ -99,7 +106,9 @@ window.initWarehouseCatalog = () => {
                 name: nameVal,
                 unit: 'м.п.',
                 icon: 'fa-grip-lines-vertical',
-                thickness: parseFloat(d.thickness) || 0
+                thickness: parseFloat(d.thickness) || 0,
+                category: 'Нарезные полосы',
+                raw: d
             };
         });
 
@@ -111,7 +120,9 @@ window.initWarehouseCatalog = () => {
                 name: d.name || 'Скобяное изделие',
                 unit: d.unit || 'шт',
                 icon: 'fa-toolbox',
-                parentGroup: 'hardware'
+                parentGroup: 'hardware',
+                category: 'Комплектующие (Скобяные изделия)',
+                raw: d
             };
         });
 
@@ -123,7 +134,9 @@ window.initWarehouseCatalog = () => {
                 name: d.name || 'Крепеж',
                 unit: d.unit || 'шт',
                 icon: 'fa-screwdriver-wrench',
-                parentGroup: 'fasteners'
+                parentGroup: 'fasteners',
+                category: 'Крепежные элементы',
+                raw: d
             };
         });
     }
@@ -155,7 +168,10 @@ window.initWarehouseCatalog = () => {
                 unit: 'шт',
                 icon: 'fa-cube',
                 parentGroup: 'blank',
-                dia: parseFloat(b.dia) || 0
+                dia: parseFloat(b.dia) || 0,
+                steel_type: (b.metalName || 'Не указана').trim(),
+                category: 'Заготовки прутков',
+                raw: b
             };
         });
     }
@@ -166,12 +182,27 @@ window.initWarehouseCatalog = () => {
             const key = r.article ? `straight_${r.article}` : `straight_${r.name}`;
             const nameLower = (r.name || '').toLowerCase();
             const isHedge = nameLower.includes('еж') || nameLower.includes('ёж') || nameLower.includes('палец');
+            
+            let steelType = 'Не указана';
+            if (rodsObj.rods_blanks) {
+                let blank = null;
+                if (r.blankId !== undefined && rodsObj.rods_blanks[r.blankId]) {
+                    blank = rodsObj.rods_blanks[r.blankId];
+                } else {
+                    blank = rodsObj.rods_blanks.find(b => String(b.dia) === String(r.dia) && parseFloat(b.length) === parseFloat(r.blankLength));
+                }
+                if (blank && blank.metalName) steelType = blank.metalName;
+            }
+
             WAREHOUSE_CATALOG[key] = {
                 name: r.name,
                 unit: 'шт',
                 icon: isHedge ? 'fa-star-of-life' : 'fa-ruler-horizontal',
                 parentGroup: isHedge ? 'hedge' : 'straight',
-                dia: parseFloat(r.dia) || 0
+                dia: parseFloat(r.dia) || 0,
+                steel_type: steelType.trim(),
+                category: 'Прямые прутки',
+                raw: r
             };
         });
     }
@@ -180,12 +211,22 @@ window.initWarehouseCatalog = () => {
     if (rodsObj.rods_double) {
         rodsObj.rods_double.forEach(r => {
             const key = r.article ? `double_${r.article}` : `double_${r.name}`;
+            
+            let steelType = 'Не указана';
+            if (rodsObj.rods_blanks) {
+                const blank = rodsObj.rods_blanks.find(b => String(b.dia) === String(r.dia));
+                if (blank && blank.metalName) steelType = blank.metalName;
+            }
+
             WAREHOUSE_CATALOG[key] = {
                 name: r.name,
                 unit: 'шт',
                 icon: 'fa-grip-lines',
                 parentGroup: 'double',
-                dia: parseFloat(r.dia) || 0
+                dia: parseFloat(r.dia) || 0,
+                steel_type: steelType.trim(),
+                category: 'Сдвоенные прутки',
+                raw: r
             };
         });
     }
@@ -196,12 +237,22 @@ window.initWarehouseCatalog = () => {
             const key = r.article ? `bent_${r.article}` : `bent_${r.name}`;
             const nameLower = (r.name || '').toLowerCase();
             const isHedge = nameLower.includes('еж') || nameLower.includes('ёж') || nameLower.includes('палец');
+            
+            let steelType = 'Не указана';
+            if (rodsObj.rods_blanks) {
+                const blank = rodsObj.rods_blanks.find(b => String(b.dia) === String(r.dia));
+                if (blank && blank.metalName) steelType = blank.metalName;
+            }
+
             WAREHOUSE_CATALOG[key] = {
                 name: r.name,
                 unit: 'шт',
                 icon: isHedge ? 'fa-star-of-life' : 'fa-wave-square',
                 parentGroup: isHedge ? 'hedge' : 'bent',
-                dia: parseFloat(r.dia) || 0
+                dia: parseFloat(r.dia) || 0,
+                steel_type: steelType.trim(),
+                category: 'Гнутые прутки',
+                raw: r
             };
         });
     }
@@ -212,14 +263,29 @@ window.initWarehouseCatalog = () => {
             const key = r.article ? `rubberized_${r.article}` : `rubberized_${r.name}`;
             const nameLower = (r.name || '').toLowerCase();
             const isBent = nameLower.includes('гнут') || nameLower.includes('сварн') || nameLower.includes('комби') || nameLower.includes('bent');
+            
+            let steelType = 'Не указана';
+            if (rodsObj.rods_blanks) {
+                const blank = rodsObj.rods_blanks.find(b => String(b.dia) === String(r.dia));
+                if (blank && blank.metalName) steelType = blank.metalName;
+            }
+
             WAREHOUSE_CATALOG[key] = {
                 name: r.name,
                 unit: 'шт',
                 icon: isBent ? 'fa-bacon' : 'fa-ring',
                 parentGroup: isBent ? 'bent_rubberized' : 'rubberized',
-                dia: parseFloat(r.dia) || 0
+                dia: parseFloat(r.dia) || 0,
+                steel_type: steelType.trim(),
+                category: 'Обрезиненные прутки',
+                raw: r
             };
         });
+    }
+
+    // Запускаем наполнение фильтров на складе
+    if (typeof window.populateFilterOptions === 'function') {
+        window.populateFilterOptions();
     }
 };
 
@@ -266,7 +332,7 @@ window.initWarehouse = async () => {
             }
 
             // 2. Грузим лог (последние 100 записей)
-            const { data: logData } = await window.supabase.from('warehouse_log').select('*').order('id', { ascending: false }).limit(100);
+            const { data: logData } = await window.supabase.from('warehouse_log').select('*').order('id', { ascending: false }).limit(1000);
             if (logData) window.dbWarehouseLog = logData.map(l => l.data || l).reverse();
 
             // 3. Грузим партии
@@ -412,6 +478,248 @@ window.refreshWarehouseData = () => {
     }
 };
 
+window.populateFilterOptions = () => {
+    const filterDia = document.getElementById('filter-diameter');
+    const filterSteel = document.getElementById('filter-steel-type');
+    const filterLength = document.getElementById('filter-length');
+    const filterBeltWidth = document.getElementById('filter-belt-width');
+    const filterBeltStrength = document.getElementById('filter-belt-strength');
+    const filterBeltThickness = document.getElementById('filter-belt-thickness');
+    const filterRubberClass = document.getElementById('filter-rubber-class');
+    const filterCordsCount = document.getElementById('filter-cords-count');
+    if (!filterDia || !filterSteel) return;
+
+    // Сохраняем текущие значения фильтров
+    const currentDia = filterDia.value;
+    const currentSteel = filterSteel.value;
+
+    const uniqueDias = new Set();
+    const uniqueSteels = new Set();
+    const uniqueLengths = new Set();
+    const uniqueBeltWidths = new Set();
+    const uniqueBeltStrengths = new Set();
+    const uniqueBeltThicknesses = new Set();
+    const uniqueRubberClasses = new Set();
+    const uniqueCordsCounts = new Set();
+
+    const getCatalogItemDia = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return 0;
+        if (item.dia) return parseFloat(item.dia);
+        const match = String(item.name || '').match(/Ø\s*(\d+(\.\d+)?)/i) || String(k).match(/(?:BL|DBL|PR)-(\d+(\.\d+)?)/i);
+        return match ? parseFloat(match[1]) : 0;
+    };
+
+    const getCatalogItemLength = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return 0;
+        if (item.raw) {
+            const r = item.raw;
+            const len = r.length || r.bar_len || r.blankLength;
+            if (len) return parseFloat(len);
+        }
+        const match = String(item.name || '').match(/L\s*=\s*(\d+)/i);
+        return match ? parseFloat(match[1]) : 0;
+    };
+
+    const getCatalogItemWidth = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return 0;
+        if (item.raw && item.raw.width) return parseFloat(item.raw.width);
+        const match = String(item.name || '').match(/(?:Лента|Заготовка|Полоса)\s*(\d+)/i);
+        return match ? parseFloat(match[1]) : 0;
+    };
+
+    const getCatalogItemStrength = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return '';
+        if (item.raw && item.raw.strength) return String(item.raw.strength);
+        const match = String(item.name || '').match(/EP-(\d+)/i);
+        return match ? String(match[1]) : '';
+    };
+
+    const getCatalogItemThickness = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return 0;
+        if (item.raw && item.raw.thickness) return parseFloat(item.raw.thickness);
+        if (item.thickness) return parseFloat(item.thickness);
+        let nameStr = String(item.name || '');
+        const match = nameStr.match(/(\d+(?:\.\d+)?)\s*мм/i);
+        if (match) return parseFloat(match[1]);
+        return 0;
+    };
+
+    const getCatalogItemRubberClass = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return '';
+        if (item.raw && item.raw.rubber_class) return String(item.raw.rubber_class).trim().toUpperCase();
+        const match = String(item.name || '').match(/класс\s*([a-zA-Zа-яА-Я\d]+)/i);
+        return match ? match[1].toUpperCase() : '';
+    };
+
+    const getCatalogItemCords = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return 0;
+        if (item.raw && item.raw.cords) return parseInt(item.raw.cords);
+        const match = String(item.name || '').match(/\/(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+    };
+
+    for (let key in WAREHOUSE_CATALOG) {
+        const item = WAREHOUSE_CATALOG[key];
+        if (!item) continue;
+        
+        // Диаметр
+        const dia = parseFloat(item.dia);
+        if (dia > 0) {
+            uniqueDias.add(dia);
+        } else {
+            const extractedDia = getCatalogItemDia(key);
+            if (extractedDia > 0) {
+                uniqueDias.add(extractedDia);
+                item.dia = extractedDia;
+            }
+        }
+
+        // Марка стали
+        if (item.steel_type) {
+            const norm = window.normalizeSteelType(item.steel_type);
+            if (norm && norm !== 'Не указана') {
+                uniqueSteels.add(norm);
+                item.steel_type = norm;
+            }
+        } else if (item.name && item.name.includes(';')) {
+            const parts = item.name.split(';');
+            if (parts.length > 1) {
+                const candidate = parts[1].split('(')[0].trim();
+                if (candidate && candidate !== 'Металл' && candidate !== 'Сталь' && candidate.toLowerCase() !== 'нераспределенный остаток') {
+                    const norm = window.normalizeSteelType(candidate);
+                    if (norm && norm !== 'Не указана') {
+                        item.steel_type = norm;
+                        uniqueSteels.add(norm);
+                    }
+                }
+            }
+        }
+
+        // Длина
+        const len = getCatalogItemLength(key);
+        if (len > 0) {
+            uniqueLengths.add(len);
+        }
+
+        // Ширина ленты
+        const width = getCatalogItemWidth(key);
+        if (width > 0) {
+            uniqueBeltWidths.add(width);
+        }
+
+        // Прочность ленты
+        const strength = getCatalogItemStrength(key);
+        if (strength) {
+            uniqueBeltStrengths.add(strength);
+        }
+
+        // Толщина ленты
+        const thickness = getCatalogItemThickness(key);
+        if (thickness > 0) {
+            uniqueBeltThicknesses.add(thickness);
+        }
+
+        // Класс резины
+        const cls = getCatalogItemRubberClass(key);
+        if (cls) {
+            uniqueRubberClasses.add(cls);
+        }
+
+        // Кол-во кордов
+        const cords = getCatalogItemCords(key);
+        if (cords > 0) {
+            uniqueCordsCounts.add(cords);
+        }
+    }
+
+    // Сортировка
+    const sortedDias = Array.from(uniqueDias).sort((a, b) => a - b);
+    const sortedSteels = Array.from(uniqueSteels).filter(s => s && s.toLowerCase() !== 'металл' && s.toLowerCase() !== 'не указана').sort();
+    const sortedLengths = Array.from(uniqueLengths).sort((a, b) => a - b);
+    const sortedWidths = Array.from(uniqueBeltWidths).sort((a, b) => a - b);
+    const sortedStrengths = Array.from(uniqueBeltStrengths).sort((a, b) => parseInt(a) - parseInt(b));
+    const sortedThicknesses = Array.from(uniqueBeltThicknesses).sort((a, b) => a - b);
+    const sortedRubberClasses = Array.from(uniqueRubberClasses).sort();
+    const sortedCords = Array.from(uniqueCordsCounts).sort((a, b) => a - b);
+
+    // Диаметры
+    let diaHtml = '<option value="">Все диаметры</option>';
+    sortedDias.forEach(d => { diaHtml += `<option value="${d}">Ø${d} мм</option>`; });
+    filterDia.innerHTML = diaHtml;
+    filterDia.value = currentDia;
+
+    // Марки стали
+    let steelHtml = '<option value="">Все марки</option>';
+    sortedSteels.forEach(s => { steelHtml += `<option value="${s}">${s}</option>`; });
+    filterSteel.innerHTML = steelHtml;
+    filterSteel.value = currentSteel;
+
+    // Длина
+    if (filterLength) {
+        const currentLen = filterLength.value;
+        let lenHtml = '<option value="">Все длины</option>';
+        sortedLengths.forEach(l => { lenHtml += `<option value="${l}">${l} мм</option>`; });
+        filterLength.innerHTML = lenHtml;
+        filterLength.value = currentLen;
+    }
+
+    // Ширина лент
+    if (filterBeltWidth) {
+        const currentWidth = filterBeltWidth.value;
+        let widthHtml = '<option value="">Все ширины</option>';
+        sortedWidths.forEach(w => { widthHtml += `<option value="${w}">${w} мм</option>`; });
+        filterBeltWidth.innerHTML = widthHtml;
+        filterBeltWidth.value = currentWidth;
+    }
+
+    // Прочность лент
+    if (filterBeltStrength) {
+        const currentStrength = filterBeltStrength.value;
+        let strengthHtml = '<option value="">Все прочности</option>';
+        sortedStrengths.forEach(s => { strengthHtml += `<option value="${s}">EP-${s}</option>`; });
+        filterBeltStrength.innerHTML = strengthHtml;
+        filterBeltStrength.value = currentStrength;
+    }
+
+    // Толщина лент
+    if (filterBeltThickness) {
+        const currentThickness = filterBeltThickness.value;
+        let thickHtml = '<option value="">Все толщины</option>';
+        sortedThicknesses.forEach(t => { thickHtml += `<option value="${t}">${t} мм</option>`; });
+        filterBeltThickness.innerHTML = thickHtml;
+        filterBeltThickness.value = currentThickness;
+    }
+
+    // Класс резины
+    if (filterRubberClass) {
+        const currentRubber = filterRubberClass.value;
+        let rubberHtml = '<option value="">Все классы</option>';
+        sortedRubberClasses.forEach(c => { rubberHtml += `<option value="${c}">Класс ${c}</option>`; });
+        filterRubberClass.innerHTML = rubberHtml;
+        filterRubberClass.value = currentRubber;
+    }
+
+    // Количество кордов
+    if (filterCordsCount) {
+        const currentCords = filterCordsCount.value;
+        let cordsHtml = '<option value="">Все корды</option>';
+        sortedCords.forEach(c => { cordsHtml += `<option value="${c}">${c}-х слойная</option>`; });
+        filterCordsCount.innerHTML = cordsHtml;
+        filterCordsCount.value = currentCords;
+    }
+};
+
+window.applyWarehouseFilters = () => {
+    renderInventory();
+};
+
 function renderInventory() {
     const tbody = document.querySelector('#inventory-table tbody');
     if (!tbody) return;
@@ -464,25 +772,71 @@ function renderInventory() {
         return match ? parseFloat(match[1]) : 0;
     };
 
+    const getCatalogItemLength = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return 0;
+        if (item.raw) {
+            const r = item.raw;
+            const len = r.length || r.bar_len || r.blankLength;
+            if (len) return parseFloat(len);
+        }
+        const match = String(item.name || '').match(/L\s*=\s*(\d+)/i);
+        return match ? parseFloat(match[1]) : 0;
+    };
+
+    const getCatalogItemWidth = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return 0;
+        if (item.raw && item.raw.width) return parseFloat(item.raw.width);
+        const match = String(item.name || '').match(/(?:Лента|Заготовка|Полоса)\s*(\d+)/i);
+        return match ? parseFloat(match[1]) : 0;
+    };
+
+    const getCatalogItemStrength = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return '';
+        if (item.raw && item.raw.strength) return String(item.raw.strength);
+        const match = String(item.name || '').match(/EP-(\d+)/i);
+        return match ? String(match[1]) : '';
+    };
+
     const getCatalogItemThickness = (k) => {
         const item = WAREHOUSE_CATALOG[k];
         if (!item) return 0;
+        if (item.raw && item.raw.thickness) return parseFloat(item.raw.thickness);
         if (item.thickness) return parseFloat(item.thickness);
-        
         let nameStr = String(item.name || '');
         const match = nameStr.match(/(\d+(?:\.\d+)?)\s*мм/i);
         if (match) return parseFloat(match[1]);
-        
-        // Попытка извлечь толщину из названия ленты (например: EP-1200/3 6/2 -> 3 + 6 + 2 = 11мм)
-        const beltMatch = nameStr.match(/\/(\d+)\s+(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)/);
-        if (beltMatch) {
-            const cords = parseFloat(beltMatch[1]) || 3;
-            const top = parseFloat(beltMatch[2]) || 0;
-            const bottom = parseFloat(beltMatch[3]) || 0;
-            return cords + top + bottom;
-        }
         return 0;
     };
+
+    const getCatalogItemRubberClass = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return '';
+        if (item.raw && item.raw.rubber_class) return String(item.raw.rubber_class).trim().toUpperCase();
+        const match = String(item.name || '').match(/класс\s*([a-zA-Zа-яА-Я\d]+)/i);
+        return match ? match[1].toUpperCase() : '';
+    };
+
+    const getCatalogItemCords = (k) => {
+        const item = WAREHOUSE_CATALOG[k];
+        if (!item) return 0;
+        if (item.raw && item.raw.cords) return parseInt(item.raw.cords);
+        const match = String(item.name || '').match(/\/(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+    };
+
+    const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim();
+    const filterDiaVal = document.getElementById('filter-diameter')?.value;
+    const filterSteelVal = document.getElementById('filter-steel-type')?.value;
+    const filterLengthVal = document.getElementById('filter-length')?.value;
+    const filterWidthVal = document.getElementById('filter-belt-width')?.value;
+    const filterStrengthVal = document.getElementById('filter-belt-strength')?.value;
+    const filterThicknessVal = document.getElementById('filter-belt-thickness')?.value;
+    const filterRubberClassVal = document.getElementById('filter-rubber-class')?.value;
+    const filterCordsVal = document.getElementById('filter-cords-count')?.value;
+    const hasActiveFilters = searchVal || filterDiaVal || filterSteelVal || filterLengthVal || filterWidthVal || filterStrengthVal || filterThicknessVal || filterRubberClassVal || filterCordsVal;
 
     for (let groupKey in groupsConfig) {
         const conf = groupsConfig[groupKey];
@@ -511,14 +865,93 @@ function renderInventory() {
             }
         }
         
+        const activeChildKeys = childKeys.filter(key => (window.dbWarehouseInv[key] || 0) > 0);
+
+        // Применяем фильтры
+        const filteredChildKeys = activeChildKeys.filter(key => {
+            const item = WAREHOUSE_CATALOG[key];
+            if (!item) return false;
+
+            if (searchVal) {
+                const nameMatch = String(item.name || '').toLowerCase().includes(searchVal);
+                const keyMatch = String(key).toLowerCase().includes(searchVal);
+                if (!nameMatch && !keyMatch) return false;
+            }
+
+            if (filterDiaVal) {
+                const itemDia = getCatalogItemDia(key);
+                if (String(itemDia) !== String(filterDiaVal)) return false;
+            }
+
+            if (filterSteelVal) {
+                const itemSteel = (item.steel_type || '').trim();
+                if (window.normalizeSteelType(itemSteel) !== window.normalizeSteelType(filterSteelVal)) return false;
+            }
+
+            if (filterLengthVal) {
+                const itemLen = getCatalogItemLength(key);
+                if (String(itemLen) !== String(filterLengthVal)) return false;
+            }
+
+            if (filterWidthVal) {
+                const itemWidth = getCatalogItemWidth(key);
+                if (String(itemWidth) !== String(filterWidthVal)) return false;
+            }
+
+            if (filterStrengthVal) {
+                const itemStrength = getCatalogItemStrength(key);
+                if (String(itemStrength) !== String(filterStrengthVal)) return false;
+            }
+
+            if (filterThicknessVal) {
+                const itemThickness = getCatalogItemThickness(key);
+                if (String(itemThickness) !== String(filterThicknessVal)) return false;
+            }
+
+            if (filterRubberClassVal) {
+                const itemRubber = getCatalogItemRubberClass(key);
+                if (String(itemRubber) !== String(filterRubberClassVal)) return false;
+            }
+
+            if (filterCordsVal) {
+                const itemCords = getCatalogItemCords(key);
+                if (String(itemCords) !== String(filterCordsVal)) return false;
+            }
+
+            return true;
+        });
+
         // Суммируем остатки
         let totalQty = 0;
-        childKeys.forEach(k => {
+        filteredChildKeys.forEach(k => {
             totalQty += (window.dbWarehouseInv[k] || 0);
         });
         
         const genericQty = window.dbWarehouseInv[groupKey] || 0;
-        totalQty += genericQty;
+        let showGeneric = false;
+        if (genericQty > 0) {
+            const genericItem = WAREHOUSE_CATALOG[groupKey] || { name: 'Общий нераспределенный остаток', unit: conf.unit, icon: conf.icon };
+            showGeneric = true;
+
+            if (searchVal) {
+                if (!String(genericItem.name).toLowerCase().includes(searchVal) && !String(groupKey).toLowerCase().includes(searchVal)) {
+                    showGeneric = false;
+                }
+            }
+
+            if (filterDiaVal || filterSteelVal || filterLengthVal || filterWidthVal || filterStrengthVal || filterThicknessVal || filterRubberClassVal || filterCordsVal) {
+                showGeneric = false;
+            }
+        }
+
+        if (showGeneric) {
+            totalQty += genericQty;
+        }
+
+        // Если активен фильтр и в группе нет остатков, скрываем всю группу
+        if (hasActiveFilters && totalQty === 0) {
+            continue;
+        }
         
         const isExpanded = window.expandedGroups[groupKey];
         const expandIcon = isExpanded ? 'fa-square-minus' : 'fa-square-plus';
@@ -543,52 +976,56 @@ function renderInventory() {
         if (isExpanded) {
             let hasChildren = false;
             
-            if (genericQty > 0) {
+            if (showGeneric) {
                 const genericItem = WAREHOUSE_CATALOG[groupKey] || { name: 'Нераспределенный остаток', unit: conf.unit, icon: conf.icon };
                 const nameDisplay = 'Общий нераспределенный остаток';
                 html += renderInventoryChildRow(groupKey, { ...genericItem, name: nameDisplay }, genericQty, groupKey);
                 hasChildren = true;
             }
             
-            // Фильтруем childKeys по количеству > 0
-            const activeChildKeys = childKeys.filter(key => (window.dbWarehouseInv[key] || 0) > 0);
-
-            // Группируем по диаметрам если прутки/заготовки
             const isRodGroup = ['blank', 'straight', 'double', 'bent', 'rubberized', 'hedge', 'bent_rubberized'].includes(groupKey);
+            const isMetalGroup = groupKey === 'metal';
             const isBeltGroup = ['belt', 'belt_blank', 'belt_strip', 'belt_ring'].includes(groupKey);
             
-            if (isRodGroup) {
-                activeChildKeys.sort((a, b) => {
+            if (isRodGroup || isMetalGroup) {
+                filteredChildKeys.sort((a, b) => {
                     const diaA = getCatalogItemDia(a);
                     const diaB = getCatalogItemDia(b);
                     if (diaA !== diaB) return diaA - diaB;
+                    
+                    const steelA = WAREHOUSE_CATALOG[a].steel_type || '';
+                    const steelB = WAREHOUSE_CATALOG[b].steel_type || '';
+                    if (steelA !== steelB) return steelA.localeCompare(steelB);
+                    
                     return String(WAREHOUSE_CATALOG[a].name).localeCompare(String(WAREHOUSE_CATALOG[b].name));
                 });
 
-                let lastDia = null;
-                activeChildKeys.forEach(key => {
+                let lastGroupKey = null;
+                filteredChildKeys.forEach(key => {
                     const item = WAREHOUSE_CATALOG[key];
                     const qty = window.dbWarehouseInv[key] || 0;
                     
                     const dia = getCatalogItemDia(key);
-                    if (dia !== lastDia) {
-                        lastDia = dia;
+                    const steel = item.steel_type || 'Не указана';
+                    const groupKeyCombined = `${dia}_${steel}`;
+                    
+                    if (groupKeyCombined !== lastGroupKey) {
+                        lastGroupKey = groupKeyCombined;
                         html += `
                             <tr style="background: rgba(255,255,255,0.02); font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.03);">
                                 <td colspan="3" style="padding: 6px 15px; padding-left: 35px; color: var(--brand-gold); font-size: 0.75rem;">
-                                    <i class="fa-solid fa-circle-dot" style="font-size:0.6rem;"></i> Диаметр: Ø${dia ? dia + ' мм' : 'Не указан'}
+                                    <i class="fa-solid fa-circle-dot" style="font-size:0.6rem;"></i> Диаметр: Ø${dia ? dia + ' мм' : 'Не указан'} | Марка стали: ${steel}
                                 </td>
                             </tr>
                         `;
                     }
                     
-                    // Strip TU from displayed name
                     const cleanItem = { ...item, name: stripTU(item.name) };
                     html += renderInventoryChildRow(key, cleanItem, qty, groupKey);
                     hasChildren = true;
                 });
             } else if (isBeltGroup) {
-                activeChildKeys.sort((a, b) => {
+                filteredChildKeys.sort((a, b) => {
                     const thickA = getCatalogItemThickness(a);
                     const thickB = getCatalogItemThickness(b);
                     if (thickA !== thickB) return thickA - thickB;
@@ -596,7 +1033,7 @@ function renderInventory() {
                 });
 
                 let lastThickness = null;
-                activeChildKeys.forEach(key => {
+                filteredChildKeys.forEach(key => {
                     const item = WAREHOUSE_CATALOG[key];
                     const qty = window.dbWarehouseInv[key] || 0;
                     
@@ -612,17 +1049,17 @@ function renderInventory() {
                         `;
                     }
                     
-                    // Strip TU from displayed name
                     const cleanItem = { ...item, name: stripTU(item.name) };
                     html += renderInventoryChildRow(key, cleanItem, qty, groupKey);
                     hasChildren = true;
                 });
             } else {
-                activeChildKeys.forEach(key => {
+                filteredChildKeys.sort((a, b) => String(WAREHOUSE_CATALOG[a].name).localeCompare(String(WAREHOUSE_CATALOG[b].name)));
+                
+                filteredChildKeys.forEach(key => {
                     const item = WAREHOUSE_CATALOG[key];
                     const qty = window.dbWarehouseInv[key] || 0;
                     
-                    // Strip TU from displayed name
                     const cleanItem = { ...item, name: stripTU(item.name) };
                     html += renderInventoryChildRow(key, cleanItem, qty, groupKey);
                     hasChildren = true;
@@ -3870,7 +4307,7 @@ window.onBeltSpecCalc = (trigger) => {
             priceM2 = widthFactor > 0 ? Math.round((priceMp / widthFactor) * 100) / 100 : 0;
             priceM2Vat = priceM2 * Q;
             priceMpVat = priceMp * Q;
-            sumVat = Math.round(sumNoVat * Q * 100) / 100;
+sumVat = Math.round(sumNoVat * Q * 100) / 100;
         } else {
             sumVat = Math.round(sumNoVat * Q * 100) / 100;
         }
@@ -3916,6 +4353,225 @@ window.onBeltSpecCalc = (trigger) => {
     setFmt('op-belt-spec-price-m2-vat', priceM2Vat);
     setFmt('op-belt-spec-price-mp-vat', priceMpVat);
     setFmt('op-belt-spec-sum-vat', sumVat);
+};
+
+window.printOperationReceipt = (logId = null) => {
+    let docNumber, docDate, sup, contract, invoiceNum, invoiceDate, carrier, dest, responsible, deliveryTotal, delVatType, distMethod, vatRate;
+    let batch = [];
+    
+    if (logId) {
+        const log = window.dbWarehouseLog.find(l => String(l.id) === String(logId));
+        if (!log) { window.showToast('Операция не найдена!', 'error'); return; }
+        
+        docNumber = log.doc_number || 'ПМ-00000';
+        docDate = log.doc_date ? new Date(log.doc_date).toLocaleDateString('ru-RU') : new Date(log.date).toLocaleDateString('ru-RU');
+        sup = log.supplier || 'Не указан';
+        contract = log.contract || 'б/д';
+        invoiceNum = log.invoice_num || 'б/н';
+        invoiceDate = log.invoice_date ? new Date(log.invoice_date).toLocaleDateString('ru-RU') : '';
+        carrier = log.carrier || 'Не указан';
+        dest = log.destination || 'Основной склад';
+        responsible = log.responsible || 'Не указан';
+        deliveryTotal = parseFloat(log.delivery_cost || 0);
+        delVatType = log.delivery_vat_type || 'no-vat';
+        distMethod = log.delivery_dist_method || 'weight';
+        vatRate = parseFloat(log.vat_rate || 1.22);
+        batch = log.items || [];
+    } else {
+        batch = window.currentBatch;
+        if (batch.length === 0) { window.showToast('Список пуст!', 'error'); return; }
+        
+        docNumber = document.getElementById('op-doc-num')?.value || 'ПМ-00000';
+        docDate = document.getElementById('op-doc-date')?.value ? new Date(document.getElementById('op-doc-date').value).toLocaleDateString('ru-RU') : new Date().toLocaleDateString('ru-RU');
+        sup = document.getElementById('op-supplier')?.value || 'Не указан';
+        contract = document.getElementById('op-contract')?.value || 'б/д';
+        invoiceNum = document.getElementById('op-invoice-num')?.value || 'б/н';
+        invoiceDate = document.getElementById('op-invoice-date')?.value ? new Date(document.getElementById('op-invoice-date').value).toLocaleDateString('ru-RU') : '';
+        carrier = document.getElementById('op-delivery-carrier')?.value || 'Не указан';
+        dest = document.getElementById('op-destination')?.value || 'Основной склад';
+        responsible = document.getElementById('op-responsible')?.value || 'Не указан';
+        deliveryTotal = window.parseRusFloat(document.getElementById('op-delivery-cost')?.value || '0');
+        delVatType = document.getElementById('op-delivery-vat-type')?.value || 'no-vat';
+        distMethod = document.getElementById('op-delivery-dist-method')?.value || 'weight';
+        vatRate = window.parseRusFloat(document.getElementById('op-vat-rate')?.value || '1.22');
+    }
+
+    const hasBelt = batch.some(item => item.isBelt);
+    const totalWeight = Math.round(batch.reduce((sum, item) => sum + item.qty, 0) * 100) / 100;
+    const totalBars = batch.reduce((sum, item) => sum + (item.bars_count || 0), 0);
+    const totalSumNoVat = Math.round(batch.reduce((sum, item) => sum + (item.sumNoVat || (item.qty * (item.priceKg || item.price || 0))), 0) * 100) / 100;
+    const totalSumVat = Math.round(batch.reduce((sum, item) => sum + (item.sumWithVat || ((item.qty * (item.priceKg || item.price || 0)) * (item.vatRate || vatRate))), 0) * 100) / 100;
+    const finalDeliveryCost = (delVatType === 'with-vat') ? deliveryTotal : deliveryTotal * vatRate;
+    const finalInvoiceTotal = totalSumVat + finalDeliveryCost;
+
+    let rowsHtml = '';
+    batch.forEach((item, index) => {
+        const pPriceKg = parseFloat(item.priceKg || item.price || 0);
+        const pQty = parseFloat(item.qty || 0);
+        const pSumNoVat = Math.round((pQty * pPriceKg) * 100) / 100;
+        const pVatRate = parseFloat(item.vatRate || vatRate);
+        const pSumWithVat = Math.round((pSumNoVat * pVatRate) * 100) / 100;
+        const pVatSum = Math.round((pSumWithVat - pSumNoVat) * 100) / 100;
+        const unit = item.isBelt ? 'м.п.' : 'кг';
+        const vatPercent = Math.round((pVatRate - 1) * 100);
+        
+        rowsHtml += `
+            <tr style="${index % 2 === 0 ? 'background:#f8fafc;' : ''}">
+                <td class="text-center">${index + 1}</td>
+                <td style="font-weight:600; color:#1e293b;">${item.name}</td>
+                <td class="text-center bold" style="font-family:'JetBrains Mono';">${item.id || item.art || '---'}</td>
+                <td class="text-center">${item.isBelt ? '006' : '166'}</td>
+                <td class="text-center">${unit}</td>
+                <td class="text-right bold" style="font-family:'JetBrains Mono';">${pQty.toFixed(2)}</td>
+                ${hasBelt ? '' : `<td class="text-right" style="font-family:'JetBrains Mono';">${item.bars_count || 0}</td>`}
+                <td class="text-right" style="font-family:'JetBrains Mono';">${pPriceKg.toFixed(2)}</td>
+                <td class="text-right bold" style="font-family:'JetBrains Mono';">${pSumNoVat.toFixed(2)}</td>
+                <td class="text-right">${vatPercent}%</td>
+                <td class="text-right" style="font-family:'JetBrains Mono';">${pVatSum.toFixed(2)}</td>
+                <td class="text-right bold" style="font-family:'JetBrains Mono';">${pSumWithVat.toFixed(2)}</td>
+            </tr>
+        `;
+    });
+    
+    const vatPercentTotal = Math.round((vatRate - 1) * 100);
+    const totalVatSum = Math.round((totalSumVat - totalSumNoVat) * 100) / 100;
+    
+    let printHtml = `
+        <html>
+        <head>
+            <title>Приходный ордер № ${docNumber} - ПРУТКОН</title>
+            <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+            <style>
+                @page { size: A4; margin: 0; }
+                body { margin: 0; padding: 0; background: #e5e9f0; font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact; color: #000; }
+                .page { 
+                    width: 210mm; height: 297mm; padding: 12mm; margin: 10mm auto; background: #fff; 
+                    position: relative; overflow: hidden; box-sizing: border-box;
+                    box-shadow: 0 15px 35px rgba(0,0,0,0.1); border-radius: 8px;
+                    display: flex; flex-direction: column;
+                }
+                .sheet-header { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+                .sheet-header td { border: none; padding: 2px; }
+                .document-title { text-align: center; font-size: 16px; font-weight: 900; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Outfit'; border-bottom: 2px solid #000; padding-bottom: 8px; }
+                
+                table.data-grid { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; font-size: 9px; }
+                table.data-grid th, table.data-grid td { border: 1px solid #cbd5e1; padding: 5px 6px; text-align: left; }
+                table.data-grid th { background: #0f172a; color: #fff; font-weight: 900; text-align: center; text-transform: uppercase; font-size: 8px; border: 1px solid #0f172a; }
+                
+                .text-right { text-align: right; }
+                .text-center { text-align: center; }
+                .bold { font-weight: bold; }
+                
+                .sign-strip { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                .sign-strip td { border: none; padding: 4px 0; font-size: 10px; }
+                .sign-line { border-bottom: 1px solid #000; width: 120px; display: inline-block; margin: 0 10px; }
+                
+                @media print {
+                    body { background: #fff; margin: 0; padding: 0; }
+                    .page { margin: 0; box-shadow: none; border-radius: 0; width: 210mm; height: 297mm; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="page">
+                <table class="sheet-header">
+                    <tr>
+                        <td class="bold" style="font-size: 14px; font-family:'Outfit';">ООО "ПРУТКОН"</td>
+                        <td class="text-right" style="font-size: 9px; color: #64748b; line-height: 1.3;">
+                            Типовая межотраслевая форма № М-4<br>
+                            Утверждена постановлением Госкомстата России от 30.10.97 № 71а
+                        </td>
+                    </tr>
+                </table>
+                
+                <div class="document-title">ПРИХОДНЫЙ ОРДЕР № ${docNumber} от ${docDate}</div>
+                
+                <table style="width: 100%; margin-bottom: 20px; border-collapse: collapse; font-size:11px;">
+                    <tr>
+                        <td style="width: 15%; padding: 6px 0; font-weight: bold; border:none;">Поставщик:</td>
+                        <td style="width: 35%; padding: 6px 0; border-bottom: 1px solid #e2e8f0; border-top:none; border-left:none; border-right:none;"><strong>${sup}</strong></td>
+                        <td style="width: 15%; padding: 6px 0; font-weight: bold; padding-left: 20px; border:none;">Склад:</td>
+                        <td style="width: 35%; padding: 6px 0; border-bottom: 1px solid #e2e8f0; border-top:none; border-left:none; border-right:none;"><strong>${dest}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; font-weight: bold; border:none;">Договор:</td>
+                        <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0; border-top:none; border-left:none; border-right:none;">${contract}</td>
+                        <td style="padding: 6px 0; font-weight: bold; padding-left: 20px; border:none;">Сопроводительный док:</td>
+                        <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0; border-top:none; border-left:none; border-right:none;">Счет-фактура № ${invoiceNum} от ${invoiceDate || '---'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 0; font-weight: bold; border:none;">Перевозчик:</td>
+                        <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0; border-top:none; border-left:none; border-right:none;">${carrier}</td>
+                        <td style="padding: 6px 0; font-weight: bold; padding-left: 20px; border:none;">Ответственный:</td>
+                        <td style="padding: 6px 0; border-bottom: 1px solid #e2e8f0; border-top:none; border-left:none; border-right:none;"><strong>${responsible}</strong></td>
+                    </tr>
+                </table>
+                
+                <table class="data-grid">
+                    <thead>
+                        <tr>
+                            <th>№ п/п</th>
+                            <th>Наименование, характеристика</th>
+                            <th>Номенклатурный номер</th>
+                            <th>Код ед. изм.</th>
+                            <th>Наименование ед. изм.</th>
+                            <th class="text-right">Количество (Вес/Метры)</th>
+                            ${hasBelt ? '' : '<th class="text-right">Количество (Прутки)</th>'}
+                            <th class="text-right">Цена без НДС, руб.</th>
+                            <th class="text-right">Сумма без НДС, руб.</th>
+                            <th class="text-right">НДС, %</th>
+                            <th class="text-right">Сумма НДС, руб.</th>
+                            <th class="text-right">Всего с НДС, руб.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                        <tr class="bold" style="background: #f1f5f9;">
+                            <td colspan="5" class="text-right">ИТОГО:</td>
+                            <td class="text-right" style="font-family:'JetBrains Mono';">${totalWeight.toFixed(2)}</td>
+                            ${hasBelt ? '' : `<td class="text-right" style="font-family:'JetBrains Mono';">${totalBars}</td>`}
+                            <td></td>
+                            <td class="text-right" style="font-family:'JetBrains Mono';">${totalSumNoVat.toFixed(2)}</td>
+                            <td class="text-right">${vatPercentTotal}%</td>
+                            <td class="text-right" style="font-family:'JetBrains Mono';">${totalVatSum.toFixed(2)}</td>
+                            <td class="text-right" style="font-size: 11px; background: #e2e8f0; font-family:'JetBrains Mono';">${totalSumVat.toFixed(2)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div style="margin-bottom: 20px; font-size: 11px; color:#475569;">
+                    Всего принято наименований <span class="bold" style="color:#0f172a;">${batch.length}</span>, общей стоимостью с НДС <span class="bold" style="color:#0f172a;">${totalSumVat.toFixed(2)} руб.</span>
+                </div>
+                
+                <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:flex-end;">
+                    <table class="sign-strip" style="width:70%; margin:0;">
+                        <tr>
+                            <td>
+                                Принял (кладовщик): <div class="sign-line"></div> / <span class="bold">${responsible}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Сдал (представитель поставщика): <div class="sign-line"></div> / <span class="bold">${sup}</span>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <div style="border: 2px dashed #008080; color: #008080; font-family: 'Outfit', sans-serif; width: 90px; height: 90px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; text-align: center; transform: rotate(-5deg); opacity: 0.85; user-select:none; margin-bottom:10px;">
+                        <div style="font-size: 6px; border-bottom: 1px solid #008080; padding-bottom: 2px; width: 60px;">СКЛАД №1</div>
+                        <div style="font-size: 12px; font-weight: 900; margin: 2px 0;">ПРИНЯТО</div>
+                        <div style="font-size: 6px;">ОТК ПРУТКОН</div>
+                    </div>
+                </div>
+            </div>
+            <script>window.print();<\/script>
+        </body>
+        </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printHtml);
+    printWindow.document.close();
 };
 
 window.addBeltToBatch = () => {
@@ -4040,10 +4696,22 @@ window.editingLogId = null;
 window.printOperationReceipt = (logId = null) => {
     let docNumber, docDate, sup, contract, invoiceNum, invoiceDate, carrier, dest, responsible, deliveryTotal, delVatType, distMethod, vatRate;
     let batch = [];
+    let signedBy = '', signedPosition = '', signedAt = '', signHash = '';
     
     if (logId) {
         const log = window.dbWarehouseLog.find(l => String(l.id) === String(logId));
         if (!log) { window.showToast('Операция не найдена!', 'error'); return; }
+        
+        let docFromRegistry = null;
+        try {
+            const registry = JSON.parse(localStorage.getItem('prutkon_doc_registry')) || [];
+            docFromRegistry = registry.find(d => String(d.orderId) === `wh_op_${logId}`);
+        } catch(e) {}
+        
+        signedBy = docFromRegistry ? (docFromRegistry.signedBy || '') : '';
+        signedPosition = docFromRegistry ? (docFromRegistry.signedPosition || '') : '';
+        signedAt = docFromRegistry ? (docFromRegistry.signedAt || '') : '';
+        signHash = docFromRegistry ? (docFromRegistry.signHash || '') : '';
         
         docNumber = log.doc_number || 'ПМ-00000';
         docDate = log.doc_date ? new Date(log.doc_date).toLocaleDateString('ru-RU') : new Date(log.date).toLocaleDateString('ru-RU');
@@ -4091,29 +4759,41 @@ window.printOperationReceipt = (logId = null) => {
         <head>
             <title>Приходный ордер № ${docNumber} - ПРУТКОН</title>
             <style>
-                body { font-family: 'Arial', sans-serif; padding: 20px; color: #000; font-size: 11px; line-height: 1.4; }
-                .sheet-header { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                @page { size: A4; margin: 0; }
+                body { margin: 0; padding: 0; background: #e5e9f0; font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact; color: #000; }
+                .page { 
+                    width: 210mm; height: 297mm; padding: 12mm; margin: 10mm auto; background: #fff; 
+                    position: relative; overflow: hidden; box-sizing: border-box;
+                    box-shadow: 0 15px 35px rgba(0,0,0,0.1); border-radius: 8px;
+                    display: flex; flex-direction: column;
+                }
+                .sheet-header { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
                 .sheet-header td { border: none; padding: 2px; }
-                .document-title { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
-                .org-info { border-bottom: 1px solid #000; font-weight: bold; font-size: 12px; padding-bottom: 4px; margin-bottom: 20px; }
+                .document-title { text-align: center; font-size: 16px; font-weight: 900; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Outfit'; border-bottom: 2px solid #000; padding-bottom: 8px; }
                 
-                table.data-grid { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px; font-size: 10px; }
-                table.data-grid th, table.data-grid td { border: 1px solid #000; padding: 6px 8px; text-align: left; }
-                table.data-grid th { background: #e0e0e0; font-weight: bold; text-align: center; text-transform: uppercase; font-size: 9px; }
+                table.data-grid { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; font-size: 9px; }
+                table.data-grid th, table.data-grid td { border: 1px solid #cbd5e1; padding: 5px 6px; text-align: left; }
+                table.data-grid th { background: #0f172a; color: #fff; font-weight: 900; text-align: center; text-transform: uppercase; font-size: 8px; border: 1px solid #0f172a; }
                 
                 .text-right { text-align: right; }
                 .text-center { text-align: center; }
                 .bold { font-weight: bold; }
                 
-                .sign-strip { width: 100%; border-collapse: collapse; margin-top: 40px; }
-                .sign-strip td { border: none; padding: 8px 0; }
-                .sign-line { border-bottom: 1px solid #000; width: 150px; display: inline-block; margin: 0 10px; }
+                .sign-strip { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                .sign-strip td { border: none; padding: 4px 0; font-size: 10px; }
+                .sign-line { border-bottom: 1px solid #000; width: 120px; display: inline-block; margin: 0 10px; }
                 
-                .stamp-box { border: 2px dashed #ccc; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #aaa; border-radius: 50%; margin: 10px auto; text-transform: uppercase; text-align: center; }
+                .stamp-box { border: 2px dashed #008080; color: #008080; font-family: 'Outfit', sans-serif; width: 90px; height: 90px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; text-align: center; transform: rotate(-5deg); opacity: 0.85; user-select:none; margin: 10px auto; }
+                
+                @media print {
+                    body { background: #fff; margin: 0; padding: 0; }
+                    .page { margin: 0; box-shadow: none; border-radius: 0; width: 210mm; height: 297mm; }
+                }
             </style>
         </head>
         <body>
-            <table class="sheet-header">
+            <div class="page">
+                <table class="sheet-header">
                 <tr>
                     <td class="bold" style="font-size: 12px;">ООО "ПРУТКОН"</td>
                     <td class="text-right" style="font-size: 9px; color: #666;">
@@ -4243,19 +4923,28 @@ window.printOperationReceipt = (logId = null) => {
 
     <table class="sign-strip">
         <tr>
-            <td width="33%">
+            <td width="33%" style="position:relative; vertical-align:bottom;">
                 Принял материальные ценности:<br><br>
-                Кладовщик <span class="sign-line"></span> / <span class="bold">${responsible}</span>
+                ${signedBy ? `
+                    <div style="border:1.5px solid #22c55e; border-left:6px solid #22c55e; border-radius:4px; padding:6px 10px; font-family:'Inter'; background:#fff; font-size:8px; line-height:1.2; width:220px; box-sizing:border-box; text-align:left;">
+                        <div style="color:#22c55e; font-weight:900; text-transform:uppercase; margin-bottom:3px; font-size:7px;">ЭЦП ПОДТВЕРЖДЕНА</div>
+                        <div>Владелец: <b>${signedBy}</b></div>
+                        <div>Должность: ${signedPosition}</div>
+                        <div style="font-family:'JetBrains Mono'; opacity:0.6; font-size:6px;">S/N: ${signHash}</div>
+                        <div style="border-top:1px solid #f0f0f0; margin-top:3px; padding-top:2px; font-size:6px; color:#22c55e;">ПРУТКОН ОС: ${signedAt}</div>
+                    </div>
+                ` : `Кладовщик <span class="sign-line"></span> / <span class="bold">${responsible}</span>`}
             </td>
             <td width="33%" class="text-center">
                 <div class="stamp-box">ООО "ПРУТКОН"<br>Складской учет<br>ДЛЯ ДОКУМЕНТОВ</div>
             </td>
-            <td width="33%" class="text-right">
+            <td width="33%" class="text-right" style="vertical-align:bottom;">
                 Сдал материальные ценности:<br><br>
                 Поставщик/Экспедитор <span class="sign-line"></span> / __________________
             </td>
         </tr>
     </table>
+    </div>
 
     <script>window.print();<\/script>
     </body>
@@ -4349,9 +5038,45 @@ window.openProductHistoryCard = (itemId) => {
     const currentQty = window.dbWarehouseInv[itemId] || 0;
     
     document.getElementById('pc-item-name').innerText = itemInfo.name;
-    document.getElementById('pc-item-cat').innerText = itemInfo.category;
+    document.getElementById('pc-item-cat').innerText = itemInfo.category || 'Не определена';
     document.getElementById('pc-item-qty').innerText = window.formatWhNumber(currentQty, itemInfo.unit === 'шт' ? 0 : 2) + ' ' + itemInfo.unit;
     
+    // Технические характеристики
+    let paramsHtml = '';
+    if (itemInfo.raw) {
+        const r = itemInfo.raw;
+        const cat = itemInfo.category;
+        
+        if (cat === 'Металлопрокат (Круги)') {
+            paramsHtml += `<div><strong>Диаметр:</strong> ${r.diameter || itemInfo.dia || '—'} мм</div>`;
+            paramsHtml += `<div><strong>Марка стали:</strong> ${window.normalizeSteelType(r.steel_type || itemInfo.steel_type)}</div>`;
+            paramsHtml += `<div><strong>Длина прутка:</strong> ${r.length || r.bar_len || 6000} мм</div>`;
+        } else if (cat === 'Конвейерные ленты') {
+            paramsHtml += `<div><strong>Ширина:</strong> ${r.width || '—'} мм</div>`;
+            paramsHtml += `<div><strong>Толщина:</strong> ${r.thickness || '—'} мм</div>`;
+            paramsHtml += `<div><strong>Каркас:</strong> EP-${r.strength || '—'} / ${r.cords || '—'}</div>`;
+            paramsHtml += `<div><strong>Обкладки (в/н):</strong> ${r.cover_top || '—'} / ${r.cover_bottom || '—'} мм</div>`;
+            paramsHtml += `<div><strong>Резина:</strong> класс ${r.rubber_class || 'W'}</div>`;
+        } else if (cat === 'Рулоны-заготовки' || cat === 'Нарезные полосы') {
+            paramsHtml += `<div><strong>Ширина:</strong> ${r.width || '—'} мм</div>`;
+            paramsHtml += `<div><strong>Толщина:</strong> ${r.thickness || '—'} мм</div>`;
+            if (r.length) paramsHtml += `<div><strong>Длина:</strong> ${r.length} м</div>`;
+        } else if (cat === 'Заготовки прутков' || cat === 'Прямые прутки' || cat === 'Гнутые прутки' || cat === 'Сдвоенные прутки' || cat === 'Обрезиненные прутки') {
+            paramsHtml += `<div><strong>Диаметр:</strong> ${r.dia || r.diameter || itemInfo.dia || '—'} мм</div>`;
+            paramsHtml += `<div><strong>Марка стали:</strong> ${window.normalizeSteelType(r.steel_type || itemInfo.steel_type)}</div>`;
+            if (r.width || r.length || r.blankLength) {
+                paramsHtml += `<div><strong>Длина/Ширина:</strong> ${r.width || r.length || r.blankLength || '—'} мм</div>`;
+            }
+            if (r.pitch) paramsHtml += `<div><strong>Шаг:</strong> ${r.pitch} мм</div>`;
+        } else {
+            if (r.unit) paramsHtml += `<div><strong>Ед. изм.:</strong> ${r.unit}</div>`;
+            if (r.code || r.article) paramsHtml += `<div><strong>Артикул:</strong> ${r.code || r.article}</div>`;
+        }
+    } else {
+        paramsHtml = '<div style="grid-column: 1 / span 3; opacity:0.5;">Технические характеристики отсутствуют</div>';
+    }
+    document.getElementById('pc-item-params-grid').innerHTML = paramsHtml;
+
     const tbody = document.getElementById('pc-history-tbody');
     let html = '';
     
@@ -4377,13 +5102,29 @@ window.openProductHistoryCard = (itemId) => {
             const sign = isIncome ? '+' : '-';
             const color = isIncome ? 'var(--emerald-neon)' : 'var(--brand-red)';
             
+            let supplyInfo = '—';
+            if (isIncome) {
+                const sup = log.supplier || '—';
+                const invNum = log.invoice_num || '—';
+                const invDate = log.invoice_date ? new Date(log.invoice_date).toLocaleDateString('ru-RU') : '—';
+                supplyInfo = `
+                    <div style="font-weight:600; color:var(--text-secondary);">${sup}</div>
+                    <div style="font-size:0.7rem; opacity:0.75; margin-top:2px;">Накл. №${invNum} от ${invDate}</div>
+                `;
+            } else {
+                supplyInfo = `<span style="opacity:0.35;">— (Списание / Выпуск)</span>`;
+            }
+            
             html += `
                 <tr style="background: rgba(255,255,255,0.015);">
-                    <td>${new Date(log.date).toLocaleString('ru-RU')}</td>
-                    <td style="color:var(--brand-gold);">${OPERATIONS_CONFIG[log.op_type]?.title || log.op_type}</td>
-                    <td>${log.doc_number || 'Б/Н'}</td>
-                    <td style="color:${color}; font-weight:bold;">${sign}${window.formatWhNumber(matchingItem.qty, itemInfo.unit === 'шт' ? 0 : 2)}</td>
-                    <td><i class="fa-solid fa-user text-muted"></i> ${log.user || 'Система'}</td>
+                    <td style="padding:10px;">
+                        <div style="font-weight:600;">${new Date(log.date).toLocaleDateString('ru-RU')}</div>
+                        <div style="font-size:0.7rem; opacity:0.6; font-family:'JetBrains Mono'; margin-top:2px;">${log.doc_number || 'Б/Н'}</div>
+                    </td>
+                    <td style="color:var(--brand-gold); padding:10px; font-weight:600;">${OPERATIONS_CONFIG[log.op_type]?.title || log.op_type}</td>
+                    <td style="padding:10px;">${supplyInfo}</td>
+                    <td style="color:${color}; font-weight:900; font-family:'JetBrains Mono'; padding:10px; text-align:right;">${sign}${window.formatWhNumber(matchingItem.qty, itemInfo.unit === 'шт' ? 0 : 2)}</td>
+                    <td style="padding:10px; font-size:0.8rem;"><i class="fa-solid fa-user text-muted"></i> ${log.user || 'Система'}</td>
                 </tr>
             `;
         }

@@ -1181,6 +1181,7 @@ window.addCatalogCategory = function() {
         if (window.showToast) window.showToast("Раздел создан", 'success');
     }
 };
+window.addNewCatalogCategory = window.addCatalogCategory;
 
 window.deleteCatalogCategory = function(id) {
     if (confirm('Удалить раздел и все вложенности?')) {

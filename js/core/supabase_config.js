@@ -20,6 +20,9 @@ async function checkCloudSync() {
         console.log('✅ Облако: Связь подтверждена. Данные доступны.');
     } catch (e) {
         console.error('❌ Облако: Ошибка подключения!', e.message);
+        if (window.renderLiveStatus) {
+            window.renderLiveStatus('offline');
+        }
     }
 }
 

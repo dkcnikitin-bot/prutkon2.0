@@ -27,8 +27,7 @@ window.CatalogStep5 = {
                                  style="padding:15px; text-align:center; cursor:pointer; border:1px solid ${active ? 'var(--brand-red)' : 'rgba(255,255,255,0.05)'}; background:${active ? 'rgba(226,31,38,0.05)' : 'rgba(0,0,0,0.2)'}; transition:0.3s;">
                                 <div style="font-size:0.65rem; font-weight:900; text-transform:uppercase; color:${active ? '#fff' : '#666'}; margin-bottom:12px; height:30px; display:flex; align-items:center; justify-content:center;">${t.name}</div>
                                 <div style="background:#000; border-radius:10px; padding:10px; border:1px solid #111; margin-bottom:15px;">
-                                    <img src="${IMG}${t.img}" 
-                                         onerror="if(this.src.endsWith('.jpg')) this.src = this.src.replace('.jpg', '.png');"
+                                    <img src="${window.getSafeImagePath(t.img)}" 
                                          style="width:100%; height:80px; object-fit:contain; filter:${active ? 'none' : 'grayscale(1)'}; transition:0.3s;">
                                 </div>
                                 <div style="width:20px; height:20px; border-radius:50%; border:2px solid ${active ? 'var(--brand-red)' : '#222'}; margin:0 auto; display:flex; align-items:center; justify-content:center;">
@@ -66,8 +65,8 @@ window.CatalogStep5 = {
                                 ${locks.map(p => `<option value="${p.id}" ${s.lockId === p.id ? 'selected' : ''}>${p.art} | ${p.name} [${p.brand || ''}]</option>`).join('')}
                             </select>
                             <div style="margin-top: 15px;">
-                                <button onclick="window.CatalogManager.saveStateAndRedirect('prices.html?return=catalog')" class="btn btn-secondary" style="width:100%; height:35px; font-size:0.65rem; font-weight:900; text-transform:uppercase; border-radius:8px; background:#0c0c0c; border:1px solid #222;" title="Если замка нет в прайсе, добавить новый">
-                                    <i class="fa-solid fa-plus" style="margin-right:8px; color:var(--brand-red);"></i> СОЗДАТЬ ЗАМОК В ПРАЙСЕ
+                                <button onclick="window.CatalogStep5.openQuickCreateLock()" class="btn btn-secondary" style="width:100%; height:35px; font-size:0.65rem; font-weight:900; text-transform:uppercase; border-radius:8px; background:#0c0c0c; border:1px solid #222;" title="Если замка нет в прайсе, добавить новый">
+                                    <i class="fa-solid fa-plus" style="margin-right:8px; color:var(--brand-red);"></i> СОЗДАТЬ В ИНЖЕНЕРИИ
                                 </button>
                             </div>
                         </div>
@@ -78,47 +77,17 @@ window.CatalogStep5 = {
                 </div>
                 ` : ''}
 
-                <!-- ФИНАЛЬНАЯ ПАНЕЛЬ ДЕЙСТВИЙ (КАК НА СКРИНЕ) -->
-                <div class="panel glass-panel" style="margin-top:40px; padding:30px; border:2px solid #181818; background:rgba(0,0,0,0.8); border-radius:30px; box-shadow: 0 30px 60px rgba(0,0,0,0.5);">
-                    <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:30px;">
-                        
-                        <!-- ГРУППА 1: ДОБАВЛЕНИЕ -->
-                        <div style="display:flex; align-items:center; gap:15px;">
-                            <button onclick="window.CatalogManager.finishAction('new')" 
-                                    style="background:#2d5a27; color:#ff3b30; border:none; padding:15px 25px; border-radius:8px; font-weight:900; font-size:0.85rem; text-transform:uppercase; cursor:pointer; line-height:1.2;">
-                                добавить новый<br>конвейер
-                            </button>
-                            <div style="font-size:0.7rem; color:#fff; font-weight:700; line-height:1.2; text-transform:uppercase;">
-                                добавить или обновить -<br><span style="color:#ff3b30;">не отправить заказ!!!</span>
-                            </div>
-                        </div>
-
-                        <!-- ГРУППА 2: КОММЕРЦИЯ -->
-                        <div onclick="window.CatalogManager.finishAction('kp')" style="cursor:pointer; color:#fff; font-size:0.75rem; text-transform:uppercase; font-weight:800; border-bottom:1px solid #444; padding-bottom:5px;">
-                            сформировать КП
-                        </div>
-
-                        <!-- ГРУППА 3: ПРОВЕРКА ПО -->
-                        <div onclick="window.CatalogManager.finishAction('review')" style="cursor:pointer; font-size:0.6rem; color:#888; text-transform:uppercase; font-weight:900; line-height:1.4; transition:0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">
-                            Сохранить с проверкой<br>
-                            <span style="color:#fff;">(Алексей/Кокарев)</span><br>
-                            с изменений
-                        </div>
-
-                        <!-- ГРУППА 4: КОНСТРУКТОР -->
-                        <div onclick="window.CatalogManager.finishAction('blueprint')" style="cursor:pointer; border:1px solid #007aff; padding:15px; border-radius:4px; max-width:200px; transition:0.3s;" onmouseover="this.style.background='rgba(0,122,255,0.1)'" onmouseout="this.style.background='transparent'">
-                            <div style="font-size:0.6rem; color:#fff; text-transform:uppercase; font-weight:900; line-height:1.4;">
-                                Сформировать чертеж / нет<br>
-                                чертежа - Данил<br>
-                                конструктор
-                            </div>
-                        </div>
-
-                    </div>
+                <div class="panel glass-panel mb-3" style="padding:15px; border-radius:12px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); font-size:0.65rem; color:#888; line-height:1.4; margin-top:20px;">
+                    <strong style="color:#fff; text-transform:uppercase; font-size:0.7rem; display:block; margin-bottom:5px;"><i class="fa-solid fa-circle-info" style="color:var(--brand-red); font-weight:900;"></i> Справка по заполнению Шага 5 (Соединение ремней):</strong>
+                    * <b>Винтовая скрутка (стык)</b> — Соединение ремней внахлест. Соединительные пластины на стыке затягиваются винтами M6, а остальные — заклепками. (Требует указания шагов нахлеста)<br>
+                    * <b>Вулканизация / Бесшовное</b> — Склеивание концов ремня. Не требует крепежных винтов или замков, поставляется в виде готового кольца.<br>
+                    * <b>Механический замок</b> — Разъемный стальной замок. Упрощает установку на комбайн. (Требует выбора модели замка из прайс-листа)<br>
+                    * <b>Увеличение длины ремня на стык (в шагах)</b> — Нахлест концов ремня при скрутке. По чертежу равен 6 шагам (удлиняет ремни на 6 × шаг прутка). (Обязательно при скрутке)<br>
+                    * <b>Модель замка</b> — Конкретный механический замок из базы. (Обязательно при замковом стыке)
                 </div>
 
-                <div style="margin-top:30px; text-align:center; font-size:0.6rem; color:#333; text-transform:uppercase; font-weight:900; letter-spacing:1px;">
-                    <i class="fa-solid fa-circle-info" style="margin-right:8px;"></i> Внимание: выбор типа соединения влияет на итоговую длину ремней и способ монтажа в цеху.
+                <div style="margin-top:20px; text-align:center; font-size:0.65rem; color:#444; text-transform:uppercase; font-weight:900; letter-spacing:1px;">
+                    <i class="fa-solid fa-circle-info" style="margin-right:8px; color:var(--brand-red);"></i> Внимание: выбор типа соединения влияет на итоговую длину ремней и способ монтажа в цеху.
                 </div>
             </div>
         `;
@@ -129,7 +98,7 @@ window.CatalogStep5 = {
         if (!p) return '';
         return `
             <div style="display:flex; gap:20px; align-items:center;">
-                <img src="${p.photo || 'no_photo.png'}" style="width:100px; height:60px; object-fit:contain; background:#fff; padding:5px; border-radius:8px;">
+                <img src="${window.getSafeImagePath(p.photo || p.img)}" style="width:100px; height:60px; object-fit:contain; background:#fff; padding:5px; border-radius:8px;">
                 <div>
                     <div style="font-size:0.85rem; font-weight:700; color:#fff;">${p.name}</div>
                     <div style="font-size:0.6rem; color:var(--brand-red); font-weight:900; margin-top:4px;">АРТИКУЛ: ${p.art}</div>
@@ -141,6 +110,19 @@ window.CatalogStep5 = {
 
     setType(id) {
         window.CatalogState.connectionType = id;
+        if (id === 'mechanical') {
+            window.CatalogState.asmLocksCount = parseInt(window.CatalogState.asmBeltsCount) || (window.CatalogState.convType === '3x' ? 3 : (window.CatalogState.convType === '4x' ? 4 : 2));
+            window.CatalogState.asmLockRodsCount = 1;
+            window.CatalogState.connectionOverlapSteps = 0;
+        } else if (id === 'screws') {
+            window.CatalogState.asmLocksCount = 0;
+            window.CatalogState.asmLockRodsCount = 0;
+            window.CatalogState.connectionOverlapSteps = 6;
+        } else {
+            window.CatalogState.asmLocksCount = 0;
+            window.CatalogState.asmLockRodsCount = 0;
+            window.CatalogState.connectionOverlapSteps = 0;
+        }
         window.CatalogManager.refreshStep();
         window.CatalogManager.syncReport();
     },
@@ -158,6 +140,120 @@ window.CatalogStep5 = {
 
     setLock(id) {
         window.CatalogState.lockId = id;
+        window.CatalogManager.refreshStep();
+        window.CatalogManager.syncReport();
+    },
+
+    openQuickCreateLock() {
+        const old = document.getElementById('quick-lock-modal');
+        if (old) old.remove();
+
+        const s = window.CatalogState;
+        const targetPitch = parseFloat(s.pitch) || 40;
+        
+        const defaultArt = `lock_pitch${targetPitch}_NEW`;
+        const defaultName = `Замок механический для шага ${targetPitch} мм`;
+        const defaultCost = 1450;
+        const defaultPrice = 3190;
+
+        const modalHtml = `
+        <div id="quick-lock-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(10px); z-index:200000; display:flex; align-items:center; justify-content:center; font-family:'Inter', sans-serif;">
+            <div style="background:rgba(15,15,25,0.96); border:2px solid var(--brand-red); width:500px; padding:35px; border-radius:20px; box-shadow:0 15px 50px rgba(0,0,0,0.8); color:#fff; position:relative; overflow:hidden;">
+                <button onclick="document.getElementById('quick-lock-modal').remove()" style="position:absolute; top:20px; right:20px; background:none; border:none; color:#aaa; font-size:1.8rem; cursor:pointer; transition:0.3s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#aaa'">&times;</button>
+                
+                <h3 style="margin:0 0 25px; color:#fff; font-size:1.2rem; font-weight:900; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; gap:10px;">
+                    <i class="fa-solid fa-plus-circle" style="color:var(--brand-red);"></i> Создание замка на склад
+                </h3>
+
+                <div style="display:flex; flex-direction:column; gap:15px; margin-bottom:25px;">
+                    <div style="display:flex; flex-direction:column; gap:5px;">
+                        <label style="font-size:0.6rem; color:#888; text-transform:uppercase; font-weight:800; letter-spacing:1px;">Артикул замка</label>
+                        <input type="text" id="ql-art" value="${defaultArt}" style="background:rgba(255,255,255,0.03); border:1px solid #222; color:var(--brand-red); font-weight:bold; font-size:0.9rem; padding:10px; border-radius:8px; width:100%; outline:none; font-family:monospace;">
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:5px;">
+                        <label style="font-size:0.6rem; color:#888; text-transform:uppercase; font-weight:800; letter-spacing:1px;">Наименование замка</label>
+                        <input type="text" id="ql-name" value="${defaultName}" style="background:rgba(255,255,255,0.03); border:1px solid #222; color:#fff; font-size:0.9rem; padding:10px; border-radius:8px; width:100%; outline:none;">
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        <div style="display:flex; flex-direction:column; gap:5px;">
+                            <label style="font-size:0.6rem; color:#888; text-transform:uppercase; font-weight:800; letter-spacing:1px;">Шаг (мм)</label>
+                            <input type="number" id="ql-pitch" value="${targetPitch}" style="background:rgba(255,255,255,0.03); border:1px solid #222; color:#fff; font-weight:bold; font-size:0.9rem; padding:10px; border-radius:8px; width:100%; outline:none;">
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:5px;">
+                            <label style="font-size:0.6rem; color:#888; text-transform:uppercase; font-weight:800; letter-spacing:1px;">Бренд / Производитель</label>
+                            <input type="text" id="ql-brand" value="Prutkon" style="background:rgba(255,255,255,0.03); border:1px solid #222; color:#fff; font-size:0.9rem; padding:10px; border-radius:8px; width:100%; outline:none;">
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px; margin-top:5px;">
+                        <div style="display:flex; flex-direction:column; gap:5px;">
+                            <label style="font-size:0.6rem; color:#888; text-transform:uppercase; font-weight:800; letter-spacing:1px;">Себестоимость (₽)</label>
+                            <input type="number" id="ql-cost" value="${defaultCost}" style="background:rgba(255,255,255,0.03); border:1px solid #222; color:var(--neon-emerald); font-weight:900; font-size:1.1rem; padding:10px; border-radius:8px; width:100%; outline:none;">
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:5px;">
+                            <label style="font-size:0.6rem; color:#888; text-transform:uppercase; font-weight:800; letter-spacing:1px;">Цена продажи (₽)</label>
+                            <input type="number" id="ql-price" value="${defaultPrice}" style="background:rgba(255,255,255,0.03); border:1px solid #222; color:var(--brand-gold); font-weight:900; font-size:1.1rem; padding:10px; border-radius:8px; width:100%; outline:none;">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ql-hint-block" style="background:rgba(226,31,38,0.03); padding:15px; border-radius:12px; border:1px solid rgba(226,31,38,0.15); font-size:0.7rem; color:#ccc; line-height:1.4; margin-bottom:20px;">
+                    <i class="fa-solid fa-info-circle" style="color:var(--brand-red); margin-right:6px;"></i>
+                    <b>Калькуляция замка:</b> Включает комплект крепежных заклепок/болтов и соединительный штырь. Наценка 120%.
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button onclick="document.getElementById('quick-lock-modal').remove()" style="background:#111; border:1px solid #222; color:#fff; font-weight:900; font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; padding:12px 20px; border-radius:10px; cursor:pointer; transition:0.3s;" onmouseover="this.style.background='#222'" onmouseout="this.style.background='#111'">Отмена</button>
+                    <button onclick="window.CatalogStep5.saveQuickLock()" style="background:var(--brand-red); border:none; color:#fff; font-weight:900; font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; padding:12px 25px; border-radius:10px; cursor:pointer; box-shadow:0 5px 15px rgba(226,31,38,0.3); transition:0.3s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Сохранить на склад</button>
+                </div>
+            </div>
+        </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    },
+
+    saveQuickLock() {
+        const art = document.getElementById('ql-art').value.trim();
+        const name = document.getElementById('ql-name').value.trim();
+        const pitch = parseFloat(document.getElementById('ql-pitch').value) || 40;
+        const brand = document.getElementById('ql-brand').value.trim();
+        const cost = parseFloat(document.getElementById('ql-cost').value) || 0;
+        const price = parseFloat(document.getElementById('ql-price').value) || 0;
+
+        if (!art || !name) {
+            alert('Заполните артикул и наименование замка!');
+            return;
+        }
+
+        const newLock = {
+            id: 'lock_' + Date.now(),
+            art: art,
+            article: art,
+            name: name,
+            category: 'locks',
+            pitch: pitch,
+            brand: brand,
+            cost: cost,
+            price: price,
+            currency: 'RUB',
+            date: new Date().toISOString().split('T')[0]
+        };
+
+        if (!window.dbProducts) window.dbProducts = [];
+        window.dbProducts.push(newLock);
+        localStorage.setItem('prutkon_products', JSON.stringify(window.dbProducts));
+
+        // Привязываем новый замок
+        window.CatalogState.lockId = newLock.id;
+
+        const modal = document.getElementById('quick-lock-modal');
+        if (modal) modal.remove();
+
+        if (window.showToast) {
+            window.showToast(`🚀 Замок "${art}" успешно сохранен на склад и выбран!`, 'success');
+        }
+
         window.CatalogManager.refreshStep();
         window.CatalogManager.syncReport();
     }

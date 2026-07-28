@@ -1,12 +1,16 @@
-﻿/* rods_production.js - ПРУТКОН Engineering Workflow Central Module */
+/* rods_production.js - ПРУТКОН Engineering Workflow Central Module */
 
 const RODS_STORAGE_KEY = 'prutkon_rods_registry';
 const RODS_KEYS = ['rods_metal', 'rods_blanks', 'rods_standard', 'rods_bent', 'rods_rubber', 'rods_double'];
 
 window.formatCurr = (v) => (window.formatRusNumber ? window.formatRusNumber(v, 2) : parseFloat(v || 0).toFixed(2)) + " ₽";
 window.formatWhNumber = window.formatWhNumber || ((v, dec = 2) => new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: dec }).format(v || 0));
+window.formatMoney = window.formatMoney || ((v) => parseFloat(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₽");
 
-document.addEventListener('DOMContentLoaded', () => {
+// Временная заглушка во избежание ошибок при мгновенном старте до парсинга всего файла
+window.updateDropdowns = window.updateDropdowns || function() {};
+
+const startProductionModule = () => {
     initTabs();
     initData();
     renderRegistry();
@@ -32,7 +36,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 150);
     setTimeout(() => clearInterval(checkCoreData), 3000);
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startProductionModule);
+} else {
+    startProductionModule();
+}
 
 function getEmptyRodsStore() {
     return {
@@ -191,15 +201,39 @@ window.switchEngineeringMode = function(mode) {
         
         // initialize dropdowns if not yet
         const asmBeltLabor = document.getElementById('asm-belt-labor');
+        const asmAssLabor = document.getElementById('asm-assembly-labor');
         if (asmBeltLabor && asmBeltLabor.options.length <= 1) {
-            const laborItems = window.dbDirectories.filter(d => d.category === 'labor');
-            let lopts = '<option value="">-- Выбрать --</option>';
+            let laborItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'labor') : [];
+            
+            // Offline fallback with professional industrial services
+            if (laborItems.length === 0) {
+                laborItems = [
+                    { id: 'labor_belt_1', name: 'Подготовка стандартного ремня (2-3 корда)', price: 3150, category: 'labor', type: 'prep' },
+                    { id: 'labor_belt_2', name: 'Подготовка усиленного ремня (4 корда)', price: 4200, category: 'labor', type: 'prep' },
+                    { id: 'labor_belt_3', name: 'Специфическая подготовка ремня (обточка)', price: 5500, category: 'labor', type: 'prep' },
+                    { id: 'labor_ass_1', name: 'Сборка стандартного 2-рядного транспортера', price: 18500, category: 'labor', type: 'ass' },
+                    { id: 'labor_ass_2', name: 'Сборка стандартного 3-рядного транспортера', price: 24500, category: 'labor', type: 'ass' },
+                    { id: 'labor_ass_3', name: 'Сборка усиленного 4-рядного транспортера', price: 32000, category: 'labor', type: 'ass' },
+                    { id: 'labor_ass_4', name: 'Сложная сборка транспортера (цепи, лопатки)', price: 45000, category: 'labor', type: 'ass' }
+                ];
+            }
+
+            let prepOpts = '<option value="">-- Выбрать подготовку --</option>';
+            let assOpts = '<option value="">-- Выбрать сборку --</option>';
+
             laborItems.forEach(i => {
-                lopts += `<option value="${i.id}" data-price="${i.price || 0}" data-name="${i.name}">${i.name} (${i.price} ₽)</option>`;
+                const nameLower = i.name.toLowerCase();
+                const isPrep = i.type === 'prep' || nameLower.includes('подготов') || nameLower.includes('ремен');
+                const isAss = i.type === 'ass' || nameLower.includes('сборк') || nameLower.includes('транспорт');
+
+                const optionHtml = `<option value="${i.id}" data-price="${i.price || 0}" data-name="${i.name}">${i.name} (${parseFloat(i.price || 0).toLocaleString('ru-RU')} ₽)</option>`;
+                
+                if (isPrep) prepOpts += optionHtml;
+                if (isAss) assOpts += optionHtml;
             });
-            if(asmBeltLabor) asmBeltLabor.innerHTML = lopts;
-            const asmAssLabor = document.getElementById('asm-assembly-labor');
-            if(asmAssLabor) asmAssLabor.innerHTML = lopts;
+
+            if (asmBeltLabor) asmBeltLabor.innerHTML = prepOpts;
+            if (asmAssLabor) asmAssLabor.innerHTML = assOpts;
         }
         window.calcAssembly();
     } else {
@@ -213,6 +247,10 @@ window.calcAssembly = function() {
     const rodsCount = parseInt(document.getElementById('asm-rods-count')?.value) || 0;
     const beltsCount = parseInt(document.getElementById('asm-belts-count')?.value) || 0;
     const locksCount = parseInt(document.getElementById('asm-locks-count')?.value) || 0;
+    const lockRodsCount = parseInt(document.getElementById('asm-lock-rods-count')?.value) || 0;
+    
+    const connectionType = document.getElementById('asm-connection-type')?.value || 'screws';
+    const overlapSteps = parseInt(document.getElementById('asm-overlap-steps')?.value) || 6;
     
     const tbody = document.getElementById('asm-tbody');
     if (!tbody) return;
@@ -222,8 +260,6 @@ window.calcAssembly = function() {
     const printBelts = document.getElementById('print-belts-count');
     if (printBelts) printBelts.innerText = beltsCount;
     
-    // Hardcoded items as per user request to map to Price-list items dynamically
-    // In a full implementation, these would be selected from dropdowns, but for now we auto-match by name
     const findProduct = (nameQuery) => {
         if (!window.dbProducts) return null;
         return window.dbProducts.find(p => p && p.name && p.name.toLowerCase().includes(nameQuery.toLowerCase()));
@@ -232,7 +268,8 @@ window.calcAssembly = function() {
     const stdPlate = findProduct('Пластина соединительная') || { name: 'Пластина соединительная', price: 41.48 };
     const rivet = findProduct('Клепка спец') || { name: 'Клепка спец 6мм', price: 10.35 };
     const lockPlate = findProduct('Пластина соединительная резьбовая') || { name: 'Пластина соединительная резьбовая', price: 150 };
-    const lockRod = findProduct('пруток-замок') || { name: 'Пруток', price: 1200 };
+    const lockRod = findProduct('пруток-замок') || { name: 'Пруток замковый', price: 1200 };
+    const screwItem = findProduct('Винт') || { name: 'Винты крепежные M6', price: 15.00 };
 
     const beltLaborEl = document.getElementById('asm-belt-labor');
     const assLaborEl = document.getElementById('asm-assembly-labor');
@@ -241,18 +278,42 @@ window.calcAssembly = function() {
     const beltLaborName = beltLaborEl && beltLaborEl.selectedIndex > 0 ? beltLaborEl.options[beltLaborEl.selectedIndex].dataset.name : 'Подготовка ремней к соединению';
     
     const assLaborPrice = assLaborEl && assLaborEl.selectedIndex > 0 ? parseFloat(assLaborEl.options[assLaborEl.selectedIndex].dataset.price) : 24500;
-    const assLaborName = assLaborEl && assLaborEl.selectedIndex > 0 ? assLaborEl.options[assLaborEl.selectedIndex].dataset.name : 'Сборка транспортера (энергия, амортизация, зп итд)';
+    const assLaborName = assLaborEl && assLaborEl.selectedIndex > 0 ? assLaborEl.options[assLaborEl.selectedIndex].dataset.name : 'Сборка транспортера (услуга)';
+
+    // Получение данных ремня с Шага 1.3
+    const beltName = document.getElementById('belt1-name')?.value || '';
+    const beltQty = parseFloat(document.getElementById('belt1-qty')?.value) || 0;
+    const beltPrice = parseFloat(document.getElementById('belt1-price')?.value) || 0;
 
     // Math
-    const stdPlatesQty = (rodsCount - locksCount) * beltsCount;
-    const rivetsQty = stdPlatesQty * 2;
-    const lockPlatesQty = locksCount * beltsCount;
+    const convType = beltsCount === 2 ? '2x' : (beltsCount === 4 ? '4x' : '3x');
+    const locksVal = (connectionType === 'mechanical' || connectionType === 'screws') ? 1 : 0;
+    const f = window.calculateConveyorFasteners(rodsCount, convType, connectionType, overlapSteps, locksVal);
     
     const rows = [
-        { name: stdPlate.name, qty: stdPlatesQty, price: stdPlate.price },
-        { name: rivet.name, qty: rivetsQty, price: rivet.price },
-        { name: lockPlate.name, qty: lockPlatesQty, price: lockPlate.price },
-        { name: lockRod.name, qty: locksCount, price: lockRod.price },
+        // 0. Ремень тяговый
+        ...(beltQty > 0 
+            ? [{ name: `Ремень тяговый: ${beltName}`, qty: beltQty, price: beltPrice }] 
+            : [{ name: '⚠️ РЕМЕНЬ ТЯГОВЫЙ (НЕ ВЫБРАН СО СКЛАДА!)', qty: beltsCount, price: 0 }]),
+        // 1. Пластины боковые стандарт
+        ...(f.standardPlatesSide > 0 ? [{ name: `${stdPlate.name} (боковая, стандарт)`, qty: f.standardPlatesSide, price: stdPlate.price }] : []),
+        // 2. Пластины цр стандарт
+        ...(f.standardPlatesCentral > 0 ? [{ name: `${stdPlate.name} цр (стандарт)`, qty: f.standardPlatesCentral, price: stdPlate.price }] : []),
+        // 3. Пластины боковые стык
+        ...(f.overlapPlatesSide > 0 ? [{ name: `${stdPlate.name} (боковая, стык)`, qty: f.overlapPlatesSide, price: stdPlate.price }] : []),
+        // 4. Пластины цр стык
+        ...(f.overlapPlatesCentral > 0 ? [{ name: `${stdPlate.name} цр (стык)`, qty: f.overlapPlatesCentral, price: stdPlate.price }] : []),
+        // 5. Пластины боковые замок
+        ...(f.lockPlatesSide > 0 ? [{ name: `${lockPlate.name} (боковая, замок)`, qty: f.lockPlatesSide, price: lockPlate.price }] : []),
+        // 6. Пластины цр замок
+        ...(f.lockPlatesCentral > 0 ? [{ name: `${lockPlate.name} цр (замок)`, qty: f.lockPlatesCentral, price: lockPlate.price }] : []),
+        // 7. Крепежные винты
+        ...(f.screws > 0 ? [{ name: screwItem.name, qty: f.screws, price: screwItem.price }] : []),
+        // 8. Заклепки
+        ...(f.rivets > 0 ? [{ name: rivet.name, qty: f.rivets, price: rivet.price }] : []),
+        // 9. Замковый пруток
+        ...(lockRodsCount > 0 ? [{ name: lockRod.name, qty: lockRodsCount, price: lockRod.price }] : []),
+        // 10. Услуги
         { name: beltLaborName, qty: beltsCount, price: beltLaborPrice },
         { name: assLaborName, qty: 1, price: assLaborPrice }
     ];
@@ -300,7 +361,7 @@ window.saveCurrentStep = function() {
     // Check if assembly mode is active
     const asmView = document.getElementById('assembly-engineering-view');
     if (asmView && asmView.style.display === 'block') {
-        notify('Калькуляция сборки транспортера сохранена (итоговый расчет)', 'success');
+        if (window.saveAssemblyCalculation) window.saveAssemblyCalculation();
         return;
     }
     
@@ -326,7 +387,7 @@ window.saveCurrentStep = function() {
     else if (step == "3" && window.saveStep3) window.saveStep3();
     else if (step == "4" && window.saveStep4) window.saveStep4();
     else if (step == "5" && window.saveStep5) window.saveStep5();
-    else if (step == "6" && window.saveStep6) window.saveStep6();
+    else if (step == "6" && window.saveStep6Double) window.saveStep6Double();
     else notify(`Сохранение для шага ${step} не настроено`, 'warning');
 };
 
@@ -577,8 +638,8 @@ window.suggestBlank = function(step) {
     if (step == 3) {
         targetLength = parseFloat(document.getElementById('r-calc-blank-len')?.value) || 0;
         targetDia = document.getElementById('r-dia-select')?.value;
-    } else if (step == 5 || step == 6) {
-        targetLength = (parseFloat(document.getElementById('d-length')?.value) || 0) + 10;
+    } else if (step == 6) {
+        targetLength = (parseFloat(document.getElementById('d-length')?.value) || 0) - 5;
         targetDia = document.getElementById('d-dia-select')?.value;
     }
 
@@ -593,6 +654,9 @@ window.suggestBlank = function(step) {
         if (step == 3 && document.getElementById('r-blank-select')) {
             document.getElementById('r-blank-select').value = existsIdx;
             if (window.calcStep3) window.calcStep3();
+        } else if ((step == 5 || step == 6) && document.getElementById('d-blank-select')) {
+            document.getElementById('d-blank-select').value = existsIdx;
+            if (window.calcStep6) window.calcStep6();
         }
         window.updateDropdowns();
         return;
@@ -625,6 +689,9 @@ window.suggestBlank = function(step) {
     if (step == 3 && document.getElementById('r-blank-select')) {
         document.getElementById('r-blank-select').value = newIdx;
         if (window.calcStep3) window.calcStep3();
+    } else if ((step == 5 || step == 6) && document.getElementById('d-blank-select')) {
+        document.getElementById('d-blank-select').value = newIdx;
+        if (window.calcStep6) window.calcStep6();
     }
 };
 
@@ -827,7 +894,8 @@ window.handleDrawingUpload = function(input, targetId) {
     // Check if it's Supabase (for real upload)
     if (window.supabase) {
         target.value = "Загрузка...";
-        const fileName = drawing__;
+        const ext = file.name.split('.').pop() || 'jpg';
+        const fileName = `drawings/${targetId}_${Date.now()}.${ext}`;
         window.supabase.storage.from('prutkon-files').upload(fileName, file)
             .then(({ data, error }) => {
                 if (error) {
@@ -864,16 +932,16 @@ window.saveStep1_3 = function() {
     
     if (!window.db.rods_rubber) window.db.rods_rubber = [];
     window.db.rods_rubber.push({
-        article: "RB-$"{Date.now()}",
+        article: `RB-${Date.now()}`,
         name: name,
         length: qty,
         price: price,
         ts: Date.now()
     });
-    if (window.persistAndRender) window.persistAndRender(Ремень "$"name" сохранен на склад);
+    if (window.persistAndRender) window.persistAndRender(`Ремень "${name}" сохранен на склад`);
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+const initReturnToCatalog = () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('return') === 'catalog') {
         const headerActions = document.querySelector('.header-actions');
@@ -887,18 +955,34 @@ document.addEventListener('DOMContentLoaded', () => {
             headerActions.prepend(returnBtn);
         }
     }
-});
+};
 
-window.sendAssemblyToBasket = function() {
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initReturnToCatalog);
+} else {
+    initReturnToCatalog();
+}
+
+// ==================== ПРОФЕССИОНАЛЬНАЯ ОБРАБОТКА СБОРКИ И КП ====================
+
+/**
+ * Профессиональная обработка сметного расчета сборки
+ * Выполняет расчет комплектующих, сохраняет смету в корзину калькулятора КП и регистрирует в Центре документов
+ */
+window.saveAssemblyCalculation = function() {
     const rodsCount = parseInt(document.getElementById('asm-rods-count')?.value) || 0;
     const beltsCount = parseInt(document.getElementById('asm-belts-count')?.value) || 0;
     const locksCount = parseInt(document.getElementById('asm-locks-count')?.value) || 0;
     const lockRodsCount = parseInt(document.getElementById('asm-lock-rods-count')?.value) || 1;
 
     if (rodsCount === 0 || beltsCount === 0) {
-        return window.notify ? window.notify('Введите данные для расчета', 'warning') : alert('Введите данные');
+        const msg = 'Для расчета сметы укажите количество прутков и ремней!';
+        if (window.notify) window.notify(msg, 'warning');
+        else alert(msg);
+        return;
     }
 
+    // 1. Поиск цен комплектующих в базе или использование стандартных промышленных цен ПРУТКОН
     const findProduct = (nameQuery) => {
         if (!window.dbProducts) return null;
         return window.dbProducts.find(p => p && p.name && p.name.toLowerCase().includes(nameQuery.toLowerCase()));
@@ -907,7 +991,290 @@ window.sendAssemblyToBasket = function() {
     const stdPlate = findProduct('Пластина соединительная') || { name: 'Пластина соединительная', price: 41.48 };
     const rivet = findProduct('Клепка') || { name: 'Клепка спец 6мм', price: 10.35 };
     const lockPlate = findProduct('Пластина соединительная резьбовая') || { name: 'Пластина соединительная резьбовая', price: 150 };
-    const lockRod = findProduct('пруток') || { name: 'пруток', price: 1200 };
+    const lockRod = findProduct('пруток') || { name: 'Пруток замковый', price: 1200 };
+
+    // 2. Получение цен услуг из выпадающих списков
+    const beltLaborEl = document.getElementById('asm-belt-labor');
+    const assLaborEl = document.getElementById('asm-assembly-labor');
+    
+    const beltLaborPrice = beltLaborEl && beltLaborEl.selectedIndex > 0 ? parseFloat(beltLaborEl.options[beltLaborEl.selectedIndex].dataset.price) : 3150;
+    const beltLaborName = beltLaborEl && beltLaborEl.selectedIndex > 0 ? beltLaborEl.options[beltLaborEl.selectedIndex].dataset.name : 'Подготовка ремней к соединению';
+    
+    const assLaborPrice = assLaborEl && assLaborEl.selectedIndex > 0 ? parseFloat(assLaborEl.options[assLaborEl.selectedIndex].dataset.price) : 24500;
+    const assLaborName = assLaborEl && assLaborEl.selectedIndex > 0 ? assLaborEl.options[assLaborEl.selectedIndex].dataset.name : 'Сборка транспортера (услуга)';
+
+    // 3. Математика расчета комплектующих и стоимости
+    const stdPlatesQty = Math.max(0, rodsCount - locksCount) * beltsCount;
+    const rivetsQty = stdPlatesQty * 2;
+    const lockPlatesQty = locksCount * beltsCount;
+    
+    const calculatedItems = [
+        { art: 'PL-STD', name: stdPlate.name, qty: stdPlatesQty, price: stdPlate.price },
+        { art: 'RV-SPEC', name: rivet.name, qty: rivetsQty, price: rivet.price },
+        { art: 'PL-LOCK', name: lockPlate.name, qty: lockPlatesQty, price: lockPlate.price },
+        { art: 'RD-LOCK', name: lockRod.name, qty: lockRodsCount, price: lockRod.price },
+        { art: 'SRV-PREP', name: beltLaborName, qty: beltsCount, price: beltLaborPrice },
+        { art: 'SRV-ASS', name: assLaborName, qty: 1, price: assLaborPrice }
+    ];
+
+    // Исключаем позиции с нулевым количеством
+    const activeItems = calculatedItems.filter(it => it.qty > 0);
+    const totalSum = activeItems.reduce((sum, it) => sum + (it.qty * it.price), 0);
+
+    // 4. Интеграция с корзиной Калькулятора КП (prutkon_calc_basket)
+    try {
+        const basket = JSON.parse(localStorage.getItem('prutkon_calc_basket')) || [];
+        
+        activeItems.forEach(item => {
+            basket.push({
+                id: Date.now() + Math.random(),
+                art: item.art,
+                name: item.name,
+                specs: `Смета сборки (Прутков: ${rodsCount}, Ремней: ${beltsCount})`,
+                qty: item.qty,
+                price: item.price,
+                total: item.qty * item.price,
+                priceFormatted: window.formatCurr ? window.formatCurr(item.qty * item.price) : (item.qty * item.price + " ₽")
+            });
+        });
+
+        localStorage.setItem('prutkon_calc_basket', JSON.stringify(basket));
+        console.log("Assembly items added to CP Basket successfully.");
+    } catch (e) {
+        console.error("Failed to add assembly items to CP Basket", e);
+    }
+
+    // 5. Регистрация Инженерного расчета в реестре документов (prutkon_doc_registry)
+    try {
+        const registry = JSON.parse(localStorage.getItem('prutkon_doc_registry')) || [];
+        const docId = `ИР-${String(Math.floor(Math.random() * 90000 + 10000))}`;
+        const docOrderId = `eng_op_${Date.now()}`;
+        
+        registry.push({
+            id: docId,
+            type: 'Инженерный расчет',
+            date: new Date().toLocaleDateString('ru-RU'),
+            client: 'Инженерная сборка транспортера',
+            orderId: docOrderId,
+            sum: Math.round(totalSum * 100) / 100,
+            status: 'Черновик',
+            items: activeItems.map(it => ({
+                name: it.name,
+                art: it.art,
+                qty: it.qty,
+                price: it.price
+            })),
+            history: [{ timestamp: new Date().toLocaleString('ru-RU'), user: 'Система', action: 'Создано из Инженерии (Шаг 6)' }]
+        });
+        
+        localStorage.setItem('prutkon_doc_registry', JSON.stringify(registry));
+        if (typeof window.saveAllToLocal === 'function') {
+            window.saveAllToLocal();
+        }
+        console.log("Assembly document registered in Registry successfully.");
+    } catch (e) {
+        console.error("Failed to register assembly document in Registry", e);
+    }
+
+    // 6. Уведомление пользователя
+    const successMsg = `Смета на сумму ${parseFloat(totalSum.toFixed(2)).toLocaleString('ru-RU')} ₽ успешно рассчитана и добавлена в Калькулятор КП!`;
+    if (window.notify) window.notify(successMsg, 'success');
+    else alert(successMsg);
+};
+
+// Пробрасываем алиас для совместимости
+window.sendAssemblyToBasket = window.saveAssemblyCalculation;
+
+// ==================== ФУНКЦИИ ШАГА 1: ПАРТИИ МЕТАЛЛА ====================
+
+/** Добавляет выбранную партию металла со склада в расчёт Шага 1 */
+window.addBatchToCalculation = function() {
+    const sel = document.getElementById('m-warehouse-select');
+    if (!sel || !sel.value) return;
+
+    const batchId = sel.value;
+    const batch = (window.dbWarehouseBatches || []).find(b => String(b.id) === String(batchId));
+    if (!batch) return;
+
+    // Prevent duplicates
+    const list = document.getElementById('m-selected-batches-list');
+    if (list && list.querySelector(`[data-batch-id="${batchId}"]`)) {
+        if (window.notify) window.notify('Эта партия уже добавлена', 'warning');
+        return;
+    }
+
+    // Auto-fill metal fields from batch
+    const mName = document.getElementById('m-name');
+    const mDia = document.getElementById('m-dia');
+    const mBatchKg = document.getElementById('m-batch-kg');
+    const mPriceTon = document.getElementById('m-price-ton-vat');
+    const mWeightM = document.getElementById('m-weight-m');
+
+    if (mName) { mName.innerHTML = `<option value="${batch.name || batch.steel_type}">${batch.name || batch.steel_type}</option>`; mName.value = batch.name || batch.steel_type; mName.dataset.populated = 'true'; }
+    const dia = parseFloat(batch.dia || batch.diameter || 0);
+    if (mDia) { mDia.innerHTML = `<option value="${dia}">${dia} мм</option>`; mDia.value = dia; mDia.dataset.populated = 'true'; }
+    const qty = parseFloat(batch.qty || batch.available_weight || batch.weight || 0);
+    if (mBatchKg) mBatchKg.value = qty;
+    if (mPriceTon && batch.price) mPriceTon.value = batch.price;
+    const wm = dia > 0 ? (Math.PI * Math.pow(dia / 1000 / 2, 2) * 7850).toFixed(3) : 0;
+    if (mWeightM && !mWeightM.value) mWeightM.value = wm;
+
+    // Show chip in list
+    if (list) {
+        const chip = document.createElement('span');
+        chip.dataset.batchId = batchId;
+        chip.style.cssText = 'background:rgba(255,180,0,0.15); border:1px solid var(--brand-gold); border-radius:4px; padding:3px 8px; font-size:0.7rem; color:var(--brand-gold); display:flex; align-items:center; gap:5px;';
+        chip.innerHTML = `${batch.name || batch.steel_type} Ø${dia} мм [${qty} кг] <span style="cursor:pointer; color:#fff;" onclick="this.parentElement.remove()">✕</span>`;
+        list.appendChild(chip);
+    }
+
+    if (window.calcStep1) window.calcStep1();
+};
+
+/** Очищает все выбранные партии металла */
+window.clearSelectedBatches = function() {
+    const list = document.getElementById('m-selected-batches-list');
+    if (list) list.innerHTML = '';
+    const sel = document.getElementById('m-warehouse-select');
+    if (sel) sel.value = '';
+    const mName = document.getElementById('m-name');
+    const mDia = document.getElementById('m-dia');
+    if (mName) { delete mName.dataset.populated; }
+    if (mDia) { delete mDia.dataset.populated; }
+    if (window.updateDropdowns) window.updateDropdowns();
+};
+
+/** Автоматически подтягивает данные металла из справочника по марке/диаметру */
+window.autoPullMetalData = function() {
+    const mName = document.getElementById('m-name');
+    const mDia = document.getElementById('m-dia');
+    if (!mName || !mDia || !mName.value || !mDia.value) return;
+
+    const selectedName = mName.value;
+    const selectedDia = parseFloat(mDia.value);
+
+    const metals = (window.dbDirectories || []).filter(d => d.category === 'metal');
+    const match = metals.find(m => {
+        const n = m.name || m.steel_type || '';
+        const d = parseFloat(m.diameter || 0);
+        return n === selectedName && d === selectedDia;
+    });
+
+    if (match) {
+        const mPriceTon = document.getElementById('m-price-ton-vat');
+        const mWeightM = document.getElementById('m-weight-m');
+        const mHardness = document.getElementById('m-res-hardness');
+        const mHardnessInfo = document.getElementById('m-hardness-info');
+
+        if (mPriceTon && match.price) mPriceTon.value = match.price;
+        // Auto-calculate theoretical weight per metre
+        const wm = selectedDia > 0 ? (Math.PI * Math.pow(selectedDia / 1000 / 2, 2) * 7850).toFixed(3) : 0;
+        if (mWeightM && !mWeightM.value) mWeightM.value = wm;
+        if (match.hardness && mHardness) {
+            mHardness.textContent = match.hardness;
+            if (mHardnessInfo) mHardnessInfo.style.display = 'block';
+        }
+    }
+
+    if (window.calcStep1) window.calcStep1();
+};
+
+// ==================== ФУНКЦИИ БЛОКА «ОТ КЛИЕНТА» ====================
+
+/** Переключает видимость блока ввода количества прутков от клиента */
+window.toggleProdClientProvided = function(checked) {
+    const group = document.getElementById('prod-client-qty-group');
+    if (group) group.style.display = checked ? 'block' : 'none';
+    if (!checked) {
+        const inp = document.getElementById('prod-client-qty');
+        if (inp) inp.value = 0;
+    }
+    window.updateProductionRequirements();
+};
+
+/** Пересчитывает, сколько прутков нужно произвести с учётом поставленных клиентом */
+window.updateProductionRequirements = function() {
+    const totalRods = parseInt(document.getElementById('asm-rods-count')?.value) || 0;
+    const clientQty = parseInt(document.getElementById('prod-client-qty')?.value) || 0;
+    const makeQty = Math.max(0, totalRods - clientQty);
+
+    const makeDisplay = document.getElementById('prod-make-qty-display');
+    if (makeDisplay) makeDisplay.textContent = makeQty;
+
+    const reqBox = document.getElementById('prod-requirements-box');
+    if (!reqBox) return;
+
+    if (totalRods === 0) {
+        reqBox.innerHTML = '<div style="color:#888; font-size:0.8rem;">Укажите количество прутков в блоке «Сборка»</div>';
+        return;
+    }
+
+    reqBox.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; font-size:0.8rem;">
+            <div class="mini-stat">Всего прутков: <strong style="color:var(--brand-gold)">${totalRods}</strong> шт.</div>
+            <div class="mini-stat">От клиента: <strong style="color:#4fc3f7">${clientQty}</strong> шт.</div>
+            <div class="mini-stat">Производство: <strong style="color:var(--neon-emerald)">${makeQty}</strong> шт.</div>
+        </div>
+    `;
+};
+
+// ==================== ФУНКЦИИ ВЫБОРА РЕМНЕЙ СО СКЛАДА ====================
+
+/** Заполняет поля при выборе партии ремней со склада на Шаге 1.3 */
+window.onBeltWarehouseSelect = function() {
+    const sel = document.getElementById('belt-warehouse-select');
+    if (!sel || !sel.value) return;
+
+    const batchId = sel.value;
+    const batch = (window.dbWarehouseBatches || []).find(b => String(b.id) === String(batchId));
+    if (!batch) return;
+
+    const nameInput = document.getElementById('belt1-name');
+    const qtyInput = document.getElementById('belt1-qty');
+    const priceInput = document.getElementById('belt1-price');
+
+    if (nameInput) nameInput.value = batch.name || batch.steel_type || 'Лента';
+    if (qtyInput) {
+        const qty = parseFloat(batch.qty || batch.available_weight || batch.weight || 0);
+        qtyInput.value = qty;
+    }
+    if (priceInput) {
+        priceInput.value = batch.price || '';
+    }
+};
+
+/** Очищает выбранную партию ремней и поля ввода */
+window.clearSelectedBelts = function() {
+    const sel = document.getElementById('belt-warehouse-select');
+    if (sel) sel.value = '';
+    const nameInput = document.getElementById('belt1-name');
+    const qtyInput = document.getElementById('belt1-qty');
+    const priceInput = document.getElementById('belt1-price');
+    if (nameInput) nameInput.value = '';
+    if (qtyInput) qtyInput.value = '';
+    if (priceInput) priceInput.value = '';
+};
+
+/** Генерирует и печатает премиальную печатную форму инженерного расчета сборки */
+window.printEngineeringAssembly = function() {
+    const rodsCount = parseInt(document.getElementById('asm-rods-count')?.value) || 0;
+    const beltsCount = parseInt(document.getElementById('asm-belts-count')?.value) || 0;
+    const locksCount = parseInt(document.getElementById('asm-locks-count')?.value) || 0;
+    const lockRodsCount = parseInt(document.getElementById('asm-lock-rods-count')?.value) || 0;
+
+    const connectionType = document.getElementById('asm-connection-type')?.value || 'screws';
+    const overlapSteps = parseInt(document.getElementById('asm-overlap-steps')?.value) || 6;
+
+    const findProduct = (nameQuery) => {
+        if (!window.dbProducts) return null;
+        return window.dbProducts.find(p => p && p.name && p.name.toLowerCase().includes(nameQuery.toLowerCase()));
+    };
+
+    const stdPlate = findProduct('Пластина соединительная') || { name: 'Пластина соединительная', price: 41.48 };
+    const rivet = findProduct('Клепка спец') || { name: 'Клепка спец 6мм', price: 10.35 };
+    const lockPlate = findProduct('Пластина соединительная резьбовая') || { name: 'Пластина соединительная резьбовая', price: 150 };
+    const lockRod = findProduct('пруток-замок') || { name: 'Пруток замковый', price: 1200 };
+    const screwItem = findProduct('Винт') || { name: 'Винты крепежные M6', price: 15.00 };
 
     const beltLaborEl = document.getElementById('asm-belt-labor');
     const assLaborEl = document.getElementById('asm-assembly-labor');
@@ -916,39 +1283,188 @@ window.sendAssemblyToBasket = function() {
     const beltLaborName = beltLaborEl && beltLaborEl.selectedIndex > 0 ? beltLaborEl.options[beltLaborEl.selectedIndex].dataset.name : 'Подготовка ремней к соединению';
     
     const assLaborPrice = assLaborEl && assLaborEl.selectedIndex > 0 ? parseFloat(assLaborEl.options[assLaborEl.selectedIndex].dataset.price) : 24500;
-    const assLaborName = assLaborEl && assLaborEl.selectedIndex > 0 ? assLaborEl.options[assLaborEl.selectedIndex].dataset.name : 'Сборка транспортера (энергия, амортизация, зп итд)';
+    const assLaborName = assLaborEl && assLaborEl.selectedIndex > 0 ? assLaborEl.options[assLaborEl.selectedIndex].dataset.name : 'Сборка транспортера (услуга)';
 
-    const stdPlatesQty = (rodsCount - locksCount) * beltsCount;
-    const rivetsQty = stdPlatesQty * 2;
-    const lockPlatesQty = locksCount * beltsCount;
-    
-    const itemsToAdd = [
-        { name: stdPlate.name, qty: stdPlatesQty, price: stdPlate.price },
-        { name: rivet.name, qty: rivetsQty, price: rivet.price },
-        { name: lockPlate.name, qty: lockPlatesQty, price: lockPlate.price },
-        { name: lockRod.name, qty: lockRodsCount, price: lockRod.price },
+    // Получение данных ремня с Шага 1.3
+    const beltName = document.getElementById('belt1-name')?.value || '';
+    const beltQty = parseFloat(document.getElementById('belt1-qty')?.value) || 0;
+    const beltPrice = parseFloat(document.getElementById('belt1-price')?.value) || 0;
+
+    const convType = beltsCount === 2 ? '2x' : (beltsCount === 4 ? '4x' : '3x');
+    const locksVal = (connectionType === 'mechanical' || connectionType === 'screws') ? 1 : 0;
+    const f = window.calculateConveyorFasteners(rodsCount, convType, connectionType, overlapSteps, locksVal);
+
+    const rows = [
+        // 0. Ремень тяговый
+        ...(beltQty > 0 
+            ? [{ name: `Ремень тяговый: ${beltName}`, qty: beltQty, price: beltPrice }] 
+            : [{ name: '⚠️ РЕМЕНЬ ТЯГОВЫЙ (НЕ ВЫБРАН СО СКЛАДА!)', qty: beltsCount, price: 0 }]),
+        // 1. Пластины боковые стандарт
+        ...(f.standardPlatesSide > 0 ? [{ name: `${stdPlate.name} (боковая, стандарт)`, qty: f.standardPlatesSide, price: stdPlate.price }] : []),
+        // 2. Пластины цр стандарт
+        ...(f.standardPlatesCentral > 0 ? [{ name: `${stdPlate.name} цр (стандарт)`, qty: f.standardPlatesCentral, price: stdPlate.price }] : []),
+        // 3. Пластины боковые стык
+        ...(f.overlapPlatesSide > 0 ? [{ name: `${stdPlate.name} (боковая, стык)`, qty: f.overlapPlatesSide, price: stdPlate.price }] : []),
+        // 4. Пластины цр стык
+        ...(f.overlapPlatesCentral > 0 ? [{ name: `${stdPlate.name} цр (стык)`, qty: f.overlapPlatesCentral, price: stdPlate.price }] : []),
+        // 5. Пластины боковые замок
+        ...(f.lockPlatesSide > 0 ? [{ name: `${lockPlate.name} (боковая, замок)`, qty: f.lockPlatesSide, price: lockPlate.price }] : []),
+        // 6. Пластины цр замок
+        ...(f.lockPlatesCentral > 0 ? [{ name: `${lockPlate.name} цр (замок)`, qty: f.lockPlatesCentral, price: lockPlate.price }] : []),
+        // 7. Крепежные винты
+        ...(f.screws > 0 ? [{ name: screwItem.name, qty: f.screws, price: screwItem.price }] : []),
+        // 8. Заклепки
+        ...(f.rivets > 0 ? [{ name: rivet.name, qty: f.rivets, price: rivet.price }] : []),
+        // 9. Замковый пруток
+        ...(lockRodsCount > 0 ? [{ name: lockRod.name, qty: lockRodsCount, price: lockRod.price }] : []),
+        // 10. Услуги
         { name: beltLaborName, qty: beltsCount, price: beltLaborPrice },
         { name: assLaborName, qty: 1, price: assLaborPrice }
     ];
 
-    let basket = [];
-    try {
-        basket = JSON.parse(localStorage.getItem('prutkon_calc_basket')) || [];
-    } catch(e) {}
-    
-    itemsToAdd.forEach(item => {
-        basket.push({
-            id: Date.now() + Math.random(),
-            art: 'СБОРКА',
-            name: item.name,
-            specs: 'Из инженерии прутка',
-            qty: item.qty,
-            price: item.price,
-            total: item.qty * item.price,
-            priceFormatted: window.formatCurr ? window.formatCurr(item.qty * item.price) : (item.qty * item.price + " ₽")
-        });
+    let totalCost = 0;
+    let tbodyRows = '';
+    rows.forEach((r, idx) => {
+        const sum = r.qty * r.price;
+        totalCost += sum;
+        tbodyRows += `
+            <tr style="${idx % 2 === 0 ? 'background:#f8fafc;' : ''}">
+                <td style="text-align:center; font-family:'JetBrains Mono'; font-weight:500;">${idx + 1}</td>
+                <td style="font-weight:700; color:#1e293b; font-size:11px;">${r.name}</td>
+                <td style="text-align:center; font-family:'JetBrains Mono'; font-weight:900; color:#ff9f0a; font-size:11px;">${r.qty}</td>
+                <td style="text-align:right; font-family:'JetBrains Mono'; font-size:11px;">${parseFloat(r.price).toLocaleString('ru-RU')} ₽</td>
+                <td style="text-align:right; font-weight:900; font-family:'JetBrains Mono'; font-size:11px;">${sum.toLocaleString('ru-RU')} ₽</td>
+            </tr>
+        `;
     });
 
-    localStorage.setItem('prutkon_calc_basket', JSON.stringify(basket));
-    if (window.notify) window.notify('Сборка добавлена в Калькулятор КП!', 'success');
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+        alert('Пожалуйста, разрешите всплывающие окна для печати!');
+        return;
+    }
+
+    const timestamp = new Date().toLocaleDateString('ru-RU') + ' ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const docId = 'ИР-' + Math.floor(Math.random() * 90000 + 10000);
+
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Инженерный расчет сборки - ПРУТКОН ОС</title>
+                <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Inter:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+                <style>
+                    @page { size: A4; margin: 0; }
+                    body { margin: 0; padding: 0; background: #e5e9f0; font-family: 'Inter', sans-serif; -webkit-print-color-adjust: exact; color: #000; }
+                    .page { 
+                        width: 210mm; height: 297mm; padding: 18mm; margin: 10mm auto; background: #fff; 
+                        position: relative; overflow: hidden; box-sizing: border-box;
+                        box-shadow: 0 15px 35px rgba(0,0,0,0.1); border-radius: 8px;
+                        display: flex; flex-direction: column;
+                    }
+                    .brand-border { position: absolute; left:0; top:0; bottom:0; width: 4mm; background: #ed1c24; }
+                    .watermark {
+                        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg);
+                        font-size: 80px; font-weight: 900; color: rgba(0,0,0,0.015); z-index:0; pointer-events:none; text-transform:uppercase;
+                    }
+                    .content { position: relative; z-index: 10; height: 100%; display: flex; flex-direction: column; }
+                    
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+                    th { background: #0f172a; color: #fff; text-transform: uppercase; font-size: 9px; font-weight: 900; padding: 10px 8px; text-align: center; border: 1px solid #0f172a; }
+                    td { border: 1px solid #cbd5e1; padding: 8px 10px; font-size: 11px; }
+                    
+                    @media print { body { background: #fff; } .page { margin: 0; box-shadow: none; border-radius: 0; } }
+                </style>
+            </head>
+            <body>
+                <div class="page">
+                    <div class="brand-border"></div>
+                    <div class="watermark">ENGINEERING</div>
+                    <div class="content">
+                        
+                        <!-- HEADER -->
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px; border-bottom:4px solid #111; padding-bottom:20px;">
+                            <div style="font-weight: 900; font-size: 16px; font-family:'Outfit';">ООО "ПРУТКОН"</div>
+                            <div style="text-align:right;">
+                                <div style="font-size:10px; color:#ed1c24; font-weight:900; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">ИНЖЕНЕРНО-ТЕХНИЧЕСКИЙ ОТДЕЛ</div>
+                                <h1 style="margin:0; font-size:26px; font-weight:900; color:#111;">СМЕТА И РАСЧЕТ СБОРКИ</h1>
+                                <div style="font-size:18px; font-weight:400; font-family:'JetBrains Mono';">РАСЧЕТ <strong>№ ${docId}</strong></div>
+                                <div style="font-size:12px; margin-top:5px; opacity:0.6;">ОТ ${timestamp}</div>
+                            </div>
+                        </div>
+
+                        <!-- META DATA -->
+                        <div style="font-size: 9px; font-weight: 900; color: #888; margin-bottom: 8px; text-transform: uppercase; border-left: 3px solid #ed1c24; padding-left: 8px;">ТЕХНИЧЕСКИЕ ДАННЫЕ РАСЧЕТА</div>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 11px; color: #000;">
+                            <tr>
+                                <td style="border: 1px solid #111; padding: 8px; font-weight:bold; background:#f8fafc; width:25%;">Количество прутков:</td>
+                                <td style="border: 1px solid #111; padding: 8px; font-family:'JetBrains Mono'; font-weight:bold; width:25%;">${rodsCount} шт</td>
+                                <td style="border: 1px solid #111; padding: 8px; font-weight:bold; background:#f8fafc; width:25%;">Количество ремней:</td>
+                                <td style="border: 1px solid #111; padding: 8px; font-family:'JetBrains Mono'; font-weight:bold; width:25%;">${beltsCount} шт</td>
+                            </tr>
+                            <tr>
+                                <td style="border: 1px solid #111; padding: 8px; font-weight:bold; background:#f8fafc;">Количество замков:</td>
+                                <td style="border: 1px solid #111; padding: 8px; font-family:'JetBrains Mono';">${locksCount} шт</td>
+                                <td style="border: 1px solid #111; padding: 8px; font-weight:bold; background:#f8fafc;">Прутков на замок:</td>
+                                <td style="border: 1px solid #111; padding: 8px; font-family:'JetBrains Mono';">${lockRodsCount} шт</td>
+                            </tr>
+                        </table>
+
+                        <!-- DATA GRID -->
+                        <div style="font-size: 9px; font-weight: 900; color: #888; margin-bottom: 8px; text-transform: uppercase; border-left: 3px solid #ed1c24; padding-left: 8px;">ДЕТАЛИЗАЦИЯ СМЕТЫ (КОМПЛЕКТУЮЩИЕ И РАБОТЫ)</div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 30px;">№</th>
+                                    <th style="text-align:left;">Наименование элемента / услуги</th>
+                                    <th style="width: 60px;">Кол-во</th>
+                                    <th style="width: 120px; text-align:right;">Цена</th>
+                                    <th style="width: 140px; text-align:right;">Сумма</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tbodyRows}
+                            </tbody>
+                        </table>
+
+                        <!-- TOTALS -->
+                        <div style="display:flex; justify-content:flex-end; margin-bottom:30px;">
+                            <div style="width:360px; background:#111; color:#fff; padding:20px; border-radius:8px; position:relative; overflow:hidden;">
+                                <div style="position:absolute; left:0; top:0; bottom:0; width:6px; background:#ed1c24;"></div>
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-size:14px; font-weight:900; text-transform:uppercase;">ИТОГО СБОРКА:</span>
+                                    <span style="font-size:18px; font-weight:900; color:#ed1c24; font-family:'Outfit';">${totalCost.toLocaleString('ru-RU')} ₽</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SIGNATURES AND STAMP -->
+                        <div style="margin-top:auto; display:grid; grid-template-columns: 1fr 1fr; gap:60px; padding-bottom:15px; border-top:1px solid #f0f0f0; padding-top:20px;">
+                            <div>
+                                <div style="font-size:9px; font-weight:900; color:#888; text-transform:uppercase; margin-bottom:15px; letter-spacing:1px;">ИСПОЛНИТЕЛЬ</div>
+                                <div style="font-size:11px; margin-top:10px;">Инженер-технолог: <div style="border-bottom:1px solid #000; width:150px; display:inline-block; margin-left:10px;"></div></div>
+                                <div style="font-size:11px; margin-top:15px;">Подпись: <div style="border-bottom:1px solid #000; width:150px; display:inline-block; margin-left:10px;"></div></div>
+                            </div>
+                            <div>
+                                <div style="font-size:9px; font-weight:900; color:#888; text-transform:uppercase; margin-bottom:10px; letter-spacing:1px;">ПРИЕМКА И КОНТРОЛЬ ОТК</div>
+                                <div style="border: 2px double #002244; color: #002244; font-family: 'Outfit', sans-serif; width: 90px; height: 90px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 7px; font-weight: 900; line-height: 1.2; text-align: center; transform: rotate(-8deg); opacity: 0.85; user-select:none; margin:0 auto;">
+                                    <div style="font-size: 6px; border-bottom: 1px solid #002244; padding-bottom: 1px; width: 60px; text-transform: uppercase;">ПРУТКОН</div>
+                                    <div style="font-size: 10px; font-weight: 900; margin: 1px 0;">ОТК №2</div>
+                                    <div style="font-size: 5px; letter-spacing: 0.5px; text-transform: uppercase;">КОНТРОЛЬ ПРОЙДЕН</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="font-size:9px; color:#94a3b8; line-height:1.4; border-top:1px solid #f1f5f9; padding-top:10px; text-align:center;">
+                            Электронный расчет сметы сборки. Сформировано в АСУП ПРУТКОН ОС.
+                        </div>
+
+                    </div>
+                </div>
+                <script>
+                    window.print();
+                <\/script>
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
 };

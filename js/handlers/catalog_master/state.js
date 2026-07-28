@@ -23,17 +23,16 @@ window.CatalogState = {
 
 window.CatalogDicts = {
     get crops() {
-        const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'crops') : [];
-        if (dbItems.length > 0) return dbItems.map(d => d.name);
         return [
-            'Транспортер основного просеивания (шаг 30)',
-            'Транспортер ботвы',
-            'Выгрузной транспортер',
-            'Транспортер №30',
-            'Транспортер №40',
-            'Боковой элеватор',
-            'Приемный транспортер',
-            'Сортировочный транспортер'
+            'Картофель',
+            'Сахарная свекла',
+            'Морковь',
+            'Лук репчатый',
+            'Чеснок',
+            'Столовая свекла',
+            'Цикорий',
+            'Цветочные луковицы',
+            'Капуста / Зелень'
         ];
     },
     convTypes: [{ id: '2x', name: '2-х рядный', img: '2.png' }, { id: '3x', name: '3-х рядный', img: '3.png' }, { id: '4x', name: '4-х рядный', img: '4.png' }],
@@ -44,7 +43,7 @@ window.CatalogDicts = {
     get pitches() {
         const dbItems = window.dbDirectories ? window.dbDirectories.filter(d => d.category === 'belt_pitches') : [];
         if (dbItems.length > 0) return dbItems.map(d => parseFloat(d.name) || d.name);
-        return [20, 23, 28, 30, 32, 33, 34, 35, 36, 37, 38, 40, 42, 43, 44, 45, 48, 50, 55, 56, 60, 64, 65, 70, 75, 80, 175, 185];
+        return [20, 23, 28, 30, 32, 33, 34, 35, 36, 37, 38, 40, 42, 43, 44, 45, 48, 50, 55, 56, 60, 64, 65, 70, 75, 80, 150, 160, 175, 185, 200, 220, 240, 250, 280];
     },
     beltTypes: [
         { id: 'R', name: 'R', img: '9.png' }, { id: 'S', name: 'S', img: '10.png' }, { id: 'DS', name: 'DS', img: '11.png' }, 

@@ -34,6 +34,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     populateBrands();
 });
 
+// Слушаем обновление БД для перезаполнения списков
+window.addEventListener('db_updated', () => {
+    console.log("🔄 База обновлена. Перезаполняем данные калькулятора...");
+    window.loadAllProducts();
+    window.populateProductCategories();
+    window.populateBrands();
+});
+
 // ==================== ФУНКЦИИ МОДАЛА МОДЕЛЕЙ ====================
 
 window.addNewModelModal = () => {
@@ -163,6 +171,11 @@ function initCalculator() {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', () => {
             window.selectedBasePrice = null;
+            const overrideEl = document.getElementById('calc-price-override');
+            if (overrideEl) {
+                overrideEl.value = '';
+                overrideEl.placeholder = 'Авто...';
+            }
             calculateCP();
         });
     });
@@ -186,27 +199,99 @@ window.toggleCalcClientProvided = (checked) => {
 
 function populateBrands() {
     const sel = document.getElementById('calc-brand-select');
-    if (!sel || !window.catalogData) return;
-    const brands = [...new Set(window.catalogData.map(item => item.brand))].filter(Boolean).sort();
-    sel.innerHTML = '<option value="">-- Бренд --</option>' + brands.map(b => `<option value="${b}">${b}</option>`).join('');
+    if (!sel) return;
+    
+    if (window.catalogData && !Array.isArray(window.catalogData)) {
+        window.catalogData = Object.values(window.catalogData || {});
+    }
+    if (!window.dbDirectories) window.dbDirectories = [];
+
+    const catalogBrands = (window.catalogData || []).map(item => item.brand);
+    const directoryBrands = (window.dbDirectories || [])
+        .filter(d => d.category === 'machinery')
+        .map(d => d.brand || d.data?.brand);
+        
+    const staticBrands = ['Grimme', 'Ropa', 'Dewulf', 'AVR', 'Holmer', 'Wühlmaus', 'Amac', 'Kverneland'];
+    
+    const allBrands = [...new Set([...catalogBrands, ...directoryBrands, ...staticBrands])]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b));
+
+    sel.innerHTML = '<option value="">-- Бренд --</option>' + allBrands.map(b => `<option value="${b}">${b}</option>`).join('');
 }
 window.populateBrands = populateBrands;
 
 window.populateModels = function (brand) {
     const sel = document.getElementById('calc-model-select');
-    if (!sel || !brand) return;
-    const filtered = window.catalogData.filter(item => item.brand === brand);
-    const models = [...new Set(filtered.map(item => item.model || item.art))].filter(Boolean).sort();
-    sel.innerHTML = '<option value="">-- Модель --</option>' + models.map(m => `<option value="${m}">${m}</option>`).join('');
-    if (filtered.length > 0) window.fillForm(filtered[0]);
+    if (!sel) return;
+    if (!brand) {
+        sel.innerHTML = '<option value="">-- Модель --</option>';
+        return;
+    }
+    
+    if (window.catalogData && !Array.isArray(window.catalogData)) {
+        window.catalogData = Object.values(window.catalogData || {});
+    }
+
+    const catalogModels = (window.catalogData || [])
+        .filter(item => String(item.brand).toLowerCase() === brand.toLowerCase())
+        .map(item => item.model || item.art);
+        
+    const directoryModels = (window.dbDirectories || [])
+        .filter(d => d.category === 'machinery' && String(d.brand || d.data?.brand).toLowerCase() === brand.toLowerCase())
+        .map(d => d.model || d.data?.model);
+        
+    const HARVESTER_BRANDS = {
+        'Grimme': ['SE 75-20', 'SE 75-30', 'SE 75-40', 'SE 75-55', 'SE 85-55', 'SE 150-60', 'SE 260', 'SV 260', 'GT 170', 'WR 200', 'Tectron 415', 'Varitron 220', 'Varitron 270', 'Varitron 470', 'EVO 280', 'EVO 290'],
+        'Ropa': ['Keiler 1', 'Keiler 2', 'Tiger 6', 'Tiger 6S', 'Panther 2', 'Panther 2S', 'Maus 5', 'Maus 6'],
+        'Dewulf': ['Kwatro', 'Torro', 'RA3060', 'Enduro', 'R3060', 'Zeno', 'R2060', 'R1060'],
+        'AVR': ['Puma 3', 'Puma 4', 'Spirit 5200', 'Spirit 7200', 'Spirit 9200', 'Spirit 6100', 'Spirit 6200', 'Spirit 8200'],
+        'Holmer': ['Terra Dos T4-30', 'Terra Dos T4-40', 'Terra Felis 3'],
+        'Wühlmaus': ['1033', '1633', '2011', '2411'],
+        'Amac': ['ZM2', 'ZM4', 'AX2', 'G2'],
+        'Kverneland': ['UN 3100', 'UN 3200', 'Minos']
+    };
+    
+    const staticKey = Object.keys(HARVESTER_BRANDS).find(k => k.toLowerCase() === brand.toLowerCase());
+    const staticModels = staticKey ? HARVESTER_BRANDS[staticKey] : [];
+
+    const allModels = [...new Set([...catalogModels, ...directoryModels, ...staticModels])]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b));
+
+    sel.innerHTML = '<option value="">-- Модель --</option>' + allModels.map(m => `<option value="${m}">${m}</option>`).join('');
+    
+    const foundCatalogItem = (window.catalogData || []).find(item => String(item.brand).toLowerCase() === brand.toLowerCase());
+    if (foundCatalogItem) window.fillForm(foundCatalogItem);
 };
 
 window.populateYears = function (brand, model) {
     const sel = document.getElementById('calc-year-select');
     if (!sel) return;
-    const items = window.catalogData.filter(item => item.brand === brand && item.model === model);
-    const years = [...new Set(items.map(item => item.year || 'Стандарт'))].filter(Boolean).sort();
-    sel.innerHTML = '<option value="">-- Версии --</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+    if (!brand || !model) {
+        sel.innerHTML = '<option value="">--</option>';
+        return;
+    }
+    
+    if (window.catalogData && !Array.isArray(window.catalogData)) {
+        window.catalogData = Object.values(window.catalogData || {});
+    }
+
+    const catalogYears = (window.catalogData || [])
+        .filter(item => String(item.brand).toLowerCase() === String(brand).toLowerCase() && String(item.model || item.art).toLowerCase() === String(model).toLowerCase())
+        .map(item => item.year);
+        
+    const directoryYears = (window.dbDirectories || [])
+        .filter(d => d.category === 'machinery' && String(d.brand || d.data?.brand).toLowerCase() === String(brand).toLowerCase() && String(d.model || d.data?.model).toLowerCase() === String(model).toLowerCase())
+        .map(d => d.year || d.data?.year);
+
+    const staticYears = ['2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'];
+
+    const allYears = [...new Set([...catalogYears, ...directoryYears, ...staticYears])]
+        .filter(Boolean)
+        .sort((a, b) => b - a);
+
+    sel.innerHTML = '<option value="">--</option>' + allYears.map(y => `<option value="${y}">${y}</option>`).join('');
 };
 
 window.fillForm = function (t) {
@@ -247,6 +332,8 @@ window.loadItemToForm = function (idx) {
     // Сохраняем цену из корзины, чтобы формула её не перебила
     if (item.price) {
         window.selectedBasePrice = parseFloat(item.price);
+        const overrideEl = document.getElementById('calc-price-override');
+        if (overrideEl) overrideEl.value = window.selectedBasePrice.toFixed(2);
     }
 
     calculateCP();
@@ -262,6 +349,7 @@ function calculateCP() {
     const P = parseFloat(document.getElementById('calc-pitch')?.value) || 0;
     const Q = parseFloat(document.getElementById('calc-qty')?.value) || 1;
     const priceDisplay = document.getElementById('calc-main-price');
+    const priceOverrideEl = document.getElementById('calc-price-override');
 
     const isClientProvided = document.getElementById('calc-client-provided')?.checked || false;
     let clientQty = isClientProvided ? (parseFloat(document.getElementById('calc-client-qty')?.value) || 0) : 0;
@@ -271,35 +359,45 @@ function calculateCP() {
     const displayMakeQty = document.getElementById('calc-make-qty-display');
     if (displayMakeQty) displayMakeQty.innerText = makeQty;
 
-    let total = 0;
+    let basePrice = 0;
+    let isCalculated = false;
 
-    if (window.selectedBasePrice !== undefined && window.selectedBasePrice !== null) {
-        if (isClientProvided && clientQty > 0) {
-            const laborVatMarkup = ((L / 1000) * 250) * 2.0 * 1.22;
-            const laborPrice = Math.min(laborVatMarkup, window.selectedBasePrice * 0.4);
-            total = (makeQty * window.selectedBasePrice) + (clientQty * laborPrice);
-        } else {
-            total = window.selectedBasePrice * Q;
-        }
+    // Сначала проверяем ручной ввод цены
+    if (priceOverrideEl && priceOverrideEl.value !== '') {
+        basePrice = parseFloat(priceOverrideEl.value) || 0;
+        window.selectedBasePrice = basePrice;
+    } else if (window.selectedBasePrice !== undefined && window.selectedBasePrice !== null) {
+        basePrice = window.selectedBasePrice;
+        if (priceOverrideEl) priceOverrideEl.placeholder = basePrice.toFixed(2);
     } else {
+        // Автоматический расчет по размерам
         if (L <= 0 || W <= 0 || P <= 0) {
-            if (priceDisplay) priceDisplay.innerText = '0,00 ₽';
-            return 0;
+            basePrice = 0;
+        } else {
+            const rods = Math.round(L / P);
+            const material = (rods * 350) + (L * 2 * 0.95);
+            const labor = (L / 1000) * 250;
+            basePrice = parseFloat(((material + labor) * 1.4).toFixed(2));
         }
+        isCalculated = true;
+        if (priceOverrideEl) {
+            priceOverrideEl.placeholder = basePrice > 0 ? basePrice.toFixed(2) : 'Авто...';
+        }
+    }
 
-        const rods = Math.floor(L / P);
-        const material = (rods * 350) + (L * 2 * 0.95);
-        const labor = (L / 1000) * 250;
-        
-        const baseTotalMake = (material + labor) * 1.4;
-        const baseTotalClient = labor * 1.4;
-
-        total = (makeQty * baseTotalMake) + (clientQty * baseTotalClient);
+    let total = 0;
+    if (isClientProvided && clientQty > 0) {
+        const laborVatMarkup = ((L / 1000) * 250) * 2.0 * 1.22;
+        const laborPrice = Math.min(laborVatMarkup, basePrice * 0.4);
+        total = (makeQty * basePrice) + (clientQty * laborPrice);
+    } else {
+        total = basePrice * Q;
     }
 
     if (priceDisplay) priceDisplay.innerText = window.formatCurrency(total);
     return total;
 }
+window.calculateCP = calculateCP;
 
 window.calcBasket = window.safeParse('prutkon_calc_basket', []);
 if (!Array.isArray(window.calcBasket)) window.calcBasket = [];
@@ -358,6 +456,14 @@ window.addItemToBasket = () => {
         window.calcBasket.push(item);
         window.showToast?.('Добавлено в корзину', 'success');
     }
+
+    // Очищаем ручной ввод цены
+    const overrideEl = document.getElementById('calc-price-override');
+    if (overrideEl) {
+        overrideEl.value = '';
+        overrideEl.placeholder = 'Авто...';
+    }
+    window.selectedBasePrice = null;
 
     localStorage.setItem('prutkon_calc_basket', JSON.stringify(window.calcBasket));
     renderBasket();
@@ -590,13 +696,15 @@ window.loadProductTypes = function() {
     const productSel = document.getElementById('calc-product-select');
     
     if (!category) {
-        typeSel.innerHTML = '<option value="">-- Сначала выберите категорию --</option>';
-        productSel.innerHTML = '<option value="">-- Сначала выберите тип --</option>';
+        if (typeSel) typeSel.innerHTML = '<option value="">-- Сначала выберите категорию --</option>';
+        if (productSel) productSel.innerHTML = '<option value="">-- Сначала выберите тип --</option>';
         return;
     }
+
+    if (!typeSel || !productSel) return;
     
     // Фильтруем товары по категории
-    const filtered = window.allProducts.filter(p => p.category === category);
+    const filtered = (window.allProducts || []).filter(p => p.category === category);
     
     // Группируем по типу (можно использовать поле name или кастомное)
     const types = [...new Set(filtered.map(p => {
@@ -604,7 +712,7 @@ window.loadProductTypes = function() {
         const name = p.name || '';
         const firstWord = name.split(' ')[0];
         return firstWord || 'Товар';
-    })).filter(Boolean)];
+    }))].filter(Boolean);
     
     typeSel.innerHTML = '<option value="">-- Все типы --</option>' + 
         types.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -619,12 +727,14 @@ window.loadProductsByType = function() {
     const type = document.getElementById('calc-product-type')?.value;
     const sel = document.getElementById('calc-product-select');
     
+    if (!sel) return;
+
     if (!category) {
         sel.innerHTML = '<option value="">-- Сначала выберите категорию --</option>';
         return;
     }
     
-    let filtered = window.allProducts.filter(p => p.category === category);
+    let filtered = (window.allProducts || []).filter(p => p.category === category);
     
     if (type) {
         filtered = filtered.filter(p => {
@@ -673,6 +783,7 @@ window.loadProductsByType = function() {
 // Выбор товара из базы
 window.selectProductFromBase = function() {
     const sel = document.getElementById('calc-product-select');
+    if (!sel) return;
     const productId = sel.value;
     
     if (!productId) {
@@ -715,10 +826,13 @@ window.selectProductFromBase = function() {
     }
     
     // Автозаполнение цены в калькуляторе
+    const overrideEl = document.getElementById('calc-price-override');
     if (product.price) {
         window.selectedBasePrice = parseFloat(product.price);
+        if (overrideEl) overrideEl.value = window.selectedBasePrice.toFixed(2);
     } else {
         window.selectedBasePrice = null;
+        if (overrideEl) overrideEl.value = '';
     }
     calculateCP();
     

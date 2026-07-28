@@ -6,10 +6,54 @@ window.CatalogStep3 = {
         const dicts = window.CatalogDicts;
         const IMG = 'extracted_xlsx/xl/media/';
         const hasCentralBelt = (s.convType !== '2x');
+
+        // Автоматическое определение параметров ремней на основе бренда
+        const brandL = (s.brand || '').toLowerCase();
+        
+        if (s.sideBeltType === undefined || s.sideBeltType === '') {
+            s.sideBeltType = 'DNG_PLUS'; // По умолчанию DNG+
+        }
+        if (hasCentralBelt && (s.centralBeltType === undefined || s.centralBeltType === '')) {
+            s.centralBeltType = 'DNG_PLUS';
+        }
+
+        if (s.sideBeltWidth === undefined || s.sideBeltWidth === '') {
+            s.sideBeltWidth = '60'; // Стандартная ширина боковых ремней
+        }
+        if (hasCentralBelt && (s.centralBeltWidth === undefined || s.centralBeltWidth === '')) {
+            s.centralBeltWidth = (brandL.includes('grimme') || brandL.includes('dewulf')) ? '75' : '60';
+        }
+
+        if (s.sideBeltThickness === undefined || s.sideBeltThickness === '') {
+            s.sideBeltThickness = '17'; // Стандартная толщина 17 мм
+        }
+        if (hasCentralBelt && (s.centralBeltThickness === undefined || s.centralBeltThickness === '')) {
+            s.centralBeltThickness = '17';
+        }
+
+        if (s.sideHoleDist === undefined || s.sideHoleDist === '') {
+            s.sideHoleDist = brandL.includes('dewulf') ? '32' : '23'; // Dewulf: 32мм, Grimme/Ropa: 23мм
+        }
+        if (hasCentralBelt && (s.centralHoleDist === undefined || s.centralHoleDist === '')) {
+            if (brandL.includes('dewulf')) {
+                s.centralHoleDist = '32';
+            } else if (brandL.includes('grimme') && s.centralBeltWidth === '75') {
+                s.centralHoleDist = '28'; // Центральный ремень Grimme 75мм: 28мм
+            } else {
+                s.centralHoleDist = '23';
+            }
+        }
+
+        if (s.sideHoleDiam === undefined || s.sideHoleDiam === '') {
+            s.sideHoleDiam = brandL.includes('dewulf') ? '8' : '6'; // Dewulf: 8мм (м8), Grimme/Ropa: 6мм (м6)
+        }
+        if (hasCentralBelt && (s.centralHoleDiam === undefined || s.centralHoleDiam === '')) {
+            s.centralHoleDiam = brandL.includes('dewulf') ? '8' : '6';
+        }
         
         let rows = dicts.beltTypes.map(b => `
             <tr style="border-bottom:1px solid #111; background:rgba(0,0,0,0.2); transition:0.3s;">
-                <td style="padding:15px; text-align:center;"><img src="${IMG}${b.img}" style="height:45px; background:#fff; border-radius:10px; padding:6px; box-shadow:0 5px 15px rgba(0,0,0,0.5);"></td>
+                <td style="padding:15px; text-align:center;"><img src="${window.getSafeImagePath(b.img)}" style="height:45px; background:#fff; border-radius:10px; padding:6px; box-shadow:0 5px 15px rgba(0,0,0,0.5);"></td>
                 <td style="font-weight:900; font-size:1.1rem; color:#fff; text-transform:uppercase; letter-spacing:1px;">${b.name}</td>
                 <td style="text-align:center;" onclick="window.CatalogStep3.setBelt('${b.id}', false)">
                     <i class="fa-solid ${s.sideBeltType===b.id?'fa-circle-check':'fa-circle'}" style="font-size:2.2rem; cursor:pointer; color:${s.sideBeltType===b.id?'var(--brand-red)':'#080808'}; transition:0.3s;"></i>
@@ -27,10 +71,10 @@ window.CatalogStep3 = {
             const tName = dicts.beltTypes.find(b=>b.id===tid).name;
             
             const paramsConfig = [
-                { L: 'ШИРИНА РЕМНЯ (W)', k: 'Width', D: dicts.beltWidths },
-                { L: 'ТОЛЩИНА РЕМНЯ (T)', k: 'Thickness', D: dicts.beltThicknesses },
-                { L: 'МЕЖОСЕВОЕ РАССТОЯНИЕ (D)', k: isC?'centralHoleDist':'sideHoleDist', D: dicts.beltHoleDistances, custom: true },
-                { L: 'ДИАМЕТР ОТВЕРСТИЙ (ø)', k: isC?'centralHoleDiam':'sideHoleDiam', D: dicts.beltHoleDiameters, custom: true }
+                { L: 'ШИРИНА РЕМНЯ (W)', k: 'Width', D: dicts.beltWidths, desc: 'Ширина тяговой резинотканевой ленты. (Обязательно)' },
+                { L: 'ТОЛЩИНА РЕМНЯ (T)', k: 'Thickness', D: dicts.beltThicknesses, desc: 'Толщина ленты. Определяет прочность полотна. (Обязательно)' },
+                { L: 'МЕЖОСЕВОЕ РАССТОЯНИЕ (D)', k: isC?'centralHoleDist':'sideHoleDist', D: dicts.beltHoleDistances, custom: true, desc: 'Расстояние между центрами крепежных отверстий. (Обязательно)' },
+                { L: 'ДИАМЕТР ОТВЕРСТИЙ (ø)', k: isC?'centralHoleDiam':'sideHoleDiam', D: dicts.beltHoleDiameters, custom: true, desc: 'Диаметр отверстий под заклепку или крепежный винт. (Обязательно)' }
             ];
 
             let h = paramsConfig.map(p => {
@@ -42,17 +86,36 @@ window.CatalogStep3 = {
                 `).join('');
                 return `
                     <div style="margin-bottom:20px;">
-                        <label class="text-xs neutral block mb-2" style="font-weight:900; color:#555; text-transform:uppercase; letter-spacing:1px;">${p.L}:</label>
+                        <label class="text-xs neutral block mb-1" style="font-weight:900; color:#555; text-transform:uppercase; letter-spacing:1px; margin-bottom: 2px;">${p.L}:</label>
+                        <span style="font-size:0.55rem; color:#666; display:block; margin-bottom:8px; line-height:1.2;">${p.desc}</span>
                         <div style="display:flex; flex-wrap:wrap; gap:8px;">${pills}</div>
                     </div>`;
             }).join('');
 
+            const wKey = bk + 'BeltWidth';
+            const dKey = isC ? 'centralHoleDist' : 'sideHoleDist';
+            const widthVal = parseFloat(s[wKey]) || 0;
+            const distVal = parseFloat(s[dKey]) || 0;
+            const edgeVal = (widthVal > distVal) ? ((widthVal - distVal) / 2).toFixed(1) : null;
+
             return `
-                <div style="background:rgba(255,255,255,0.02); padding:30px; border-radius:25px; border:1px solid #181818; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
-                    <div style="color:var(--brand-red); font-weight:900; font-size:1rem; border-bottom:3px solid #111; padding-bottom:15px; margin-bottom:25px; text-transform:uppercase; letter-spacing:2px;">
-                        ${isC?'ВНУТРЕННИЙ (ЦЕНТРАЛЬНЫЙ)':'НАРУЖНЫЙ (БОКОВОЙ)'} ПОЯС: <span style="color:#fff;">${tName}</span>
+                <div style="background:rgba(255,255,255,0.02); padding:30px; border-radius:25px; border:1px solid #181818; box-shadow: 0 10px 30px rgba(0,0,0,0.4); display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div style="color:var(--brand-red); font-weight:900; font-size:1rem; border-bottom:3px solid #111; padding-bottom:15px; margin-bottom:25px; text-transform:uppercase; letter-spacing:2px;">
+                            ${isC?'ВНУТРЕННИЙ (ЦЕНТРАЛЬНЫЙ)':'НАРУЖНЫЙ (БОКОВОЙ)'} РЕМЕНЬ: <span style="color:#fff;">${tName}</span>
+                        </div>
+                        ${h}
                     </div>
-                    ${h}
+                    
+                    <div style="margin-top: 15px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px dashed rgba(226,31,38,0.2); font-size: 0.7rem; text-align: center; line-height:1.4;">
+                        <span style="color:#888; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">РАЗМЕР ПО БОКАМ (КРАЙ РЕМНЯ):</span>
+                        <strong style="color:var(--brand-red); font-size:1.1rem; margin-left:8px; font-family:'Roboto Mono';">
+                            ${edgeVal ? edgeVal + ' мм' : '—'}
+                        </strong>
+                        <div style="font-size:0.55rem; color:#444; margin-top:4px; text-transform:uppercase; font-weight:bold;">
+                            (Ширина ремня W - Межосевое D) ÷ 2
+                        </div>
+                    </div>
                 </div>`;
         };
 
@@ -63,7 +126,7 @@ window.CatalogStep3 = {
                         <thead style="font-size:0.65rem; color:#444; text-transform:uppercase; background:rgba(226,31,38,0.05); letter-spacing:2px;">
                             <tr>
                                 <th style="padding:20px; width:100px;">ЧЕРТЕЖ</th>
-                                <th style="text-align:left;">ТИП ТЯГОВОГО ПОЯСА</th>
+                                <th style="text-align:left;">ТИП ТЯГОВОГО РЕМНЯ</th>
                                 <th>БОКОВОЙ</th>
                                 <th>ЦЕНТРАЛЬНЫЙ</th>
                             </tr>
@@ -90,13 +153,41 @@ window.CatalogStep3 = {
     },
     setBelt(id, isC) {
         const s = window.CatalogState;
-        if(isC) s.centralBeltType = (s.centralBeltType===id?'':id); 
-        else s.sideBeltType = (s.sideBeltType===id?'':id);
+        if(isC) {
+            s.centralBeltType = (s.centralBeltType===id?'':id); 
+            // При выборе типа центрального ремня копируем параметры бокового, если типы совпадают
+            if (s.centralBeltType && s.centralBeltType === s.sideBeltType) {
+                s.centralBeltWidth = s.sideBeltWidth;
+                s.centralBeltThickness = s.sideBeltThickness;
+                s.centralHoleDist = s.sideHoleDist;
+                s.centralHoleDiam = s.sideHoleDiam;
+            }
+        } else {
+            s.sideBeltType = (s.sideBeltType===id?'':id);
+            // При изменении типа бокового ремня, если центральный совпадает, синхронизируем
+            if (s.sideBeltType && s.sideBeltType === s.centralBeltType) {
+                s.centralBeltWidth = s.sideBeltWidth;
+                s.centralBeltThickness = s.sideBeltThickness;
+                s.centralHoleDist = s.sideHoleDist;
+                s.centralHoleDiam = s.sideHoleDiam;
+            }
+        }
         window.CatalogManager.refreshStep();
         window.CatalogManager.syncReport();
     },
     setParam(k, v) { 
-        window.CatalogState[k] = v; 
+        const s = window.CatalogState;
+        s[k] = v; 
+        
+        // Синхронизация: если у центрального и бокового ремня совпадает тип,
+        // то изменение параметров бокового автоматически обновляет центральный!
+        if (s.centralBeltType && s.centralBeltType === s.sideBeltType) {
+            if (k === 'sideBeltWidth') s.centralBeltWidth = v;
+            if (k === 'sideBeltThickness') s.centralBeltThickness = v;
+            if (k === 'sideHoleDist') s.centralHoleDist = v;
+            if (k === 'sideHoleDiam') s.centralHoleDiam = v;
+        }
+        
         window.CatalogManager.refreshStep(); 
         window.CatalogManager.syncReport();
     }

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PRUTKON ERP OS - CORE.JS (v19.0.0)
  * ПОЛНОЕ ИСПРАВЛЕННОЕ ЯДРО (БЕЗ СОКРАЩЕНИЙ)
  */
@@ -26,7 +26,8 @@ window.saveAllToLocal = async () => {
         warehouse_inv: window.dbWarehouseInv || {},
         warehouse_log: window.dbWarehouseLog || [],
         warehouse_batches: window.dbMetalBatches || [],
-        rods_registry: JSON.parse(localStorage.getItem('prutkon_rods_registry') || '{}')
+        rods_registry: JSON.parse(localStorage.getItem('prutkon_rods_registry') || '{}'),
+        doc_registry: JSON.parse(localStorage.getItem('prutkon_doc_registry') || '[]')
     };
     
     // 1. Локальный бэкап
@@ -88,6 +89,7 @@ window.saveAllToLocal = async () => {
 
                 const syncKeys = [
                     { key: 'rods_registry', value: JSON.parse(localStorage.getItem('prutkon_rods_registry') || '{}') },
+                    { key: 'doc_registry', value: JSON.parse(localStorage.getItem('prutkon_doc_registry') || '[]') },
                     { key: 'db_products', value: window.dbProducts || [] },
                     { key: 'db_categories', value: window.dbCategories || [] },
                     { key: 'catalog_data', value: window.catalogData || [] },
@@ -131,7 +133,8 @@ window.saveAllToLocalQuiet = () => {
         warehouse_inv: window.dbWarehouseInv || {},
         warehouse_log: window.dbWarehouseLog || [],
         warehouse_batches: window.dbMetalBatches || [],
-        rods_registry: JSON.parse(localStorage.getItem('prutkon_rods_registry') || '{}')
+        rods_registry: JSON.parse(localStorage.getItem('prutkon_rods_registry') || '{}'),
+        doc_registry: JSON.parse(localStorage.getItem('prutkon_doc_registry') || '[]')
     };
     localStorage.setItem(window.DB_KEY, JSON.stringify(data));
     window.dispatchEvent(new CustomEvent('db_updated'));
@@ -153,6 +156,7 @@ window.saveAllToCloud = async () => {
         
         const syncKeys = [
             { key: 'rods_registry', value: JSON.parse(localStorage.getItem('prutkon_rods_registry') || '{}') },
+            { key: 'doc_registry', value: JSON.parse(localStorage.getItem('prutkon_doc_registry') || '[]') },
             { key: 'db_products', value: window.dbProducts || [] },
             { key: 'db_categories', value: window.dbCategories || [] },
             { key: 'catalog_data', value: window.catalogData || [] },
@@ -445,7 +449,7 @@ window.loadFromCloud = async (force = false) => {
         }
 
         // 4. Первоначальная загрузка логов склада
-        const { data: logs } = await window.supabase.from('warehouse_log').select('*').order('id', { ascending: false }).limit(50);
+        const { data: logs } = await window.supabase.from('warehouse_log').select('*').order('id', { ascending: false }).limit(1000);
         if (logs) {
             window.dbWarehouseLog = logs.map(l => l.data || l).reverse();
         }
@@ -594,7 +598,8 @@ window.safeParse = (key, def) => {
             'prutkon_trans_categories': data.trans_categories,
             'prutkon_catalog_data': data.catalog_data,
             'prutkon_catalog_categories': data.catalog_categories,
-            'prutkon_dir_categories': data.directory_categories
+            'prutkon_dir_categories': data.directory_categories,
+            'prutkon_doc_registry': data.doc_registry
         };
         return map[key] || def;
     } catch (e) { return def; }
@@ -904,12 +909,25 @@ window.confirmAction = (title, text, cb) => {
     let m = document.getElementById('system-confirm-modal');
     if (!m) {
         m = document.createElement('div'); m.id = 'system-confirm-modal'; m.className = 'modal confirm-modal';
-        m.innerHTML = `<div class="confirm-card"><h3 id="confirm-title"></h3><p id="confirm-text"></p><div class="confirm-actions"><button class="btn btn-secondary" onclick="document.getElementById('system-confirm-modal').classList.remove('active')">Отмена</button><button id="confirm-yes" class="btn btn-primary">Да</button></div></div>`;
+        m.innerHTML = `<div class="confirm-card"><h3 id="confirm-title"></h3><div id="confirm-text" style="margin-bottom:20px;"></div><div class="confirm-actions" style="display:flex; justify-content:flex-end; gap:10px;"><button id="confirm-no" class="btn btn-secondary" onclick="document.getElementById('system-confirm-modal').classList.remove('active')">Отмена</button><button id="confirm-yes" class="btn btn-primary">Да</button></div></div>`;
         document.body.appendChild(m);
     }
     document.getElementById('confirm-title').innerText = title;
-    document.getElementById('confirm-text').innerText = text;
-    document.getElementById('confirm-yes').onclick = () => { m.classList.remove('active'); cb(); };
+    document.getElementById('confirm-text').innerHTML = text;
+    
+    const btnNo = document.getElementById('confirm-no');
+    const btnYes = document.getElementById('confirm-yes');
+    
+    if (typeof cb === 'function') {
+        btnNo.style.display = 'block';
+        btnNo.innerText = 'Отмена';
+        btnYes.innerText = 'Да';
+        btnYes.onclick = () => { m.classList.remove('active'); cb(); };
+    } else {
+        btnNo.style.display = 'none';
+        btnYes.innerText = 'Закрыть';
+        btnYes.onclick = () => { m.classList.remove('active'); };
+    }
     m.classList.add('active');
 };
 
@@ -1120,6 +1138,66 @@ window.runUniversalImport = async ({ data, mappings, artSources, targetCategory,
     }
     
     return results;
+};
+
+window.getSafeImagePath = function(imgPath) {
+    const defaultPlaceholder = 'extracted_xlsx/xl/media/no_photo.png';
+    
+    if (!imgPath || imgPath === '---') {
+        return defaultPlaceholder;
+    }
+    
+    // Очищаем и извлекаем имя файла
+    let filename = String(imgPath).split('/').pop().split('\\').pop().trim();
+    if (!filename || filename === '---') {
+        return defaultPlaceholder;
+    }
+    
+    const imagesList = (window.EXCEL_DB && window.EXCEL_DB._Images) ? window.EXCEL_DB._Images : [];
+    
+    // Вспомогательная функция для регистронезависимого поиска
+    const findInList = (name) => {
+        return imagesList.find(img => img.toLowerCase() === name.toLowerCase()) || null;
+    };
+    
+    // Разбираем имя и расширение
+    const dotIdx = filename.lastIndexOf('.');
+    const baseName = dotIdx > -1 ? filename.substring(0, dotIdx) : filename;
+    const ext = dotIdx > -1 ? filename.substring(dotIdx) : '.png';
+    
+    // Формируем список кандидатов для поиска
+    const candidates = [
+        filename,
+        'image' + filename
+    ];
+    if (baseName.toLowerCase().startsWith('image')) {
+        candidates.push(baseName.substring(5) + ext);
+    }
+    
+    const altExt = ext.toLowerCase() === '.jpg' ? '.png' : (ext.toLowerCase() === '.png' ? '.jpg' : null);
+    if (altExt) {
+        candidates.push(baseName + altExt);
+        candidates.push('image' + baseName + altExt);
+        if (baseName.toLowerCase().startsWith('image')) {
+            candidates.push(baseName.substring(5) + altExt);
+        }
+    }
+    
+    // 1. Ищем совпадение в списке импортированных картинок базы
+    for (let c of candidates) {
+        const found = findInList(c);
+        if (found) return 'extracted_xlsx/xl/media/' + found;
+    }
+    
+    // 2. Если не найдено в базе, но это статический системный ресурс
+    const isSystemAsset = !filename.toLowerCase().startsWith('image');
+    if (isSystemAsset) {
+        // Корректируем известные системные файлы, у которых не совпадает расширение (например, 36.jpg -> 36.png)
+        if (filename === '36.jpg') return 'extracted_xlsx/xl/media/36.png';
+        return 'extracted_xlsx/xl/media/' + filename;
+    }
+    
+    return defaultPlaceholder;
 };
 
 
@@ -1662,4 +1740,211 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log(`Core OS v${window.DB_VERSION} operational.`);
 });
 
+/** Глобальная функция нормализации марок стали для устранения дублирования в фильтрах */
+window.normalizeSteelType = function(str) {
+    if (!str) return 'Не указана';
+    let s = str.trim();
+    
+    // Если строка содержит точку с запятой, извлекаем часть с маркой стали
+    if (s.includes(';')) {
+        const parts = s.split(';');
+        if (parts.length > 1) {
+            s = parts[1].split('(')[0].trim().split(' ')[0].trim();
+        }
+    }
+    
+    // Если в названии остался "Круг" или "КРУГ" (без точки с запятой, например "КРУГ Х/Т МД"), 
+    // значит конкретная марка стали не указана
+    if (s.toLowerCase().includes('круг') || s.toLowerCase().includes('лента') || s === 'МД') {
+        return 'Не указана';
+    }
+
+    s = s.replace(/^ст\.?\s*/i, 'ст')
+         .replace(/^ct\.?\s*/i, 'ст')
+         .replace(/сп\s*$/i, 'сп')
+         .replace(/пс\s*$/i, 'пс')
+         .replace(/х\s*$/i, 'Х')
+         .replace(/[\(\)]/g, '');
+    
+    const lat = 'ABCEHKMPTX';
+    const cyr = 'АВСЕНКМРТХ';
+    for (let i = 0; i < lat.length; i++) {
+        s = s.replace(new RegExp(lat[i], 'g'), cyr[i]);
+    }
+    
+    if (!s.startsWith('ст')) {
+        s = s.toUpperCase();
+    } else {
+        s = 'ст' + s.slice(2).toLowerCase();
+    }
+
+    // Итоговая валидация
+    if (s === 'МЕТАЛЛ' || s === 'СТАЛЬ' || s === 'ДЕТАЛЬ' || s === 'РАСЧЕТ' || s === 'УСЛУГА') {
+        return 'Не указана';
+    }
+    
+    return s;
+};
+
 console.log("PRUTKON CORE v19.0.0 OPERATIONAL");
+
+// ==================== ГЛОБАЛЬНЫЙ ГЕНЕРАТОР СПРАВОК И ПОДСКАЗОК (TOOLTIPS) ====================
+window.initGlobalButtonTooltips = function() {
+    const buttons = document.querySelectorAll('button, .btn, input[type="button"], input[type="submit"], .action-btn, .tab-btn');
+    buttons.forEach(btn => {
+        if (btn.hasAttribute('title') && btn.getAttribute('title').trim() !== '') return;
+        
+        let text = (btn.innerText || btn.value || '').trim().toLowerCase();
+        let html = btn.innerHTML || '';
+        let iconClass = '';
+        
+        // Попытка извлечь иконку font-awesome
+        const iconMatch = html.match(/fa-([a-z0-9-]+)/);
+        if (iconMatch) iconClass = iconMatch[1];
+        
+        let title = '';
+        
+        // Сопоставление по тексту или классу иконки
+        if (text.includes('сохранить') || text.includes('записать') || iconClass.includes('floppy') || iconClass.includes('save') || iconClass.includes('cloud')) {
+            title = 'Сохранить изменения в базу данных и синхронизировать с облаком Supabase';
+        } else if (text.includes('печать') || text.includes('распечатать') || iconClass.includes('print')) {
+            title = 'Открыть печатную форму документа в формате А4';
+        } else if (text.includes('удалить') || iconClass.includes('trash') || iconClass.includes('trash-can')) {
+            title = 'Безвозвратно удалить запись или выделенные документы из реестра';
+        } else if (text.includes('очистить') || text.includes('сбросить') || iconClass.includes('eraser') || iconClass.includes('xmark')) {
+            title = 'Сбросить текущие фильтры поиска и очистить форму ввода';
+        } else if (text.includes('добавить') || text.includes('создать') || iconClass.includes('plus') || iconClass.includes('square-plus')) {
+            title = 'Добавить новую запись, партию или спецификацию';
+        } else if (text.includes('расчет') || text.includes('рассчитать') || text.includes('вычислить') || iconClass.includes('calculator')) {
+            title = 'Выполнить автоматический инженерный расчет себестоимости и цен';
+        } else if (text.includes('подобрать') || text.includes('предложить') || iconClass.includes('wand-magic-sparkles')) {
+            title = 'Автоматически подобрать подходящую заготовку под диаметр и длину';
+        } else if (text.includes('провести') || iconClass.includes('circle-check') || iconClass.includes('file-circle-check')) {
+            title = 'Провести документ по учету (зафиксировать движения по складу и бухгалтерии)';
+        } else if (text.includes('подписать') || iconClass.includes('signature') || iconClass.includes('file-signature')) {
+            title = 'Заверить документ простой электронной цифровой подписью (ЭЦП)';
+        } else if (text.includes('экспорт') || text.includes('выгрузить') || iconClass.includes('download') || iconClass.includes('file-csv')) {
+            title = 'Выгрузить реестр в формате CSV для Excel';
+        } else if (text.includes('назад') || text.includes('вернуться') || iconClass.includes('arrow-left')) {
+            title = 'Вернуться на предыдущий шаг или в каталог';
+        } else if (text.includes('свернуть') || iconClass.includes('chevron-up')) {
+            title = 'Свернуть панель подробностей';
+        } else if (text.includes('развернуть') || iconClass.includes('chevron-down')) {
+            title = 'Развернуть панель подробностей';
+        } else if (text.includes('история') || iconClass.includes('clock-rotate-left') || iconClass.includes('history')) {
+            title = 'Просмотреть хронологию изменений и движений документа';
+        } else if (text.includes('редактировать') || text.includes('изменить') || iconClass.includes('pen') || iconClass.includes('edit')) {
+            title = 'Открыть редактор для изменения параметров';
+        } else if (text.includes('поиск') || text.includes('найти') || iconClass.includes('magnifying-glass') || iconClass.includes('search')) {
+            title = 'Начать фильтрацию записей по ключевому слову';
+        } else if (text.includes('корзину') || text.includes('в корзину') || iconClass.includes('cart-plus')) {
+            title = 'Добавить смету в корзину калькулятора коммерческих предложений';
+        } else if (text.includes('наряд') || text.includes('выдать наряд')) {
+            title = 'Выдать наряд-заказ на производство';
+        } else if (text.includes('поступление') || text.includes('принять')) {
+            title = 'Оформить поступление товаров на склад';
+        } else if (text.includes('списание') || text.includes('списать')) {
+            title = 'Оформить списание материалов или брака со склада';
+        }
+        
+        // Вспомогательный дефолтный заголовок, если текст есть
+        if (!title && text) {
+            title = text.charAt(0).toUpperCase() + text.slice(1);
+        }
+        
+        if (title) {
+            btn.setAttribute('title', title);
+        }
+    });
+};
+
+// Запускаем инициализацию при полной загрузке DOM
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(window.initGlobalButtonTooltips, 400);
+    
+    // MutationObserver для динамических элементов и рендерингов
+    const observer = new MutationObserver((mutations) => {
+        let hasNewButtons = false;
+        for (let mutation of mutations) {
+            if (mutation.addedNodes.length > 0) {
+                hasNewButtons = true;
+                break;
+            }
+        }
+        if (hasNewButtons) {
+            window.initGlobalButtonTooltips();
+        }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+
+// ==================== ИНЖЕНЕРНЫЙ РАСЧЕТ КРЕПЕЖА И ПРИЖИМНЫХ ПЛАТИН (ПО ЧЕРТЕЖУ) ====================
+window.calculateConveyorFasteners = function(rodsCount, convType, connectionType, overlapSteps, locksCount) {
+    rodsCount = parseInt(rodsCount) || 0;
+    overlapSteps = parseInt(overlapSteps) || 6;
+    locksCount = parseInt(locksCount) || 0;
+    
+    let totalBeltsSide = 2;
+    let totalBeltsCentral = 0;
+    
+    if (convType === '3x') {
+        totalBeltsCentral = 1;
+    } else if (convType === '4x') {
+        totalBeltsCentral = 2;
+    }
+    
+    let result = {
+        sideBelts: totalBeltsSide,
+        centralBelts: totalBeltsCentral,
+        rods: rodsCount,
+        
+        // Стыковые пластины
+        overlapPlatesSide: 0,
+        overlapPlatesCentral: 0,
+        
+        // Стандартные пластины
+        standardPlatesSide: 0,
+        standardPlatesCentral: 0,
+        
+        // Крепеж
+        screws: 0,
+        rivets: 0,
+        
+        // Пластины замка (если механический стык)
+        lockPlatesSide: 0,
+        lockPlatesCentral: 0
+    };
+    
+    if (connectionType === 'screws' || connectionType === 'vulcanization' || connectionType === 'vulcanization_cold' || connectionType === 'vulcanization_hot') {
+        // Стык "Винтовая скрутка" или "Вулканизация" (внахлест)
+        result.overlapPlatesSide = totalBeltsSide * overlapSteps;
+        result.overlapPlatesCentral = totalBeltsCentral * overlapSteps;
+        
+        const standardRods = Math.max(0, rodsCount - overlapSteps);
+        result.standardPlatesSide = totalBeltsSide * standardRods;
+        result.standardPlatesCentral = totalBeltsCentral * standardRods;
+        
+        result.screws = (result.overlapPlatesSide + result.overlapPlatesCentral) * 2;
+        result.rivets = (result.standardPlatesSide + result.standardPlatesCentral) * 2;
+    } else if (connectionType === 'mechanical') {
+        // Механический замок (через замковый пруток)
+        result.lockPlatesSide = totalBeltsSide * locksCount;
+        result.lockPlatesCentral = totalBeltsCentral * locksCount;
+        
+        const standardRods = Math.max(0, rodsCount - locksCount);
+        result.standardPlatesSide = totalBeltsSide * standardRods;
+        result.standardPlatesCentral = totalBeltsCentral * standardRods;
+        
+        result.screws = 0;
+        result.rivets = (result.standardPlatesSide + result.standardPlatesCentral) * 2;
+    } else {
+        // Стандартный стык без нахлеста (открытый)
+        result.standardPlatesSide = totalBeltsSide * rodsCount;
+        result.standardPlatesCentral = totalBeltsCentral * rodsCount;
+        
+        result.screws = 0;
+        result.rivets = (result.standardPlatesSide + result.standardPlatesCentral) * 2;
+    }
+    
+    return result;
+};

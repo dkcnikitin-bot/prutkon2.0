@@ -8,7 +8,7 @@ window.calcStep3 = function() {
     const blank = window.db.rods_blanks?.[blankId];
     
     // Входные параметры
-    const I = parseFloat(document.getElementById('r-width')?.value) || 0;
+    const I = parseFloat(document.getElementById('r-length')?.value) || 0;
     const P = parseFloat(document.getElementById('r-ext-ends')?.value) || 0;
     const K = parseInt(document.getElementById('r-center-count')?.value) || 0;
     const Q = parseFloat(document.getElementById('r-ext-center')?.value) || 0;
@@ -65,14 +65,14 @@ window.calcStep3 = function() {
     }
 
     // Автосохранение в сессию
-    const drawingVal = document.getElementById('r-drawing')?.value.trim() || '';
+    const drawingVal = (document.getElementById('r-drawing')?.value || '').trim();
     const state = {
         art: document.getElementById('r-article')?.value,
         hessels: document.getElementById('r-art-hessels')?.value,
         grimme: document.getElementById('r-art-grimme')?.value,
         broekema: document.getElementById('r-art-broekema')?.value,
         ropa: document.getElementById('r-art-ropa')?.value,
-        blankId, dia: G, width: I, centerCount: K, extEnds: P, extCenter: Q, shrinkCenter: R, labor, vatRate: S,
+        blankId, dia: G, width: I, endsFlatLen: parseFloat(document.getElementById('r-ends-flat-len')?.value) || 217, centerCount: K, extEnds: P, extCenter: Q, shrinkCenter: R, labor, vatRate: S,
         drawing: drawingVal,
         available: document.getElementById('r-available')?.checked !== false
     };
@@ -91,7 +91,7 @@ window.saveStep3 = function() {
     if (res.F <= 0) return notify('Себестоимость прутка должна быть больше 0', 'warning');
 
     const G = parseFloat(document.getElementById('r-dia-select')?.value) || parseFloat(blank?.dia) || 0;
-    const I = parseFloat(document.getElementById('r-width')?.value) || 0;
+    const I = parseFloat(document.getElementById('r-length')?.value) || 0;
     const K = parseInt(document.getElementById('r-center-count')?.value) || 0;
     const drawingVal = document.getElementById('r-drawing')?.value.trim() || '';
     
@@ -132,14 +132,47 @@ window.saveStep3 = function() {
         ts: Date.now()
     };
 
+    // Автоматическое создание Детали 2 / Детали 2/1 (полуфабрикат прутка плющеный без отверстий)
+    const flatArticle = K === 0 ? `PR-${G}MM-L${res.J.toFixed(0)}-FLAT` : `PR-${G}MM-L${res.J.toFixed(0)}-K${K}-FLAT`;
+    const flatName = K === 0 
+        ? `Деталь 2 (полуфабрикат): Заготовка прутка с плющеными краями Ø${G} мм L=${res.J.toFixed(0)} мм` 
+        : `Деталь 2/1 (полуфабрикат): Заготовка прутка с плющеными краями и серединой Ø${G} мм L=${res.J.toFixed(0)} мм`;
+
+    const flatRecord = {
+        dia: G,
+        length: res.J,
+        labor: blank.labor || 0,
+        costPrice: blank.costPrice || 0,
+        costPriceVat: blank.costPriceVat || 0,
+        priceNoVat: blank.priceNoVat || 0,
+        price: blank.price || 0,
+        priceVat: blank.priceVat || 0,
+        vatRate: blank.vatRate || 1.20,
+        article: flatArticle,
+        name: flatName,
+        metalName: blank.metalName || '',
+        qtyInRod: blank.qtyInRod || 0,
+        rodLength: blank.rodLength || 6000,
+        gap: blank.gap || 10,
+        ts: Date.now()
+    };
+
+    if (!window.db.rods_blanks) window.db.rods_blanks = [];
+    const flatExistingIdx = window.db.rods_blanks.findIndex(b => b.article === flatArticle);
+    if (flatExistingIdx === -1) {
+        window.db.rods_blanks.push(flatRecord);
+    } else {
+        window.db.rods_blanks[flatExistingIdx] = { ...window.db.rods_blanks[flatExistingIdx], ...flatRecord };
+    }
+
     if (existingIdx !== -1) {
         if (confirm(`Пруток "${name}" (${article}) уже существует в базе. Обновить прайсовую цену до ${window.formatCurr(res.F)}?`)) {
             window.db.rods_standard[existingIdx] = { ...window.db.rods_standard[existingIdx], ...record };
-            window.persistAndRender('Прямой пруток успешно обновлен в базе!');
+            window.persistAndRender('Прямой пруток успешно обновлен в базе (с сохранением промежуточных заготовок)!');
         }
     } else {
         window.db.rods_standard.push(record);
-        window.persistAndRender('Прямой пруток успешно сохранен в базу!');
+        window.persistAndRender('Прямой пруток успешно сохранен в базу (с сохранением промежуточных заготовок)!');
     }
 };
 
@@ -148,20 +181,21 @@ window.restoreLastStep3Session = function() {
     if (savedState) {
         try {
             const s = JSON.parse(savedState);
-            if (s.blankId !== undefined && window.db.rods_blanks?.[s.blankId]) document.getElementById('r-blank-select').value = s.blankId;
-            if (s.art !== undefined) document.getElementById('r-article').value = s.art;
-            if (s.hessels !== undefined) document.getElementById('r-art-hessels').value = s.hessels;
-            if (s.grimme !== undefined) document.getElementById('r-art-grimme').value = s.grimme;
-            if (s.broekema !== undefined) document.getElementById('r-art-broekema').value = s.broekema;
-            if (s.ropa !== undefined) document.getElementById('r-art-ropa').value = s.ropa;
+            if (s.blankId !== undefined && window.db.rods_blanks?.[s.blankId] && document.getElementById('r-blank-select')) document.getElementById('r-blank-select').value = s.blankId;
+            if (s.art !== undefined && document.getElementById('r-article')) document.getElementById('r-article').value = s.art;
+            if (s.hessels !== undefined && document.getElementById('r-art-hessels')) document.getElementById('r-art-hessels').value = s.hessels;
+            if (s.grimme !== undefined && document.getElementById('r-art-grimme')) document.getElementById('r-art-grimme').value = s.grimme;
+            if (s.broekema !== undefined && document.getElementById('r-art-broekema')) document.getElementById('r-art-broekema').value = s.broekema;
+            if (s.ropa !== undefined && document.getElementById('r-art-ropa')) document.getElementById('r-art-ropa').value = s.ropa;
             if (s.dia !== undefined && document.getElementById('r-dia-select')) document.getElementById('r-dia-select').value = s.dia;
-            if (s.width !== undefined) document.getElementById('r-width').value = s.width;
-            if (s.centerCount !== undefined) document.getElementById('r-center-count').value = s.centerCount;
-            if (s.extEnds !== undefined) document.getElementById('r-ext-ends').value = s.extEnds;
-            if (s.extCenter !== undefined) document.getElementById('r-ext-center').value = s.extCenter;
-            if (s.shrinkCenter !== undefined) document.getElementById('r-shrink-center').value = s.shrinkCenter;
-            if (s.labor !== undefined) document.getElementById('r-labor').value = s.labor;
-            if (s.vatRate !== undefined) document.getElementById('r-vat-rate').value = s.vatRate;
+            if (s.width !== undefined && document.getElementById('r-length')) document.getElementById('r-length').value = s.width;
+            if (s.endsFlatLen !== undefined && document.getElementById('r-ends-flat-len')) document.getElementById('r-ends-flat-len').value = s.endsFlatLen;
+            if (s.centerCount !== undefined && document.getElementById('r-center-count')) document.getElementById('r-center-count').value = s.centerCount;
+            if (s.extEnds !== undefined && document.getElementById('r-ext-ends')) document.getElementById('r-ext-ends').value = s.extEnds;
+            if (s.extCenter !== undefined && document.getElementById('r-ext-center')) document.getElementById('r-ext-center').value = s.extCenter;
+            if (s.shrinkCenter !== undefined && document.getElementById('r-shrink-center')) document.getElementById('r-shrink-center').value = s.shrinkCenter;
+            if (s.labor !== undefined && document.getElementById('r-labor')) document.getElementById('r-labor').value = s.labor;
+            if (s.vatRate !== undefined && document.getElementById('r-vat-rate')) document.getElementById('r-vat-rate').value = s.vatRate;
             if (s.drawing !== undefined && document.getElementById('r-drawing')) document.getElementById('r-drawing').value = s.drawing;
             if (s.available !== undefined && document.getElementById('r-available')) document.getElementById('r-available').checked = s.available;
             

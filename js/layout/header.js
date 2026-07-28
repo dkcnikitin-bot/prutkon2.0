@@ -73,5 +73,7 @@ window.renderLiveStatus = (state) => {
     else if (state === 'sync') {
         badge.innerHTML = `<span style="color:var(--emerald-neon)"><i class="fa-solid fa-check"></i> ОБНОВЛЕНО</span>`;
         setTimeout(() => window.renderLiveStatus('idle'), 2000);
+    } else if (state === 'offline') {
+        badge.innerHTML = `<span style="color:#ff9f0a; font-weight:900;"><i class="fa-solid fa-cloud-slash"></i> OFFLINE</span>`;
     } else badge.innerHTML = `<div class="live-pulse"></div> LIVE`;
 };

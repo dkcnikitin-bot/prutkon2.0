@@ -33,7 +33,7 @@ window.calcStep6 = function() {
         articleInput.value = `DBL-${dia}-${len}`;
     }
 
-    const drawingVal = document.getElementById('d-drawing')?.value.trim() || '';
+    const drawingVal = (document.getElementById('d-drawing')?.value || '').trim();
 
     // Автосохранение сессии
     localStorage.setItem('prutkon_step6_state', JSON.stringify({ blankId, clampPrice, centerPrice, labor, dia, len, drawing: drawingVal, article: articleInput?.value }));
@@ -46,7 +46,7 @@ window.calcStep6 = function() {
     return { K: costPriceNoVat, H: priceVat, I: priceEuro };
 };
 
-window.saveStep6 = function() {
+window.saveStep6Double = function() {
     const blankSelect = document.getElementById('d-blank-select');
     const lengthInput = document.getElementById('d-length');
 
@@ -65,7 +65,7 @@ window.saveStep6 = function() {
     const dia = blank.dia;
     const article = document.getElementById('d-article')?.value || `DBL-${dia}-${length}`;
     const name = `Сдвоенный пруток Ø${dia} мм L=${length} мм`;
-    const drawingVal = document.getElementById('d-drawing')?.value.trim() || '';
+    const drawingVal = (document.getElementById('d-drawing')?.value || '').trim();
 
     if (!window.db.rods_double) window.db.rods_double = [];
     const existingIdx = window.db.rods_double.findIndex(r => r.article === article || r.name === name);

@@ -4,9 +4,17 @@
 
 window.PrutkonFeatures = {
     init: function() {
-        this.injectModals();
-        this.loadDirectories();
-        this.setupRealtimeListeners();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.injectModals();
+                this.loadDirectories();
+                this.setupRealtimeListeners();
+            });
+        } else {
+            this.injectModals();
+            this.loadDirectories();
+            this.setupRealtimeListeners();
+        }
     },
 
     injectModals: function() {
@@ -53,21 +61,11 @@ window.PrutkonFeatures = {
                 <h4 class="mt-4 mb-3" style="color: var(--brand-gold)"><i class="fa-solid fa-clock-rotate-left"></i> История движения и списаний</h4>
                 <div id="mc-history-block" style="background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); padding: 15px; max-height: 300px; overflow-y: auto;">
                     <div style="opacity: 0.5; text-align: center; padding: 20px;">Загрузка истории...</div>
-                </div>
-
-                <datalist id="mc-suppliers-list"></datalist>
-                <datalist id="mc-steels-list"></datalist>
-                <div class="mt-4 flex justify-end gap-2">
-                    <button class="btn btn-primary" onclick="PrutkonFeatures.saveMetalCard()"><i class="fa-solid fa-cloud-upload"></i> Сохранить изменения</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- БЛОК 2.2: Карточка Прутка (Сводный паспорт) -->
+         <!-- БЛОК 2.2: Карточка Прутка (Сводный паспорт) -->
         <div id="modal-rod-card" class="modal">
-            <div class="glass-panel" style="width: 900px; padding: 35px; max-height: 90vh; overflow-y: auto;">
+            <div class="glass-panel" id="rc-glass-panel" style="width: 900px; padding: 35px; max-height: 90vh; overflow-y: auto; transition: width 0.3s ease;">
                 <button onclick="document.getElementById('modal-rod-card').classList.remove('active')" style="float: right; background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer;">&times;</button>
-                <h3 class="mb-4 text-white"><i class="fa-solid fa-passport text-brand-red"></i> Карточка Прутка (Единый паспорт изделия)</h3>
+                <h3 class="mb-4 text-white" id="rc-card-title"><i class="fa-solid fa-passport text-brand-red"></i> Карточка Прутка (Единый паспорт изделия)</h3>
                 
                 <div class="grid grid-4 gap-4">
                     <!-- Идентификация -->
@@ -76,43 +74,48 @@ window.PrutkonFeatures = {
                     <div class="form-group" style="grid-column:span 2;"><label>Техника (Бренд/Модель) [F]</label><input type="text" id="rc-tech" class="form-control" readonly></div>
                     <div class="form-group"><label>Связанная заготовка [E]</label><input type="text" id="rc-blank-id" class="form-control" readonly></div>
                     <div class="form-group"><label>Диаметр стали (мм) [R]</label><input type="text" id="rc-dia" class="form-control" readonly></div>
-
-                    <!-- Кросс-номера -->
-                    <div class="form-group"><label>Артикул Hessels [L]</label><input type="text" id="rc-hessels" class="form-control" readonly></div>
-                    <div class="form-group"><label>Артикул ROPA [M]</label><input type="text" id="rc-ropa" class="form-control" readonly></div>
-                    <div class="form-group"><label>Артикул Broekema [N]</label><input type="text" id="rc-broekema" class="form-control" readonly></div>
-                    <div class="form-group"><label>Артикул Grimme [P]</label><input type="text" id="rc-grimme" class="form-control" readonly></div>
-
-                    <!-- Технические параметры и РТИ -->
+                    
+                    <!-- Эти поля перенесены вверх, чтобы при создании прутка они были на виду -->
                     <div class="form-group"><label>Ширина ремня (мм) [S]</label><input type="text" id="rc-belt-width" class="form-control" readonly></div>
                     <div class="form-group"><label>Готовая длина (мм) [J]</label><input type="number" id="rc-final-len" class="form-control" readonly></div>
-                    <div class="form-group"><label>Межосевое по бокам (мм) [U]</label><input type="text" id="rc-pitch-side" class="form-control" readonly></div>
-                    <div class="form-group"><label>Межосевое в центре (мм) [V]</label><input type="text" id="rc-pitch-center" class="form-control" readonly></div>
-
-                    <div class="form-group"><label>Рез. наконечники [W]</label><input type="text" id="rc-rubber-tips" class="form-control" readonly></div>
-                    <div class="form-group"><label>Высота шпильки [X]</label><input type="number" id="rc-pin-height" class="form-control" readonly></div>
-                    <div class="form-group"><label>Ширина по резине [Y]</label><input type="number" id="rc-rubber-width" class="form-control" readonly></div>
-                    <div class="form-group"><label>Диаметр по резине [Z]</label><input type="number" id="rc-rubber-dia" class="form-control" readonly></div>
-
-                    <div class="form-group" style="grid-column:span 2;">
-                        <label>URL чертежа / фото</label>
-                        <div style="display:flex; gap:10px;">
-                            <input type="text" id="rc-drawing-url" class="form-control" readonly>
-                            <button id="rc-drawing-open-btn" class="btn btn-secondary" onclick="window.openDrawingUrl('rc-drawing-url')" style="padding: 0 15px;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Открыть</button>
-                        </div>
-                    </div>
-                    <div class="form-group" style="grid-column:span 2;">
-                        <label>URL чертежа гнутья</label>
-                        <div style="display:flex; gap:10px;">
-                            <input type="text" id="rc-drawing-bent-url" class="form-control" readonly>
-                            <button id="rc-drawing-bent-open-btn" class="btn btn-secondary" onclick="window.openDrawingUrl('rc-drawing-bent-url')" style="padding: 0 15px;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Открыть</button>
-                        </div>
-                    </div>
                 </div>
 
-                <h4 class="mt-4 mb-3" style="color: var(--brand-gold)"><i class="fa-solid fa-code-branch"></i> Жизненный цикл изделия (Сквозной Workflow)</h4>
-                <div id="rc-dynamic-workflow-actions" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 20px; border-radius: 12px; margin-bottom: 25px;">
-                    <div style="color: var(--text-muted); text-align: center; font-size: 0.85rem;">Выберите изделие из реестра для управления жизненным циклом...</div>
+                <div id="rc-detailed-sections">
+                    <div class="grid grid-4 gap-4 mt-4" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+                        <!-- Кросс-номера -->
+                        <div class="form-group"><label>Артикул Hessels [L]</label><input type="text" id="rc-hessels" class="form-control" readonly></div>
+                        <div class="form-group"><label>Артикул ROPA [M]</label><input type="text" id="rc-ropa" class="form-control" readonly></div>
+                        <div class="form-group"><label>Артикул Broekema [N]</label><input type="text" id="rc-broekema" class="form-control" readonly></div>
+                        <div class="form-group"><label>Артикул Grimme [P]</label><input type="text" id="rc-grimme" class="form-control" readonly></div>
+
+                        <!-- Технические параметры и РТИ -->
+                        <div class="form-group"><label>Межосевое по бокам (мм) [U]</label><input type="text" id="rc-pitch-side" class="form-control" readonly></div>
+                        <div class="form-group"><label>Межосевое в центре (мм) [V]</label><input type="text" id="rc-pitch-center" class="form-control" readonly></div>
+                        <div class="form-group"><label>Рез. наконечники [W]</label><input type="text" id="rc-rubber-tips" class="form-control" readonly></div>
+                        <div class="form-group"><label>Высота шпильки [X]</label><input type="number" id="rc-pin-height" class="form-control" readonly></div>
+                        <div class="form-group"><label>Ширина по резине [Y]</label><input type="number" id="rc-rubber-width" class="form-control" readonly></div>
+                        <div class="form-group"><label>Диаметр по резине [Z]</label><input type="number" id="rc-rubber-dia" class="form-control" readonly></div>
+
+                        <div class="form-group" style="grid-column:span 2;">
+                            <label>URL чертежа / фото</label>
+                            <div style="display:flex; gap:10px;">
+                                <input type="text" id="rc-drawing-url" class="form-control" readonly>
+                                <button id="rc-drawing-open-btn" class="btn btn-secondary" onclick="window.openDrawingUrl('rc-drawing-url')" style="padding: 0 15px;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Открыть</button>
+                            </div>
+                        </div>
+                        <div class="form-group" style="grid-column:span 2;">
+                            <label>URL чертежа гнутья</label>
+                            <div style="display:flex; gap:10px;">
+                                <input type="text" id="rc-drawing-bent-url" class="form-control" readonly>
+                                <button id="rc-drawing-bent-open-btn" class="btn btn-secondary" onclick="window.openDrawingUrl('rc-drawing-bent-url')" style="padding: 0 15px;"><i class="fa-solid fa-arrow-up-right-from-square"></i> Открыть</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 class="mt-4 mb-3" style="color: var(--brand-gold)"><i class="fa-solid fa-code-branch"></i> Жизненный цикл изделия (Сквозной Workflow)</h4>
+                    <div id="rc-dynamic-workflow-actions" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 20px; border-radius: 12px; margin-bottom: 25px;">
+                        <div style="color: var(--text-muted); text-align: center; font-size: 0.85rem;">Выберите изделие из реестра для управления жизненным циклом...</div>
+                    </div>
                 </div>
 
                 <h4 class="mt-4 mb-3" style="color: var(--brand-gold)">Ценообразование (Каскадный расчет)</h4>
@@ -122,14 +125,15 @@ window.PrutkonFeatures = {
                     <div class="form-group"><label>Цена интернет евро [I]</label><input type="text" id="rc-price-euro" class="form-control" readonly style="font-weight:bold; color:#007aff"></div>
                 </div>
 
-                <!-- Блок истории и документов для прутка -->
-                <h4 class="mt-4 mb-3" style="color: var(--brand-gold)"><i class="fa-solid fa-clock-rotate-left"></i> История движения и сопроводительные документы</h4>
-                <div id="rc-history-block" style="background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); padding: 15px; max-height: 300px; overflow-y: auto; margin-bottom: 25px;">
-                    <div style="opacity: 0.5; text-align: center; padding: 20px;">Загрузка истории...</div>
-                </div>
-
-                <div class="mt-4 flex justify-end gap-2">
-                    <button class="btn btn-primary" onclick="document.getElementById('modal-rod-card').classList.remove('active')"><i class="fa-solid fa-check"></i> Закрыть карточку</button>
+                <div id="rc-history-section">
+                    <!-- Блок истории и документов для прутка -->
+                    <h4 class="mt-4 mb-3" style="color: var(--brand-gold)"><i class="fa-solid fa-clock-rotate-left"></i> История движения и сопроводительные документы</h4>
+                    <div id="rc-history-block" style="background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); padding: 15px; max-height: 300px; overflow-y: auto; margin-bottom: 25px;">
+                        <div style="opacity: 0.5; text-align: center; padding: 20px;">Загрузка истории...</div>
+                    </div>
+                </div>                <div class="mt-4 flex justify-end gap-2">
+                    <button id="rc-save-btn" class="btn btn-primary" onclick="PrutkonFeatures.saveRodCard()"><i class="fa-solid fa-floppy-disk"></i> Сохранить в базу</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('modal-rod-card').classList.remove('active')"><i class="fa-solid fa-check"></i> Закрыть</button>
                 </div>
             </div>
         </div>
@@ -702,28 +706,69 @@ window.PrutkonFeatures = {
     },
 
     saveRodCard: async function() {
+        const art = document.getElementById('rc-art').value;
+        const price = parseFloat(document.getElementById('rc-price').value) || 0;
+        const diam = document.getElementById('rc-dia').value;
+        const width = document.getElementById('rc-belt-width')?.value || '';
+        
         const data = {
-            key: 'rod_card_' + document.getElementById('rc-art').value,
+            key: 'rod_card_' + art,
             value: {
-                art: document.getElementById('rc-art').value,
-                dia: document.getElementById('rc-dia').value,
+                art: art,
+                dia: diam,
                 calc_blank_len: document.getElementById('rc-calc-blank-len').value,
                 cost: document.getElementById('rc-cost').value,
-                price: document.getElementById('rc-price').value
+                price: price
             }
         };
         
+        // 1. Сохраняем в Supabase
         if (window.supabase) {
-            const { error } = await window.supabase.from('system_settings').upsert(data);
-            if (!error) {
-                window.showToast('Параметры прутка сохранены в реестр', 'success');
-                if (window.saveAllToLocal) window.saveAllToLocal();
-            }
+            await window.supabase.from('system_settings').upsert(data);
         }
+        
+        // 2. Локально добавляем в базу продуктов для Мастера
+        if (art) {
+            if (!window.dbProducts) window.dbProducts = [];
+            let existing = window.dbProducts.find(x => x.art === art);
+            if (existing) {
+                existing.price = price;
+                existing.diam = diam;
+                if (width) existing.width = width;
+            } else {
+                window.dbProducts.push({
+                    id: Date.now(),
+                    category: 'sec_rods',
+                    art: art,
+                    name: 'Пруток ' + art,
+                    price: price,
+                    diam: diam,
+                    width: width
+                });
+            }
+            localStorage.setItem('prutkon_products', JSON.stringify(window.dbProducts));
+            // Сбрасываем кэш списка Step 4
+            window.allProductsListForStep4 = null;
+        }
+        
+        window.showToast('Параметры прутка сохранены в реестр', 'success');
+        if (window.saveAllToLocal) window.saveAllToLocal();
+        
+        // Пересчитываем Шаг 4 и спецификацию на лету, если открыт мастер
+        if (window.CatalogStep4 && window.CatalogStep4.recalc) {
+            window.CatalogStep4.recalc();
+        }
+        
+        // Закрываем модальное окно
+        document.getElementById('modal-rod-card').classList.remove('active');
     },
 
     openRodCard: function(artOrName) {
-        document.getElementById('modal-rod-card').classList.add('active');
+        if (!document.getElementById('modal-rod-card')) {
+            this.injectModals();
+        }
+        const m = document.getElementById('modal-rod-card');
+        if (m) m.classList.add('active');
         
         let found = null;
         let stepName = "";
@@ -755,11 +800,113 @@ window.PrutkonFeatures = {
         const actContainer = document.getElementById('rc-dynamic-workflow-actions');
 
         if (!found) {
-            document.getElementById('rc-art').value = artOrName || 'НОВЫЙ';
+            // Настраиваем компактный вид модалки для создания прутка
+            const glassPanel = document.getElementById('rc-glass-panel');
+            if (glassPanel) glassPanel.style.width = '550px';
+            
+            const detailedSec = document.getElementById('rc-detailed-sections');
+            if (detailedSec) detailedSec.style.display = 'none';
+            
+            const historySec = document.getElementById('rc-history-section');
+            if (historySec) historySec.style.display = 'none';
+            
+            const saveBtn = document.getElementById('rc-save-btn');
+            if (saveBtn) saveBtn.style.display = 'inline-block';
+            
+            const cardTitle = document.getElementById('rc-card-title');
+            if (cardTitle) cardTitle.innerHTML = '<i class="fa-solid fa-plus-circle text-brand-red"></i> Создание новой позиции прутка';
+
+            // Очищаем кросс-номера и другие параметры, чтобы не переносить из старой карточки
+            ['rc-hessels', 'rc-ropa', 'rc-broekema', 'rc-grimme', 'rc-rubber-tips', 'rc-pin-height', 'rc-rubber-width', 'rc-rubber-dia', 'rc-drawing-url', 'rc-drawing-bent-url'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+
+            // Разрешаем редактирование для нового прутка
+            ['rc-art', 'rc-dia', 'rc-final-len', 'rc-cost', 'rc-price'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.removeAttribute('readonly');
+            });
+            
+            const targetArt = artOrName || 'NEW_ROD';
+            document.getElementById('rc-art').value = targetArt;
+            
+            const targetDia = parseFloat(window.CatalogState ? window.CatalogState.diam : 11) || 11;
+            document.getElementById('rc-dia').value = targetDia;
+            
+            const targetWidth = parseFloat(window.CatalogState ? window.CatalogState.width : 1650) || 1650;
+            document.getElementById('rc-belt-width').value = targetWidth;
+            document.getElementById('rc-final-len').value = targetWidth;
+            
+            if (window.CatalogState) {
+                document.getElementById('rc-tech').value = `${window.CatalogState.brand || ''} ${window.CatalogState.model || ''}`.trim() || 'Инженерия';
+            } else {
+                document.getElementById('rc-tech').value = 'Инженерия';
+            }
+            
+            document.getElementById('rc-rod-type').value = targetArt.includes('bent') ? 'Сложный / Гнутый' : (targetArt.includes('rubber') ? 'Обрезиненный' : 'Прямой');
+            
+            // Автоподбор материала (металла) из справочника
+            let metalPrice = 180; // Дефолтная цена за кг
+            if (window.dbDirectories) {
+                const metalDir = window.dbDirectories.find(d => d.category === 'metal' && parseFloat(d.diameter || d.data?.diameter) === targetDia);
+                if (metalDir) {
+                    const d = metalDir.data || metalDir;
+                    metalPrice = parseFloat(d.price || d.price_ton_vat / 1000) || 180;
+                }
+            }
+            
+            // Расчет веса и себестоимости прутка
+            const weightPerMeter = 0.006165 * targetDia * targetDia;
+            const rodWeight = (targetWidth / 1000) * weightPerMeter;
+            const matCost = rodWeight * metalPrice;
+            
+            let opCost = 150; // Базовая обработка
+            if (targetArt.includes('bent')) opCost += 120;
+            if (targetArt.includes('rubber')) opCost += 200;
+            
+            const totalCost = Math.round(matCost + opCost);
+            const totalPrice = Math.round(totalCost * 2.2);
+            
+            document.getElementById('rc-cost').value = totalCost;
+            document.getElementById('rc-price').value = totalPrice;
+            
             if (actContainer) {
-                actContainer.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Изделие "${artOrName}" не найдено в базе или создано вручную.</div>`;
+                actContainer.innerHTML = `
+                    <div style="background:rgba(226,31,38,0.05); padding:15px; border-radius:12px; border:1px solid rgba(226,31,38,0.2); font-size:0.7rem; color:#fff; line-height:1.4;">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--brand-red); margin-right:6px; font-size:0.8rem;"></i> 
+                        <b>Интеллектуальный авторасчет параметров:</b><br>
+                        * Подобран материал Ø${targetDia} мм (цена закупа: <span style="color:var(--brand-gold);">${metalPrice} ₽/кг</span>)<br>
+                        * Длина готового прутка: <b>${targetWidth} мм</b>, вес: <b>${rodWeight.toFixed(3)} кг</b><br>
+                        * Расчетная себестоимость: <span style="color:var(--emerald-neon); font-weight:bold;">${totalCost} ₽</span> (материал + операции)<br>
+                        * Рекомендуемая цена продажи (маржа 120%): <span style="color:var(--brand-gold); font-weight:bold;">${totalPrice} ₽</span>
+                        <div style="margin-top:10px; font-size:0.6rem; color:#888;">Вы можете вручную отредактировать себестоимость и цену перед сохранением!</div>
+                    </div>
+                `;
             }
             return;
+        } else {
+            // Восстанавливаем полный вид модалки для существующего прутка
+            const glassPanel = document.getElementById('rc-glass-panel');
+            if (glassPanel) glassPanel.style.width = '900px';
+            
+            const detailedSec = document.getElementById('rc-detailed-sections');
+            if (detailedSec) detailedSec.style.display = 'block';
+            
+            const historySec = document.getElementById('rc-history-section');
+            if (historySec) historySec.style.display = 'block';
+            
+            const saveBtn = document.getElementById('rc-save-btn');
+            if (saveBtn) saveBtn.style.display = 'none';
+            
+            const cardTitle = document.getElementById('rc-card-title');
+            if (cardTitle) cardTitle.innerHTML = '<i class="fa-solid fa-passport text-brand-red"></i> Карточка Прутка (Единый паспорт изделия)';
+
+            // Для существующих прутков делаем поля заблокированными
+            ['rc-art', 'rc-dia', 'rc-final-len', 'rc-cost', 'rc-price'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.setAttribute('readonly', 'true');
+            });
         }
 
         document.getElementById('rc-art').value = found.article || found.name || artOrName;
@@ -898,6 +1045,10 @@ window.openDrawingUrl = function(inputId) {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        PrutkonFeatures.init();
+    });
+} else {
     PrutkonFeatures.init();
-});
+}

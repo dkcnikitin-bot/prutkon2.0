@@ -76,12 +76,93 @@ window.buildFiltersBar = function() {
     fBar.dataset.cat = window.activeCategory;
 };
 
+window.populatePriceFiltersTrans = () => {
+    const filterDia = document.getElementById('filter-diameter');
+    const filterSteel = document.getElementById('filter-steel-type');
+    if (!filterDia || !filterSteel) return;
+
+    const currentDia = filterDia.value;
+    const currentSteel = filterSteel.value;
+
+    const uniqueDias = new Set();
+    const uniqueSteels = new Set();
+
+    (window.dbTransProducts || []).forEach(p => {
+        if (!p) return;
+        
+        // Diameter / Width
+        const diaVal = parseFloat(p.dia || p.diameter || p.width || p.thickness || 0);
+        if (diaVal > 0) {
+            uniqueDias.add(diaVal);
+        } else {
+            const matchDia = String(p.name || '').match(/(?:Ø|ширина|L=)\s*(\d+(\.\d+)?)/i) || String(p.art || '').match(/(?:BL|DBL|PR)-(\d+(\.\d+)?)/i);
+            if (matchDia) uniqueDias.add(parseFloat(matchDia[1]));
+        }
+
+        // Material / Strength
+        const mat = (p.material || p.steel_type || p.steel || p.strength || '').trim();
+        if (mat) {
+            const norm = window.normalizeSteelType(mat);
+            if (norm && norm !== 'Не указана') {
+                uniqueSteels.add(norm);
+            }
+        }
+    });
+
+    const sortedDias = Array.from(uniqueDias).sort((a, b) => a - b);
+    const sortedSteels = Array.from(uniqueSteels).filter(s => s && s.toLowerCase() !== 'не указана').sort();
+
+    let diaHtml = '<option value="">Все размеры</option>';
+    sortedDias.forEach(d => { diaHtml += `<option value="${d}">Ø/W ${d} мм</option>`; });
+    filterDia.innerHTML = diaHtml;
+    filterDia.value = currentDia;
+
+    let steelHtml = '<option value="">Все материалы</option>';
+    sortedSteels.forEach(s => { steelHtml += `<option value="${s}">${s}</option>`; });
+    filterSteel.innerHTML = steelHtml;
+    filterSteel.value = currentSteel;
+};
+
+window.clearFiltersTrans = function() {
+    const els = {
+        'filter-price-min': '',
+        'filter-price-max': '',
+        'filter-stock': '',
+        'filter-diameter': '',
+        'filter-steel-type': '',
+        'filter-has-photo': false
+    };
+    Object.entries(els).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (el.type === 'checkbox') el.checked = val;
+            else el.value = val;
+        }
+    });
+    document.querySelectorAll('.dynamic-filter-select').forEach(sel => {
+        sel.value = '';
+    });
+    window.renderPriceTable();
+    if (window.showToast) window.showToast('Фильтры сброшены', 'info');
+};
+
 window.renderPriceTable = function() {
     if (!Array.isArray(window.dbTransProducts)) window.dbTransProducts = [];
+    
+    // Наполняем фильтры
+    window.populatePriceFiltersTrans();
+
     const tableContainer = document.getElementById('price-table');
     if (!tableContainer) return;
 
     window.buildFiltersBar();
+
+    const filterMinPrice = document.getElementById('filter-price-min')?.value;
+    const filterMaxPrice = document.getElementById('filter-price-max')?.value;
+    const filterStock = document.getElementById('filter-stock')?.value;
+    const filterDiameter = document.getElementById('filter-diameter')?.value;
+    const filterSteelType = document.getElementById('filter-steel-type')?.value;
+    const filterHasPhoto = document.getElementById('filter-has-photo')?.checked;
 
     const activeFilters = {};
     document.querySelectorAll('.dynamic-filter-select').forEach(sel => {
@@ -96,6 +177,34 @@ window.renderPriceTable = function() {
                           (p.name && p.name.toLowerCase().includes(window.priceSearchQuery));
             if (!match) return false;
         }
+        
+        // Фильтр по цене
+        if (filterMinPrice && parseFloat(p.price) < parseFloat(filterMinPrice)) return false;
+        if (filterMaxPrice && parseFloat(p.price) > parseFloat(filterMaxPrice)) return false;
+        
+        // Фильтр по остатку
+        if (filterStock === 'in_stock' && (p.stock || 0) <= 0) return false;
+        if (filterStock === 'low_stock' && (p.stock || 0) > 10) return false;
+        if (filterStock === 'low_stock' && (p.stock || 0) <= 0) return false;
+        if (filterStock === 'out_of_stock' && (p.stock || 0) > 0) return false;
+        
+        // Фильтр по диаметру
+        if (filterDiameter) {
+            const pDia = parseFloat(p.dia || p.diameter || p.width || p.thickness || 0);
+            const matchDia = String(p.name || '').match(/(?:Ø|ширина|L=)\s*(\d+(\.\d+)?)/i) || String(p.art || '').match(/(?:BL|DBL|PR)-(\d+(\.\d+)?)/i);
+            const resolvedDia = pDia || (matchDia ? parseFloat(matchDia[1]) : 0);
+            if (String(resolvedDia) !== String(filterDiameter)) return false;
+        }
+
+        // Фильтр по марке стали (материалу)
+        if (filterSteelType) {
+            const pSteel = (p.material || p.steel_type || p.steel || p.strength || '').trim();
+            if (window.normalizeSteelType(pSteel) !== window.normalizeSteelType(filterSteelType)) return false;
+        }
+
+        // Фильтр по фото
+        if (filterHasPhoto && !p.photo) return false;
+
         for (let key in activeFilters) {
             if (String(p[key]) !== String(activeFilters[key])) return false;
         }
@@ -122,7 +231,13 @@ window.renderPriceTable = function() {
                 <td class="table-art" style="color:var(--brand-red);">${p.art || '---'}</td>
                 <td>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        ${p.photo ? `<img src="${p.photo}" class="table-thumb">` : ''}
+                        ${(() => {
+                            if (p.photo && p.photo.trim() && p.photo !== 'no_photo.jpg' && p.photo !== 'no-image.png') {
+                                return `<img src="${p.photo}" onerror="this.outerHTML='<div class=\\'table-thumb-placeholder\\'>📷</div>'" class="table-thumb">`;
+                            } else {
+                                return `<div class="table-thumb-placeholder">📷</div>`;
+                            }
+                        })()}
                         <span>${p.name || 'Без названия'}</span>
                     </div>
                 </td>
@@ -675,3 +790,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener('pricesTransSynced', () => { window.renderPriceTable(); });
+
+// Compatibility aliases for button handlers in prices_trans.html
+window.manageCategoriesTrans = window.manageCategories;
+window.openExcelImportTrans = window.openExcelImport;
+window.refreshPricesTrans = window.refreshPrices;
+window.startAddWizardTrans = window.openAddMaster;
